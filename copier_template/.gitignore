@@ -1,0 +1,23 @@
+# Planveyor process state is local to this sibling and must not block an upgrade.
+.planveyor.*
+.tmp/
+
+# Local connection settings and developer environments are never contract files.
+.env.local
+.venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# macOS Finder metadata would otherwise count as uncommitted changes on upgrade.
+.DS_Store
+
+# Known build and test outputs.
+build/
+dist/
+coverage/
+.coverage
+htmlcov/
+node_modules/

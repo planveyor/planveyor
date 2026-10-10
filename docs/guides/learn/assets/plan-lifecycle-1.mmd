@@ -1,0 +1,12 @@
+flowchart TB
+A["Architect initial draft"] --> AD["Architect draft"]
+AD --> P["Ready for Planner"]
+P --> PI["Planner intake"]
+PI --> PF["Planner finalize"]
+PF --> C["Ready for Coder"]
+C --> CI["Coder intake"]
+CI --> IP["In progress"]
+IP --> R["Ready for Review"]
+R --> AR["Ready for Arch review"]
+AR --> AA["Architect arch review"]
+AA --> D["Done"]

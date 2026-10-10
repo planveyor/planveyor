@@ -1,0 +1,4 @@
+interface:
+  display_name: "Planveyor Plan Queue"
+  short_description: "Materialize and inspect planveyor Manager queues"
+  default_prompt: "Use $planveyor-plan-queue to materialize or inspect a planveyor Manager queue safely before running run Q."

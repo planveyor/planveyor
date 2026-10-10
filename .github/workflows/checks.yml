@@ -1,0 +1,168 @@
+name: Planveyor checks
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: macos-latest
+    timeout-minutes: 105
+    defaults:
+      run:
+        working-directory: My Planveyor
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - python-version: "3.10"
+            test-pattern: "test_[a-e]*.py"
+            meta: false
+          - python-version: "3.10"
+            test-pattern: "test_[f-j]*.py"
+            meta: false
+          - python-version: "3.10"
+            test-pattern: "test_[k-o]*.py"
+            meta: false
+          - python-version: "3.10"
+            test-pattern: "test_p[!l]*.py"
+            meta: false
+          - python-version: "3.10"
+            test-pattern: "test_plan[!v]*.py"
+            meta: false
+          - python-version: "3.10"
+            test-pattern: "test_planveyor_[!ir]*.py"
+            meta: false
+          - python-version: "3.10"
+            test-pattern: "test_planveyor_router_merge_boundary.py"
+            meta: false
+          - python-version: "3.10"
+            test-pattern: "test_planveyor_[ir][!o]*.py"
+            meta: false
+          - python-version: "3.10"
+            test-pattern: "test_[q-t]*.py"
+            meta: false
+          - python-version: "3.10"
+            test-pattern: "test_[u-z]*.py"
+            meta: false
+          - python-version: "3.12"
+            test-pattern: "test_[a-e]*.py"
+            meta: true
+          - python-version: "3.12"
+            test-pattern: "test_[f-j]*.py"
+            meta: false
+          - python-version: "3.12"
+            test-pattern: "test_[k-o]*.py"
+            meta: false
+          - python-version: "3.12"
+            test-pattern: "test_p[!l]*.py"
+            meta: false
+          - python-version: "3.12"
+            test-pattern: "test_plan[!v]*.py"
+            meta: false
+          - python-version: "3.12"
+            test-pattern: "test_planveyor_[!ir]*.py"
+            meta: false
+          - python-version: "3.12"
+            test-pattern: "test_planveyor_router_merge_boundary.py"
+            meta: false
+          - python-version: "3.12"
+            test-pattern: "test_planveyor_[ir][!o]*.py"
+            meta: false
+          - python-version: "3.12"
+            test-pattern: "test_[q-t]*.py"
+            meta: false
+          - python-version: "3.12"
+            test-pattern: "test_[u-z]*.py"
+            meta: false
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+        with:
+          fetch-depth: 0
+          path: My Planveyor
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: pip
+          cache-dependency-path: My Planveyor/requirements-dev.lock
+      - name: Install shell tools
+        run: |
+          brew install ripgrep
+          command -v rg
+          command -v zsh
+          zsh -df -c 'exit 0'
+      - name: Select build interpreter
+        run: echo "PYBIN=$(python -c 'import sys; print(sys.executable)')" >> "$GITHUB_ENV"
+      - name: Install development dependencies
+        run: make bootstrap-python
+      - name: Check test shard partition
+        if: matrix.test-pattern == 'test_[a-e]*.py'
+        env:
+          PYTHONDONTWRITEBYTECODE: "1"
+        run: |
+          "$PYBIN" - <<'PY'
+          from fnmatch import fnmatch
+          from pathlib import Path
+
+          patterns = (
+              "test_[a-e]*.py",
+              "test_[f-j]*.py",
+              "test_[k-o]*.py",
+              "test_p[!l]*.py",
+              "test_plan[!v]*.py",
+              "test_planveyor_[!ir]*.py",
+              "test_planveyor_router_merge_boundary.py",
+              "test_planveyor_[ir][!o]*.py",
+              "test_[q-t]*.py",
+              "test_[u-z]*.py",
+          )
+          expected_count = 125
+          files = sorted(path.name for path in Path("scripts").glob("test_*.py"))
+          if len(files) != expected_count:
+              raise SystemExit(f"unexpected canonical top-level test count: {len(files)}")
+          if "test_contract_authority_support.py" not in files:
+              raise SystemExit("missing canonical test_contract_authority_support.py")
+          for name in files:
+              matches = [pattern for pattern in patterns if fnmatch(name, pattern)]
+              if not len(matches) == 1:
+                  raise SystemExit(f"shard partition mismatch for {name}: {matches}")
+          PY
+      - name: Lint documentation
+        if: matrix.meta
+        run: make doc-lint
+      - name: Lint changed plans
+        if: matrix.meta
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          BASE_BRANCH: ${{ github.base_ref }}
+          BEFORE_COMMIT: ${{ github.event.before }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [[ "$EVENT_NAME" == pull_request ]]; then
+            planveyor_ci_base="$(git merge-base "origin/$BASE_BRANCH" HEAD)"
+          else
+            planveyor_ci_base="$BEFORE_COMMIT"
+          fi
+          if [[ -z "$planveyor_ci_base" || "$planveyor_ci_base" =~ ^0+$ ]] || ! git cat-file -e "$planveyor_ci_base^{commit}" 2>/dev/null; then
+            planveyor_ci_base="$(git rev-list --max-parents=0 HEAD)"
+          fi
+          "$PYBIN" -B scripts/plan_lint_changed.py --base "$planveyor_ci_base" --head HEAD
+      - name: Typecheck
+        if: matrix.meta
+        run: make typecheck
+      - name: Scan public contents
+        if: matrix.meta
+        run: make oss-release-scan
+      - name: Test workflow shard
+        env:
+          PYTHONDONTWRITEBYTECODE: "1"
+        run: '"$PYBIN" -m unittest discover -s scripts -p "${{ matrix.test-pattern }}" -v'

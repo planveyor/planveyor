@@ -1,0 +1,4 @@
+interface:
+  display_name: "Planveyor Plan Draft"
+  short_description: "Create linted planveyor plan draft artifacts"
+  default_prompt: "Use $planveyor-plan-draft to create a planveyor plan draft artifact, add an optional seed code draft only when appropriate, and run the required lint checks."

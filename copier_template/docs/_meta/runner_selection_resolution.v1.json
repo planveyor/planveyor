@@ -1,0 +1,35 @@
+{
+  "schema_version": "runner_selection_resolution.v1",
+  "identity_schema_version": "runner_selection_identity.v1",
+  "carrier_states": [
+    "absent_default",
+    "present_valid"
+  ],
+  "role_runner_matrix": {
+    "architect": [
+      "codex"
+    ],
+    "coder": [
+      "codex"
+    ],
+    "manager": [
+      "codex"
+    ],
+    "planner": [
+      "codex",
+      "claude"
+    ],
+    "reviewer": [
+      "codex",
+      "claude"
+    ]
+  },
+  "selection_fields": [
+    "carrier_state",
+    "init_attempt_id",
+    "role",
+    "runner",
+    "schema_version",
+    "selection_digest"
+  ]
+}

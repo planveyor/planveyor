@@ -1,0 +1,37 @@
+[project]
+name = "planveyor"
+version = "0.0.0"
+description = "Planveyor plan, role, review, and delivery workflow tooling."
+readme = "README.md"
+requires-python = ">=3.10,<3.13"
+dependencies = []
+
+[project.optional-dependencies]
+dev = []
+
+[tool.planveyor.bootstrap]
+lockfile = "requirements-dev.lock"
+primary_make_target = "bootstrap-python"
+lint_make_target = "doc-lint"
+runtime_selector = ["PYBIN", "CONDA_PREFIX", "PATH"]
+
+[tool.mypy]
+python_version = "3.10"
+files = [
+  "scripts/contract_authority_snapshot.py",
+  "scripts/contract_authority_runtime.py",
+  "scripts/contract_authority_context.py",
+  "scripts/contract_authority_bridge.py",
+  "scripts/plan_lint.py",
+  "scripts/plan_queue.py",
+  "scripts/codex_session_context.py",
+  "scripts/plan_status_oracle.py",
+  "scripts/doc_lint.py",
+  "scripts/merge_tracker_oracle.py",
+  "scripts/strip_trailing_ws.py",
+]
+mypy_path = "scripts"
+pretty = true
+show_error_codes = true
+warn_redundant_casts = true
+warn_unused_ignores = true

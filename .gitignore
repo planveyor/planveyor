@@ -1,0 +1,24 @@
+# Newly authored Planveyor development output exclusions.
+__pycache__/
+*.py[cod]
+.mypy_cache/
+.pytest_cache/
+.ruff_cache/
+.venv/
+node_modules/
+.tmp/
+*.log
+*.sqlite
+*.sqlite3
+**/.planveyor.*
+/dist/
+/build/
+.claude/
+.DS_Store
+.idea/
+.vscode/
+*.swp
+.env*
+.codex/
+.playwright-cli/
+.worktrees/

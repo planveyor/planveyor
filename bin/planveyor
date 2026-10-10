@@ -1,0 +1,278 @@
+#!/bin/sh
+# Standalone Planveyor entrypoint.  It deliberately never sources the runtime
+# into the caller: every command runs in one clean `zsh -df` child.
+set -eu
+
+die() {
+  printf '%s\n' "planveyor: $*" >&2
+  exit 64
+}
+
+runtime_git_preflight_die() {
+  runtime_git_category="$1"
+  case "$runtime_git_category" in
+    missing_git) runtime_git_detail='Git executable is unavailable' ;;
+    missing_repo) runtime_git_detail='runtime root has no Git metadata' ;;
+    missing_head) runtime_git_detail='HEAD does not resolve to a commit' ;;
+    git_command_failed)
+      case "${2:-}" in
+        version) runtime_git_stage_label='--version' ;;
+        root) runtime_git_stage_label='rev-parse --show-toplevel' ;;
+        head) runtime_git_stage_label='rev-parse --verify HEAD^{commit}' ;;
+        *) runtime_git_stage_label='command' ;;
+      esac
+      runtime_git_detail="Git $runtime_git_stage_label exited status ${3:-unknown}"
+      ;;
+    *)
+      runtime_git_category='git_command_failed'
+      runtime_git_detail='Git command exited status unknown'
+      ;;
+  esac
+  die "runtime Git preflight failed: category=$runtime_git_category; root=$root; detail=$runtime_git_detail"
+}
+
+regular_file() {
+  [ -f "$1" ] && [ ! -L "$1" ]
+}
+
+canonical_external_dir() {
+  value=$1
+  label=$2
+  [ -n "$value" ] || die "$label is empty"
+  case "$value" in
+    /*) ;;
+    *) die "$label must be an absolute path" ;;
+  esac
+  case "$value" in
+    *'//'*|*/./*|*/../*|*/.|*/..) die "$label is not a canonical path" ;;
+  esac
+  [ -d "$value" ] || die "$label is not a directory: $value"
+  [ ! -L "$value" ] || die "$label must not be a symlink: $value"
+  resolved=$(CDPATH= cd -P -- "$value" && pwd -P) || die "$label cannot be resolved"
+  printf '%s\n' "$resolved"
+}
+
+external_path() {
+  value=$1
+  label=$2
+  [ -n "$value" ] || return 0
+  case "$value" in
+    /*) ;;
+    *) die "$label must be an absolute path" ;;
+  esac
+  case "$value" in
+    *'//'*|*/./*|*/../*|*/.|*/..) die "$label is not a canonical path" ;;
+  esac
+  case "$value" in
+    "$root"|"$root"/*) die "$label must be outside the Planveyor product tree" ;;
+  esac
+  if [ -e "$value" ] && [ -L "$value" ]; then
+    die "$label must not be a symlink"
+  fi
+}
+
+self=$0
+case "$self" in
+  */*) ;;
+  *) self=$(command -v -- "$self" 2>/dev/null || true) ;;
+esac
+[ -n "${self:-}" ] || die 'cannot resolve entrypoint path'
+case "$self" in
+  /*) ;;
+  *) self=$PWD/$self ;;
+esac
+[ ! -L "$self" ] || die 'entrypoint must not be a symlink'
+
+bin_dir=$(CDPATH= cd -P -- "$(dirname -- "$self")" && pwd -P) || die 'cannot resolve entrypoint directory'
+root=$(CDPATH= cd -P -- "$bin_dir/.." && pwd -P) || die 'cannot resolve Planveyor root'
+[ -d "$root" ] && [ ! -L "$root" ] || die 'Planveyor root is not a regular directory'
+
+facade=$root/scripts/planveyor.zsh
+template=$root/scripts/contract_authority_shell_loader.zsh
+bootstrap=$root/scripts/contract_authority_bootstrap.py
+regular_file "$facade" || die 'missing regular runtime facade'
+regular_file "$template" || die 'missing regular authority loader template'
+regular_file "$bootstrap" || die 'missing regular authority bootstrap'
+
+[ -n "${HOME:-}" ] || die 'consumer HOME is required for normal CLI authentication'
+case "$HOME" in
+  /*) ;;
+  *) die 'consumer HOME must be an absolute path' ;;
+esac
+[ -d "$HOME" ] || die 'consumer HOME is not a directory'
+
+# The product is a self-owned Git runtime.  The child receives a clean
+# environment, but this preflight also ignores inherited Git selectors before
+# accepting the entrypoint's physical root.
+path_value=${PATH:-/usr/bin:/bin:/usr/sbin:/sbin}
+git_bin=$(command -v git 2>/dev/null || true)
+[ -n "$git_bin" ] && [ -x "$git_bin" ] || runtime_git_preflight_die missing_git
+runtime_git() {
+  env -i PATH="$path_value" HOME="$HOME" "$git_bin" "$@"
+}
+if runtime_git --version >/dev/null 2>&1; then
+  :
+else
+  runtime_git_status=$?
+  runtime_git_preflight_die git_command_failed version "$runtime_git_status"
+fi
+[ -e "$root/.git" ] || [ -L "$root/.git" ] || runtime_git_preflight_die missing_repo
+if runtime_toplevel=$(runtime_git -C "$root" rev-parse --show-toplevel 2>/dev/null); then
+  :
+else
+  runtime_git_status=$?
+  if [ ! -e "$root/.git" ] && [ ! -L "$root/.git" ]; then
+    runtime_git_preflight_die missing_repo
+  fi
+  runtime_git_preflight_die git_command_failed root "$runtime_git_status"
+fi
+[ "$runtime_toplevel" = "$root" ] || die 'Planveyor runtime Git root differs from the entrypoint root'
+if runtime_git -C "$root" rev-parse --verify --quiet 'HEAD^{commit}' >/dev/null 2>&1; then
+  :
+else
+  runtime_head_status=$?
+  [ "$runtime_head_status" -eq 1 ] && runtime_git_preflight_die missing_head
+  runtime_git_preflight_die git_command_failed head "$runtime_head_status"
+fi
+
+rg_bin=$(command -v rg 2>/dev/null || true)
+[ -n "$rg_bin" ] && [ -x "$rg_bin" ] || die 'ripgrep (rg) is required'
+
+invocation_root=$(pwd -P) || die 'cannot resolve invocation directory'
+project_root=$root
+project_explicit=no
+while [ "$#" -gt 0 ]; do
+  case "$1" in
+    --project)
+      shift
+      [ "$#" -gt 0 ] || die '--project requires an absolute directory'
+      project_root=$(canonical_external_dir "$1" 'project root')
+      project_explicit=yes
+      shift
+      ;;
+    --)
+      shift
+      break
+      ;;
+    -h|--help)
+      break
+      ;;
+    *) break ;;
+  esac
+done
+
+# Only the human sibling group infers a consumer from the caller's checkout.
+# Keep the established runtime default for every low-level command.
+if [ "${1:-}" = sibling ] && [ "$project_explicit" = no ]; then
+  case "${2:-}" in
+    ''|init|help|-h|--help) ;;
+    *)
+      sibling_help=no
+      for sibling_arg in "$@"; do
+        case "$sibling_arg" in -h|--help) sibling_help=yes ;; esac
+      done
+      if [ "$sibling_help" = no ]; then
+        inferred_root=$(runtime_git -C "$invocation_root" rev-parse --show-toplevel 2>/dev/null) \
+          || die 'sibling requires a Git project; enter its checkout or pass --project'
+        project_root=$(canonical_external_dir "$inferred_root" 'sibling project root')
+        [ "$project_root" != "$root" ] || die 'sibling requires a consumer checkout; enter it or pass --project'
+      fi
+      ;;
+  esac
+fi
+
+state_root=${PLANVEYOR_STATE_ROOT:-$HOME/.local/state/planveyor}
+codex_home=${PLANVEYOR_CODEX_HOME:-}
+claude_command=${PLANVEYOR_CLAUDE_COMMAND:-}
+claude_model=${PLANVEYOR_CLAUDE_MODEL:-}
+claude_effort=${PLANVEYOR_CLAUDE_EFFORT:-}
+
+external_path "$state_root" 'PLANVEYOR_STATE_ROOT'
+external_path "$codex_home" 'PLANVEYOR_CODEX_HOME'
+
+case "$claude_command" in
+  ''|*[!A-Za-z0-9_./-]*) [ -z "$claude_command" ] || die 'PLANVEYOR_CLAUDE_COMMAND must be a command name or absolute path' ;;
+esac
+
+tmpdir=${TMPDIR:-/tmp}
+case "$tmpdir" in
+  /*) ;;
+  *) tmpdir=/tmp ;;
+esac
+[ -d "$tmpdir" ] || tmpdir=/tmp
+tmpprefix=${tmpdir%/}/zsh
+loader_tmp=$(umask 077; mktemp "$tmpdir/planveyor-loader.XXXXXXXX") || die 'cannot create private authority loader'
+cleanup() { rm -f -- "$loader_tmp"; }
+trap cleanup EXIT HUP INT TERM
+
+marker_count=$(/usr/bin/grep -c '^@PLANVEYOR_AUTHORITY_BOOTSTRAP_LITERAL@$' "$template" || true)
+[ "$marker_count" = 1 ] || die 'authority loader template must contain exactly one bootstrap marker'
+/usr/bin/awk -v bootstrap="$bootstrap" '
+  $0 == "@PLANVEYOR_AUTHORITY_BOOTSTRAP_LITERAL@" {
+    while ((getline line < bootstrap) > 0) print line
+    close(bootstrap)
+    next
+  }
+  { print }
+' "$template" > "$loader_tmp" || die 'cannot render authority loader'
+chmod 600 "$loader_tmp" || die 'cannot protect authority loader'
+
+zsh_bin=$(command -v zsh 2>/dev/null || true)
+[ -n "$zsh_bin" ] && [ -x "$zsh_bin" ] || die 'zsh is required'
+cd -- "$project_root" || die 'cannot enter project root'
+
+# Of the caller's Codex session the clean child receives only a non-empty
+# CODEX_THREAD_ID, the thread id that plan provenance records; it is not a secret.
+exec /usr/bin/env -i \
+  PATH="$path_value" \
+  HOME="$HOME" \
+  TERM="${TERM:-dumb}" \
+  LANG="${LANG:-C}" \
+  LC_ALL="${LC_ALL:-}" \
+  LC_CTYPE="${LC_CTYPE:-}" \
+  ${TZ+"TZ=$TZ"} \
+  TMPDIR="$tmpdir" \
+  TMPPREFIX="$tmpprefix" \
+  PLANVEYOR_CHILD_SHELL_V1='planveyor-child-shell.v1' \
+  PLANVEYOR_ROOT="$root" \
+  PLANVEYOR_RUNTIME_ROOT="$root" \
+  PLANVEYOR_PROJECT_ROOT="$project_root" \
+  PLANVEYOR_INVOCATION_ROOT="$invocation_root" \
+  PLANVEYOR_STATE_ROOT="$state_root" \
+  PLANVEYOR_CODEX_HOME="$codex_home" \
+  PLANVEYOR_CLAUDE_COMMAND="$claude_command" \
+  PLANVEYOR_CLAUDE_MODEL="$claude_model" \
+  PLANVEYOR_CLAUDE_EFFORT="$claude_effort" \
+  PLANVEYOR_RUNTIME_SOURCE_KIND='git' \
+  ${CODEX_THREAD_ID:+"CODEX_THREAD_ID=$CODEX_THREAD_ID"} \
+  "$zsh_bin" -df -c '
+    loader=$1
+    facade=$2
+    shift 2
+    trap '\''rm -f -- "$loader"'\'' EXIT HUP INT TERM
+    cd -- "$PLANVEYOR_PROJECT_ROOT" || exit 1
+    source "$loader" || exit $?
+    rm -f -- "$loader" || exit 1
+    planveyor_source_runtime "$facade" || exit $?
+    [[ "${_PLANVEYOR_AUTHORITY_SOURCE_STATE:-}" == pinned ]] || {
+      print -u2 -r -- "planveyor: retained runtime source is not pinned"
+      exit 1
+    }
+    [[ ${(t)_PLANVEYOR_AUTHORITY_RUNTIME_PIN_SUMMARY-} == scalar-readonly ]] || {
+      print -u2 -r -- "planveyor: retained runtime pin summary is unavailable"
+      exit 1
+    }
+    _planveyor_runtime_api_guard 5 5 || exit $?
+    runtime_commit="$(_planveyor_authority_bridge runtime-field \
+      --runtime-pin-summary "$_PLANVEYOR_AUTHORITY_RUNTIME_PIN_SUMMARY" \
+      --field commit)" || {
+      print -u2 -r -- "planveyor: retained runtime pin is not Git-backed"
+      exit 1
+    }
+    [[ ${#runtime_commit} -eq 40 && "$runtime_commit" != *[^0-9a-f]* ]] || {
+      print -u2 -r -- "planveyor: retained runtime commit is invalid"
+      exit 1
+    }
+    _planveyor_authority_validate_runtime_pin || exit $?
+    planveyor_cli "$@"
+  ' planveyor-child "$loader_tmp" "$facade" "$@"

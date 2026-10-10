@@ -1,0 +1,10 @@
+# planveyor v1 bootstrap lock
+#
+# Keep third-party dev tooling pinned here so `python -m pip install -r
+# requirements-dev.lock` stays the single deterministic bootstrap lane.
+copier==9.18.2
+mypy==1.15.0
+mypy_extensions==1.1.0
+PyYAML==6.0.3
+tomli==1.1.0; python_version < "3.11"
+typing_extensions==4.15.0

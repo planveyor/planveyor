@@ -1,0 +1,23 @@
+{
+  "canon_doc": "docs/playbooks/docs_architecture.md",
+  "id_format": "stable snake_case machine id",
+  "label_format": "human-readable display label; punctuation/hyphenation may differ from id",
+  "classes": [
+    {
+      "id": "source",
+      "label": "source"
+    },
+    {
+      "id": "control_plane_metadata",
+      "label": "control-plane metadata"
+    },
+    {
+      "id": "derived_artifacts",
+      "label": "derived artifacts"
+    },
+    {
+      "id": "runtime_bundles",
+      "label": "runtime bundles"
+    }
+  ]
+}

@@ -1,0 +1,21 @@
+{
+  "summary": "После адаптации sibling прямое поручение Owner создаёт обычный план без обязательного promotion открытого follow-up.",
+  "contract_changes": [
+    "Адаптация согласует назначение и готовность стека; следующая полезная задача согласуется отдельно. Реальные findings capture-ятся, zero findings допустимы.",
+    "Bounded discovery раскрывает matching open follow-up через literal source_ref#item_id в Context links; status=open, plan=null и null disposition fields сохраняются, automatic backlink запрещён. Нет совпадения — нет искусственной row; конфликт active plan требует Architect/Owner triage.",
+    "Ordinary plan не является row promotion; prepare/finalize/backlink не являются его предусловиями. Настоящее продвижение требует штатного writer и exact proof; V2/K1 port остаётся post-release работой.",
+    "native_existing сохраняет Architect-owned Done/commit с final gates и failed-transition cleanup. human_explicit сохраняет accepted Architect review, preview и отдельный sibling close --commit; Coder/Planner не получают Done writer."
+  ],
+  "engine_changes": [],
+  "sibling_actions": [
+    "Принять обновлённые общие инструкции и анкету обычным планом адаптации обновления; сохранить sibling-owned Local bodies.",
+    "После закрытия адаптации согласовать отдельное прямое поручение Owner и выбрать ordinary plan через existing draft skill/facade; matching row сохранить как контекст.",
+    "Сохранять semantic и docs closeout как отдельные шаги по текущей commit policy, без ручного Done, backlog backlink или подмены current proof.",
+    "До fresh init проверить весь применимый runbook; фактический command/input trace и публичное описание passage создавать только по реальному исполнению."
+  ],
+  "checks": [
+    "Source/Copier plain-copy parity, реально rendered README и frozen Local-tail hashes без restamp.",
+    "Purpose/readiness §1, unchanged §§2–10, ordinary task matching/no-match/conflict guidance и отсутствие forced promotion/backlink.",
+    "Обе commit policies: current accepted review, preview без побочных эффектов, отдельный commit, red/stale/Q&A rejection и failed-final-gate cleanup."
+  ]
+}

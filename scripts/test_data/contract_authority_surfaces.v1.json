@@ -1,0 +1,565 @@
+{
+  "admission": {
+    "allowed_public_prefixes": [
+      "planveyor_",
+      "codex_",
+      "claude_"
+    ],
+    "guard_api": "_planveyor_authority_context_for_reader",
+    "guarded_internal_classification": "guarded_sink",
+    "guarded_public_classification": "guarded_owner_prologue",
+    "guarded_public_reclassifications": [
+      "planveyor_merge_collab_cmd",
+      "planveyor_merge_collab_tui",
+      "planveyor_reviewer",
+      "planveyor_reviewer_code_contracts",
+      "planveyor_reviewer_code_contracts_init",
+      "planveyor_reviewer_code_risk",
+      "planveyor_reviewer_code_risk_init",
+      "planveyor_reviewer_init"
+    ],
+    "baseline_internal_sink_count": 40,
+    "pure_delegate_classification": "pure_alias_delegation",
+    "readonly_context_locals": [
+      "PLANVEYOR_CTX_SEAL",
+      "PLANVEYOR_CTX_ROOT",
+      "PLANVEYOR_CTX_GENERATION",
+      "PLANVEYOR_CTX_JSON",
+      "PLANVEYOR_CTX_STATE"
+    ]
+  },
+  "approved_guard_api_exceptions": {},
+  "internal_sinks": {
+    "_planveyor_arch_track_tui": "scripts/planveyor.zsh",
+    "_planveyor_censor_receipt_gate_check": "scripts/planveyor/role_runtime.zsh",
+    "_planveyor_codex_home_ensure": "scripts/planveyor.zsh",
+    "_planveyor_copy_doc_template_if_missing": "scripts/planveyor.zsh",
+    "_planveyor_copy_review_template_if_missing": "scripts/planveyor.zsh",
+    "_planveyor_doc_template_source_path": "scripts/planveyor.zsh",
+    "_planveyor_init_run_capture_begin": "scripts/planveyor/session_init.zsh",
+    "_planveyor_init_run_capture_finalize": "scripts/planveyor/session_init.zsh",
+    "_planveyor_init_run_publish_validated_session": "scripts/planveyor/session_init.zsh",
+    "_planveyor_manager_custom_pipeline_nonrun_cmd": "scripts/planveyor/role_runtime.zsh",
+    "_planveyor_manager_custom_pipeline_supervise": "scripts/planveyor/role_runtime.zsh",
+    "_planveyor_manager_custom_pipeline_terminal": "scripts/planveyor/role_runtime.zsh",
+    "_planveyor_manager_mode_admit": "scripts/planveyor/role_runtime.zsh",
+    "_planveyor_plan_queue": "scripts/planveyor.zsh",
+    "_planveyor_planning_wave_readback": "scripts/planveyor.zsh",
+    "_planveyor_planqueue_metrics": "scripts/planveyor.zsh",
+    "_planveyor_prepare_role_bundle": "scripts/planveyor.zsh",
+    "_planveyor_prompt_file_for_role_phase": "scripts/planveyor.zsh",
+    "_planveyor_q_advance_json": "scripts/planveyor.zsh",
+    "_planveyor_q_closeout_json": "scripts/planveyor.zsh",
+    "_planveyor_q_history_json": "scripts/planveyor.zsh",
+    "_planveyor_q_next_json": "scripts/planveyor.zsh",
+    "_planveyor_q_planpath_override_json": "scripts/planveyor.zsh",
+    "_planveyor_q_small_slice_json": "scripts/planveyor.zsh",
+    "_planveyor_q_stop_json": "scripts/planveyor.zsh",
+    "_planveyor_review_template_source_path": "scripts/planveyor.zsh",
+    "_planveyor_reviewer_init_for_session_key": "scripts/planveyor/session_init.zsh",
+    "_planveyor_reviewer_resume_for_session_key": "scripts/planveyor.zsh",
+    "_planveyor_reviewer_run_for_session_key": "scripts/planveyor/role_runtime.zsh",
+    "_planveyor_role_prompt_body": "scripts/planveyor.zsh",
+    "_planveyor_role_outcome_contract_active": "scripts/planveyor/role_runtime.zsh",
+    "_planveyor_role_run_execute_for_plan": "scripts/planveyor/role_runtime.zsh",
+    "_planveyor_role_run_supervise": "scripts/planveyor/role_runtime.zsh",
+    "_planveyor_rollout_packet_helper_run": "scripts/planveyor.zsh",
+    "_planveyor_runner_selection_init_consume": "scripts/planveyor/session_init.zsh",
+    "_planveyor_save_session_key_from_output": "scripts/planveyor/session_init.zsh",
+    "_planveyor_session_sid_ensure_in_effective_codex_home": "scripts/planveyor.zsh",
+    "_planveyor_upstream_request_helper_run": "scripts/planveyor.zsh",
+    "_planveyor_wave_telemetry_report": "scripts/planveyor.zsh"
+  },
+  "public_by_file": {
+    "scripts/planveyor.zsh": [
+      "claude_planner",
+      "claude_reviewer",
+      "codex_arch",
+      "codex_arch_initial",
+      "codex_coder",
+      "codex_manager",
+      "codex_manager_collab",
+      "codex_manager_custom_pipeline",
+      "planveyor_ai_gate",
+      "planveyor_ai_gate_smoke",
+      "planveyor_analysis_init",
+      "planveyor_arch_canon_sweep_start",
+      "planveyor_arch_collab_resume",
+      "planveyor_arch_inno_resume",
+      "planveyor_arch_innovations_tui",
+      "planveyor_arch_merge_notes_start",
+      "planveyor_arch_plan_harvest_start",
+      "planveyor_arch_post_merge_audit_start",
+      "planveyor_arch_process_collab_tui",
+      "planveyor_arch_process_roles_tui",
+      "planveyor_arch_resume",
+      "planveyor_arch_roles_resume",
+      "planveyor_bare_entrypoints_doctor",
+      "planveyor_bare_entrypoints_install",
+      "planveyor_clear_owner_answers",
+      "planveyor_cli",
+      "planveyor_code_draft_stub_from_plan",
+      "planveyor_coder_resume",
+      "planveyor_collab_state_write_alive",
+      "planveyor_consumer_doctor",
+      "planveyor_consumer_init",
+      "planveyor_contract_upgrade",
+      "planveyor_decomposition_collab",
+      "planveyor_decomposition_collab_tui",
+      "planveyor_decomposition_init",
+      "planveyor_decomposition_seed_promote",
+      "planveyor_doc_lint",
+      "planveyor_docs_archive_db",
+      "planveyor_docs_archive_query",
+      "planveyor_docs_archive_show",
+      "planveyor_docs_archive_snapshot_export",
+      "planveyor_docs_archive_snapshot_info",
+      "planveyor_docs_archive_snapshot_restore",
+      "planveyor_docs_archive_snapshot_validate",
+      "planveyor_docs_closeout",
+      "planveyor_docs_context_check",
+      "planveyor_docs_db",
+      "planveyor_docs_get",
+      "planveyor_docs_hygiene_archive",
+      "planveyor_docs_hygiene_list",
+      "planveyor_docs_hygiene_suggest",
+      "planveyor_docs_index_build",
+      "planveyor_docs_lookup",
+      "planveyor_docs_multi_get",
+      "planveyor_docs_retrieve",
+      "planveyor_docs_retrieve_log",
+      "planveyor_docs_retrieve_metrics",
+      "planveyor_docs_retrieve_outcome",
+      "planveyor_docs_retrieve_outcome_log",
+      "planveyor_docs_retrieve_read_log",
+      "planveyor_entry_doctor",
+      "planveyor_followups_apply",
+      "planveyor_followups_capture",
+      "planveyor_followups_lint",
+      "planveyor_followups_promote",
+      "planveyor_followups_query",
+      "planveyor_followups_reconcile",
+      "planveyor_followups_triage",
+      "planveyor_help",
+      "planveyor_manager_resume",
+      "planveyor_merge_bundle_report",
+      "planveyor_merge_init",
+      "planveyor_merge_next",
+      "planveyor_merge_range_stats_json",
+      "planveyor_merge_range_verdict_digest",
+      "planveyor_merge_tracker_ensure",
+      "planveyor_merge_tracker_init",
+      "planveyor_merge_tracker_next_step",
+      "planveyor_merge_tracker_show",
+      "planveyor_merge_tracker_tick",
+      "planveyor_mirror_strict_gate",
+      "planveyor_owner_answers_set",
+      "planveyor_plan_bundle",
+      "planveyor_plan_closeout_preflight",
+      "planveyor_plan_lint",
+      "planveyor_plan_list",
+      "planveyor_plan_list_status",
+      "planveyor_plan_provenance_context",
+      "planveyor_plan_provenance_stamp",
+      "planveyor_plan_set",
+      "planveyor_plan_status_oracle",
+      "planveyor_planner_resume",
+      "planveyor_planning_wave_readback",
+      "planveyor_planning_wave_readback_json",
+      "planveyor_planpath",
+      "planveyor_planqueue_metrics",
+      "planveyor_planqueue_metrics_json",
+      "planveyor_post_merge_docs_finalize_tick",
+      "planveyor_post_merge_docs_hygiene_suggest_gate",
+      "planveyor_post_merge_operational_receipt",
+      "planveyor_post_merge_packetization_gate",
+      "planveyor_post_merge_packetization_gate_recover",
+      "planveyor_post_merge_ready_to_push_closeout",
+      "planveyor_post_merge_receipt_preflight",
+      "planveyor_post_merge_receipt_skeleton",
+      "planveyor_process_improvements_promote",
+      "planveyor_process_improvements_reconcile",
+      "planveyor_profile",
+      "planveyor_profile_clear",
+      "planveyor_profile_set",
+      "planveyor_pybin_file",
+      "planveyor_pybin_set",
+      "planveyor_q_advance_json",
+      "planveyor_q_append",
+      "planveyor_q_clear",
+      "planveyor_q_closeout_json",
+      "planveyor_q_final_report",
+      "planveyor_q_history",
+      "planveyor_q_history_json",
+      "planveyor_q_next_json",
+      "planveyor_q_planpath_override_json",
+      "planveyor_q_recover",
+      "planveyor_q_set",
+      "planveyor_q_show",
+      "planveyor_q_small_slice",
+      "planveyor_q_small_slice_json",
+      "planveyor_q_stop_json",
+      "planveyor_range_base",
+      "planveyor_range_head",
+      "planveyor_range_merge",
+      "planveyor_range_set",
+      "planveyor_range_set_auto_merge",
+      "planveyor_range_set_merge",
+      "planveyor_review_range_init",
+      "planveyor_review_range_start",
+      "planveyor_review_risk_packet",
+      "planveyor_review_target_snapshot",
+      "planveyor_reviewer_code_contracts_resume",
+      "planveyor_reviewer_code_risk_resume",
+      "planveyor_reviewer_resume",
+      "planveyor_role_bundle_prompt_manifest",
+      "planveyor_role_run_child_dispatch",
+      "planveyor_role_run_probe",
+      "planveyor_role_runner_preflight",
+      "planveyor_runtime_py",
+      "planveyor_rollout_packet_ack",
+      "planveyor_rollout_packet_adoption_plan",
+      "planveyor_rollout_packet_create",
+      "planveyor_rollout_packet_harvest",
+      "planveyor_rollout_packet_import_instructions",
+      "planveyor_rollout_packet_inbox",
+      "planveyor_rollout_packet_lint",
+      "planveyor_rollout_packet_outcome_set",
+      "planveyor_rollout_packet_query",
+      "planveyor_rollout_packet_reconcile",
+      "planveyor_rollout_packet_show",
+      "planveyor_runner",
+      "planveyor_runner_clear",
+      "planveyor_runner_file",
+      "planveyor_runner_matrix",
+      "planveyor_runner_resolve_strict",
+      "planveyor_runner_set",
+      "planveyor_runtime_info",
+      "planveyor_session",
+      "planveyor_session_set",
+      "planveyor_shared_docs_mirror_drift",
+      "planveyor_show",
+      "planveyor_show_collab",
+      "planveyor_show_manual",
+      "planveyor_show_process",
+      "planveyor_sibling",
+      "planveyor_status_line",
+      "planveyor_upstream_request_ack",
+      "planveyor_upstream_request_import",
+      "planveyor_upstream_request_query",
+      "planveyor_upstream_request_show",
+      "planveyor_verify",
+      "planveyor_wave_telemetry_report",
+      "planveyor_wave_telemetry_report_json"
+    ],
+    "scripts/planveyor/docs_finalize.zsh": [
+      "planveyor_arch_docs_general",
+      "planveyor_arch_followups",
+      "planveyor_coder_docs_general",
+      "planveyor_coder_followups",
+      "planveyor_planner_docs_general",
+      "planveyor_planner_followups",
+      "planveyor_reviewer_docs_general",
+      "planveyor_reviewer_followups"
+    ],
+    "scripts/planveyor/role_runtime.zsh": [
+      "planveyor_arch",
+      "planveyor_arch_censor",
+      "planveyor_arch_initial",
+      "planveyor_coder",
+      "planveyor_coder_censor",
+      "planveyor_custom_role_step",
+      "planveyor_manager",
+      "planveyor_manager_collab",
+      "planveyor_manager_collab_cmd",
+      "planveyor_manager_collab_tui",
+      "planveyor_manager_custom_pipeline",
+      "planveyor_manager_custom_pipeline_cmd",
+      "planveyor_manager_custom_pipeline_tui",
+      "planveyor_manager_invocation_checkpoint",
+      "planveyor_merge_apply_collab_cmd",
+      "planveyor_merge_apply_collab_tui",
+      "planveyor_merge_collab_cmd",
+      "planveyor_merge_collab_tui",
+      "planveyor_planner",
+      "planveyor_planner_censor",
+      "planveyor_reviewer",
+      "planveyor_reviewer_code_contracts",
+      "planveyor_reviewer_code_risk",
+      "planveyor_role_run",
+      "planveyor_role_run_receipt_check"
+    ],
+    "scripts/planveyor/session_init.zsh": [
+      "planveyor_arch_init",
+      "planveyor_coder_init",
+      "planveyor_manager_init",
+      "planveyor_planner_init",
+      "planveyor_reviewer_code_contracts_init",
+      "planveyor_reviewer_code_risk_init",
+      "planveyor_reviewer_init"
+    ]
+  },
+  "pure_delegates": {
+    "claude_planner": {
+      "file": "scripts/planveyor.zsh",
+      "statement": "planveyor_planner \"$@\"",
+      "target": "planveyor_planner"
+    },
+    "claude_reviewer": {
+      "file": "scripts/planveyor.zsh",
+      "statement": "planveyor_reviewer \"$@\"",
+      "target": "planveyor_reviewer"
+    },
+    "codex_arch": {
+      "file": "scripts/planveyor.zsh",
+      "statement": "planveyor_arch \"$@\"",
+      "target": "planveyor_arch"
+    },
+    "codex_arch_initial": {
+      "file": "scripts/planveyor.zsh",
+      "statement": "planveyor_arch_initial \"$@\"",
+      "target": "planveyor_arch_initial"
+    },
+    "codex_coder": {
+      "file": "scripts/planveyor.zsh",
+      "statement": "planveyor_coder \"$@\"",
+      "target": "planveyor_coder"
+    },
+    "codex_manager": {
+      "file": "scripts/planveyor.zsh",
+      "statement": "planveyor_manager \"$@\"",
+      "target": "planveyor_manager"
+    },
+    "codex_manager_collab": {
+      "file": "scripts/planveyor.zsh",
+      "statement": "planveyor_manager_collab \"$@\"",
+      "target": "planveyor_manager_collab"
+    },
+    "codex_manager_custom_pipeline": {
+      "file": "scripts/planveyor.zsh",
+      "statement": "planveyor_manager_custom_pipeline \"$@\"",
+      "target": "planveyor_manager_custom_pipeline"
+    },
+    "planveyor_arch_collab_resume": {
+      "file": "scripts/planveyor.zsh",
+      "statement": "planveyor_arch_process_collab_tui \"$@\"",
+      "target": "planveyor_arch_process_collab_tui"
+    },
+    "planveyor_arch_inno_resume": {
+      "file": "scripts/planveyor.zsh",
+      "statement": "planveyor_arch_innovations_tui \"$@\"",
+      "target": "planveyor_arch_innovations_tui"
+    },
+    "planveyor_arch_roles_resume": {
+      "file": "scripts/planveyor.zsh",
+      "statement": "planveyor_arch_process_roles_tui \"$@\"",
+      "target": "planveyor_arch_process_roles_tui"
+    },
+    "planveyor_merge_collab_cmd": {
+      "file": "scripts/planveyor/role_runtime.zsh",
+      "statement": "planveyor_manager_collab_cmd merge_run \"$@\"",
+      "target": "planveyor_manager_collab_cmd"
+    },
+    "planveyor_merge_collab_tui": {
+      "file": "scripts/planveyor/role_runtime.zsh",
+      "statement": "planveyor_manager_collab_tui --merge \"$@\"",
+      "target": "planveyor_manager_collab_tui"
+    },
+    "planveyor_merge_init": {
+      "file": "scripts/planveyor.zsh",
+      "statement": "planveyor_merge_tracker_init \"$@\"",
+      "target": "planveyor_merge_tracker_init"
+    },
+    "planveyor_planning_wave_readback": {
+      "file": "scripts/planveyor.zsh",
+      "statement": "_planveyor_planning_wave_readback \"$@\"",
+      "target": "_planveyor_planning_wave_readback"
+    },
+    "planveyor_planning_wave_readback_json": {
+      "file": "scripts/planveyor.zsh",
+      "statement": "_planveyor_planning_wave_readback --json \"$@\"",
+      "target": "_planveyor_planning_wave_readback"
+    },
+    "planveyor_planqueue_metrics": {
+      "file": "scripts/planveyor.zsh",
+      "statement": "_planveyor_planqueue_metrics \"$@\"",
+      "target": "_planveyor_planqueue_metrics"
+    },
+    "planveyor_planqueue_metrics_json": {
+      "file": "scripts/planveyor.zsh",
+      "statement": "_planveyor_planqueue_metrics --json \"$@\"",
+      "target": "_planveyor_planqueue_metrics"
+    },
+    "planveyor_q_advance_json": {
+      "file": "scripts/planveyor.zsh",
+      "statement": "_planveyor_q_advance_json \"$@\"",
+      "target": "_planveyor_q_advance_json"
+    },
+    "planveyor_q_clear": {
+      "file": "scripts/planveyor.zsh",
+      "statement": "_planveyor_plan_queue clear \"$@\"",
+      "target": "_planveyor_plan_queue"
+    },
+    "planveyor_q_closeout_json": {
+      "file": "scripts/planveyor.zsh",
+      "statement": "_planveyor_q_closeout_json \"$@\"",
+      "target": "_planveyor_q_closeout_json"
+    },
+    "planveyor_q_history": {
+      "file": "scripts/planveyor.zsh",
+      "statement": "_planveyor_plan_queue history \"$@\"",
+      "target": "_planveyor_plan_queue"
+    },
+    "planveyor_q_history_json": {
+      "file": "scripts/planveyor.zsh",
+      "statement": "_planveyor_q_history_json \"$@\"",
+      "target": "_planveyor_q_history_json"
+    },
+    "planveyor_q_next_json": {
+      "file": "scripts/planveyor.zsh",
+      "statement": "_planveyor_q_next_json \"$@\"",
+      "target": "_planveyor_q_next_json"
+    },
+    "planveyor_q_planpath_override_json": {
+      "file": "scripts/planveyor.zsh",
+      "statement": "_planveyor_q_planpath_override_json \"$@\"",
+      "target": "_planveyor_q_planpath_override_json"
+    },
+    "planveyor_q_recover": {
+      "file": "scripts/planveyor.zsh",
+      "statement": "_planveyor_plan_queue recover \"$@\"",
+      "target": "_planveyor_plan_queue"
+    },
+    "planveyor_q_show": {
+      "file": "scripts/planveyor.zsh",
+      "statement": "_planveyor_plan_queue show \"$@\"",
+      "target": "_planveyor_plan_queue"
+    },
+    "planveyor_q_small_slice_json": {
+      "file": "scripts/planveyor.zsh",
+      "statement": "_planveyor_q_small_slice_json \"$@\"",
+      "target": "_planveyor_q_small_slice_json"
+    },
+    "planveyor_q_stop_json": {
+      "file": "scripts/planveyor.zsh",
+      "statement": "_planveyor_q_stop_json \"$@\"",
+      "target": "_planveyor_q_stop_json"
+    },
+    "planveyor_reviewer": {
+      "file": "scripts/planveyor/role_runtime.zsh",
+      "statement": "_planveyor_reviewer_run_for_session_key reviewer reviewer",
+      "target": "_planveyor_reviewer_run_for_session_key"
+    },
+    "planveyor_reviewer_code_contracts": {
+      "file": "scripts/planveyor/role_runtime.zsh",
+      "statement": "_planveyor_reviewer_run_for_session_key reviewer_code_contracts reviewer_code_contracts",
+      "target": "_planveyor_reviewer_run_for_session_key"
+    },
+    "planveyor_reviewer_code_contracts_init": {
+      "file": "scripts/planveyor/session_init.zsh",
+      "statement": "_planveyor_reviewer_init_for_session_key reviewer_code_contracts reviewer_code_contracts",
+      "target": "_planveyor_reviewer_init_for_session_key"
+    },
+    "planveyor_reviewer_code_risk": {
+      "file": "scripts/planveyor/role_runtime.zsh",
+      "statement": "_planveyor_reviewer_run_for_session_key reviewer_code_risk reviewer_code_risk",
+      "target": "_planveyor_reviewer_run_for_session_key"
+    },
+    "planveyor_reviewer_code_risk_init": {
+      "file": "scripts/planveyor/session_init.zsh",
+      "statement": "_planveyor_reviewer_init_for_session_key reviewer_code_risk reviewer_code_risk",
+      "target": "_planveyor_reviewer_init_for_session_key"
+    },
+    "planveyor_reviewer_init": {
+      "file": "scripts/planveyor/session_init.zsh",
+      "statement": "_planveyor_reviewer_init_for_session_key reviewer reviewer",
+      "target": "_planveyor_reviewer_init_for_session_key"
+    },
+    "planveyor_rollout_packet_ack": {
+      "file": "scripts/planveyor.zsh",
+      "statement": "_planveyor_rollout_packet_helper_run ack \"$@\"",
+      "target": "_planveyor_rollout_packet_helper_run"
+    },
+    "planveyor_rollout_packet_adoption_plan": {
+      "file": "scripts/planveyor.zsh",
+      "statement": "_planveyor_rollout_packet_helper_run adoption-plan \"$@\"",
+      "target": "_planveyor_rollout_packet_helper_run"
+    },
+    "planveyor_rollout_packet_create": {
+      "file": "scripts/planveyor.zsh",
+      "statement": "_planveyor_rollout_packet_helper_run create \"$@\"",
+      "target": "_planveyor_rollout_packet_helper_run"
+    },
+    "planveyor_rollout_packet_harvest": {
+      "file": "scripts/planveyor.zsh",
+      "statement": "planveyor_rollout_packet_adoption_plan \"$@\"",
+      "target": "planveyor_rollout_packet_adoption_plan"
+    },
+    "planveyor_rollout_packet_import_instructions": {
+      "file": "scripts/planveyor.zsh",
+      "statement": "_planveyor_rollout_packet_helper_run import-instructions \"$@\"",
+      "target": "_planveyor_rollout_packet_helper_run"
+    },
+    "planveyor_rollout_packet_inbox": {
+      "file": "scripts/planveyor.zsh",
+      "statement": "_planveyor_rollout_packet_helper_run inbox \"$@\"",
+      "target": "_planveyor_rollout_packet_helper_run"
+    },
+    "planveyor_rollout_packet_lint": {
+      "file": "scripts/planveyor.zsh",
+      "statement": "_planveyor_rollout_packet_helper_run lint \"$@\"",
+      "target": "_planveyor_rollout_packet_helper_run"
+    },
+    "planveyor_rollout_packet_outcome_set": {
+      "file": "scripts/planveyor.zsh",
+      "statement": "_planveyor_rollout_packet_helper_run outcome-set \"$@\"",
+      "target": "_planveyor_rollout_packet_helper_run"
+    },
+    "planveyor_rollout_packet_query": {
+      "file": "scripts/planveyor.zsh",
+      "statement": "_planveyor_rollout_packet_helper_run query \"$@\"",
+      "target": "_planveyor_rollout_packet_helper_run"
+    },
+    "planveyor_rollout_packet_reconcile": {
+      "file": "scripts/planveyor.zsh",
+      "statement": "_planveyor_rollout_packet_helper_run reconcile \"$@\"",
+      "target": "_planveyor_rollout_packet_helper_run"
+    },
+    "planveyor_rollout_packet_show": {
+      "file": "scripts/planveyor.zsh",
+      "statement": "_planveyor_rollout_packet_helper_run show \"$@\"",
+      "target": "_planveyor_rollout_packet_helper_run"
+    },
+    "planveyor_upstream_request_ack": {
+      "file": "scripts/planveyor.zsh",
+      "statement": "_planveyor_upstream_request_helper_run ack \"$@\"",
+      "target": "_planveyor_upstream_request_helper_run"
+    },
+    "planveyor_upstream_request_import": {
+      "file": "scripts/planveyor.zsh",
+      "statement": "_planveyor_upstream_request_helper_run import \"$@\"",
+      "target": "_planveyor_upstream_request_helper_run"
+    },
+    "planveyor_upstream_request_query": {
+      "file": "scripts/planveyor.zsh",
+      "statement": "_planveyor_upstream_request_helper_run query \"$@\"",
+      "target": "_planveyor_upstream_request_helper_run"
+    },
+    "planveyor_upstream_request_show": {
+      "file": "scripts/planveyor.zsh",
+      "statement": "_planveyor_upstream_request_helper_run show \"$@\"",
+      "target": "_planveyor_upstream_request_helper_run"
+    },
+    "planveyor_wave_telemetry_report": {
+      "file": "scripts/planveyor.zsh",
+      "statement": "_planveyor_wave_telemetry_report \"$@\"",
+      "target": "_planveyor_wave_telemetry_report"
+    },
+    "planveyor_wave_telemetry_report_json": {
+      "file": "scripts/planveyor.zsh",
+      "statement": "_planveyor_wave_telemetry_report --json \"$@\"",
+      "target": "_planveyor_wave_telemetry_report"
+    }
+  },
+  "schema_version": 1
+}

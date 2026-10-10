@@ -1,0 +1,7 @@
+_answers_file: .copier-answers.yml
+_subdirectory: copier_template
+_templates_suffix: .jinja
+
+repository_id:
+  type: str
+  help: "Идентификатор sibling (ASCII letters, digits, dot, underscore, hyphen)"

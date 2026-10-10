@@ -1,0 +1,266 @@
+{
+  "notes": {
+    "code_draft_required": "Statuses where executable handoff must have a code draft / exact bundle carrier.",
+    "external_followups_v2": "New plan.v2 artifacts keep deferred work only in source-bound followups.v2 rows; plan_meta.followups_out is a legacy V1 compatibility carrier and not an authoring default."
+  },
+  "plan_statuses": {
+    "canonical": [
+      "Architect initial draft",
+      "Architect draft",
+      "Ready for Planner",
+      "Planner intake",
+      "Ready for Architect response",
+      "Architect response",
+      "Planner finalize",
+      "Ready for Coder",
+      "Coder intake",
+      "In progress",
+      "Ready for Review",
+      "Reviewer intake",
+      "Reviewer code review",
+      "Reviewer visual review",
+      "Ready for Arch review",
+      "Architect arch review",
+      "Superseded",
+      "Done"
+    ],
+    "groups": {
+      "code_draft_required": [
+        "planner finalize",
+        "ready for coder",
+        "coder intake",
+        "in progress",
+        "ready for review",
+        "reviewer intake",
+        "reviewer code review",
+        "reviewer visual review",
+        "ready for arch review",
+        "architect arch review",
+        "done"
+      ]
+    }
+  },
+  "clusters": {
+    "canonical": [
+      "api",
+      "architecture",
+      "automation",
+      "cli",
+      "data",
+      "deploy",
+      "docs",
+      "infra",
+      "integrations",
+      "observability",
+      "ops",
+      "performance",
+      "process",
+      "quality",
+      "reliability",
+      "security",
+      "ui",
+      "workflow"
+    ],
+    "deprecated_aliases": {}
+  },
+  "manager_modes": {
+    "canonical_required": [
+      "manager-collab",
+      "manager-custom-pipeline",
+      "either"
+    ],
+    "canonical_actual": [
+      "manager-collab",
+      "manager-custom-pipeline"
+    ]
+  },
+  "blocking_dependency_carrier": {
+    "field": "blocking_depends_on",
+    "shape": "sorted_unique_repo_relative_plan_path_array",
+    "subset_of": "depends_on",
+    "clearance": "delivery_green"
+  },
+  "phase_overlays": {
+    "canonical": [
+      "decomposition_wave"
+    ],
+    "states": {
+      "decomposition_wave": [
+        "active",
+        "parked"
+      ]
+    }
+  },
+  "planning_contour": {
+    "wave_markers": {
+      "analysis_wave": {
+        "field": "plan_meta.wave_family",
+        "required_value": "analysis_wave"
+      },
+      "decomposition_wave": {
+        "field": "plan_meta.phase_overlay",
+        "required_value": "decomposition_wave",
+        "state_field": "plan_meta.phase_state",
+        "states": [
+          "active",
+          "parked"
+        ]
+      }
+    },
+    "accepted_routes": [
+      "developer_wave",
+      "decomposition_wave",
+      "human_gate",
+      "defer",
+      "reject"
+    ],
+    "requirement_slice_kinds": [
+      "dev_candidate",
+      "decomposition_candidate",
+      "needs_analysis"
+    ],
+    "reserved_taxonomy": {
+      "qa_wave": {
+        "disposition": "defer",
+        "route_truth": false,
+        "reason": "QA-shaped work needs a materialized QA carrier and public command surface before it can become active route vocabulary."
+      },
+      "post_merge_wave": {
+        "disposition": "defer",
+        "route_truth": false,
+        "reason": "Existing harvest, audit and docs-closeout playbooks plus landed post-merge governance carriers remain delivery-contour tail; carrier count alone is not route admission, and active post_merge_wave needs a separate activation plan with route/proof/queue value."
+      },
+      "decomposition_marker_split": {
+        "disposition": "accept-current-split",
+        "route_truth": false,
+        "current_contract_carrier": "wave_markers",
+        "reason": "analysis_wave uses plan_meta.wave_family; decomposition_wave uses plan_meta.phase_overlay plus plan_meta.phase_state."
+      },
+      "post_merge_state": {
+        "disposition": "defer",
+        "route_truth": false,
+        "reason": "Optional metadata candidate only; no active schema field or helper consumer is accepted."
+      }
+    },
+    "promoted_artifact_kinds": [
+      "seed_dev_plan",
+      "decomposition_umbrella",
+      "owner_gate",
+      "followup",
+      "rejection_receipt"
+    ],
+    "queue_admission": [
+      "queueable_now",
+      "needs_planner",
+      "needs_owner",
+      "not_queueable"
+    ],
+    "runner_admission": [
+      "frontier_only",
+      "small_runner_ok",
+      "small_runner_blocked"
+    ],
+    "queue_activation_states": [
+      "not_requested",
+      "owner_approved",
+      "architect_approved",
+      "n/a"
+    ],
+    "analysis_route_lifecycle_states": [
+      "ok",
+      "warning",
+      "architect_stop",
+      "stale_needs_architect_review",
+      "not_applicable"
+    ],
+    "analysis_route_lifecycle_fields": [
+      "budget_status",
+      "source_ref_floor",
+      "route_iteration_limit",
+      "needs_analysis_depth_cap",
+      "current_needs_analysis_depth",
+      "stop_owner",
+      "exhaustion_action",
+      "override_ref",
+      "source_subject_baseline",
+      "current_source_subject",
+      "source_refs_baseline",
+      "current_source_refs",
+      "change_ref",
+      "action"
+    ],
+    "scope_expansion_states": [
+      "n/a",
+      "suspected",
+      "reroute_required",
+      "architect_accepted"
+    ],
+    "status_transition_matrix": [
+      {
+        "from_marker": "analysis_wave",
+        "accepted_route": "developer_wave",
+        "target_marker": "developer_wave",
+        "initial_status": "Architect initial draft",
+        "required_carriers": [
+          "## Promoted route artifact",
+          "source_analysis_plan",
+          "source_analysis_pack_ref",
+          "plan_meta.promoted_from"
+        ],
+        "queue_activation_required": true,
+        "hard_gate_state": "warning"
+      },
+      {
+        "from_marker": "analysis_wave",
+        "accepted_route": "decomposition_wave",
+        "target_marker": "decomposition_wave",
+        "initial_status": "Architect initial draft",
+        "required_carriers": [
+          "## Promoted route artifact",
+          "source_analysis_plan",
+          "source_analysis_pack_ref",
+          "plan_meta.phase_overlay",
+          "plan_meta.phase_state"
+        ],
+        "queue_activation_required": true,
+        "hard_gate_state": "warning"
+      },
+      {
+        "from_marker": "analysis_wave",
+        "accepted_route": "human_gate",
+        "target_marker": "human_gate",
+        "initial_status": "N/A",
+        "required_carriers": [
+          "## Promoted route artifact",
+          "Owner Q&A or approval request"
+        ],
+        "queue_activation_required": false,
+        "hard_gate_state": "warning"
+      },
+      {
+        "from_marker": "analysis_wave",
+        "accepted_route": "defer",
+        "target_marker": "defer",
+        "initial_status": "N/A",
+        "required_carriers": [
+          "## Promoted route artifact",
+          "plan_meta.followups_out or docs/followups row"
+        ],
+        "queue_activation_required": false,
+        "hard_gate_state": "warning"
+      },
+      {
+        "from_marker": "analysis_wave",
+        "accepted_route": "reject",
+        "target_marker": "reject",
+        "initial_status": "N/A",
+        "required_carriers": [
+          "## Promoted route artifact",
+          "rejection receipt"
+        ],
+        "queue_activation_required": false,
+        "hard_gate_state": "warning"
+      }
+    ]
+  }
+}
