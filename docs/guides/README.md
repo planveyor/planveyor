@@ -1,11 +1,15 @@
 # Guides
 
-Канонические owner-facing инструкции и эксплуатационные гайды Planveyor.
+**English** · [Русский](README.ru.md)
 
-- [Sibling под свой стек: создание, настройка, работа](stack-sibling.md)
-- [Запуск и режимы ролей](launch-and-role-modes.md)
-- [Lifecycle и пакеты](lifecycle-and-packets.md)
-- [Accepted-red и forensic capture](accepted-red.md)
-- [Реестр повторяемых потоков](golden_paths.md)
+Canonical Owner-facing instructions and operating guides for Planveyor.
+
+- [Install Planveyor](install.md)
+- [Stack sibling: create, set up, and work](stack-sibling.md)
+- [Launch and role modes](launch-and-role-modes.md)
+- [Agent harnesses](harnesses.md)
+- [Lifecycle and packets](lifecycle-and-packets.md)
+- [Accepted-red and forensic capture](accepted-red.md)
+- [Golden paths](golden_paths.md)
 - [Planning-contour continuity](planning_contour_continuity.md)
-- [Краткое руководство Owner](../../planveyor_owner_book.md)
+- [Owner guide](../../planveyor_owner_book.md)

@@ -24,6 +24,7 @@ from unittest import mock
 REPO_ROOT = Path(__file__).resolve().parent.parent
 PLANVEYOR_SCRIPT = REPO_ROOT / "scripts" / "planveyor.zsh"
 OWNER_RUNBOOK = REPO_ROOT / "docs" / "tools" / "owner_runbook_codex.md"
+OWNER_RUNBOOK_RU = REPO_ROOT / "docs" / "tools" / "owner_runbook_codex.ru.md"
 
 SUCCESS_SIDS = {
     "architect": "00000000-0000-4000-8000-000000000101",
@@ -442,6 +443,9 @@ class InitCaptureTests(unittest.TestCase):
         source_script: Path | str = Path("scripts/planveyor.zsh"),
         timeout_seconds: float = 60,
     ) -> subprocess.CompletedProcess[str]:
+        # Role runs and init flows that took fifteen seconds or more on a
+        # loaded machine pass timeout_seconds=180; the default stays 60,
+        # which test_run_timeout_is_fail_closed_with_context checks.
         shell_command = (
             f'export PATH={shlex.quote(env["PLANVEYOR_FAKE_CODEX_BIN"])}:$PATH; '
             f"source {shlex.quote(str(source_script))} && {command}"
@@ -607,6 +611,7 @@ class InitCaptureTests(unittest.TestCase):
                 "planveyor_coder_init >/dev/null && "
                 "planveyor_planner_init >/dev/null && "
                 "planveyor_reviewer_init >/dev/null",
+                timeout_seconds=180,
             )
 
             self.assertEqual(result.returncode, 0, result.stderr)
@@ -658,7 +663,7 @@ class InitCaptureTests(unittest.TestCase):
         with tempfile.TemporaryDirectory(prefix="planveyor_init_capture_") as tmpdir:
             root, env, _ = self._prepare_repo(tmpdir, sid_map=SUCCESS_SIDS, fail_role="coder", fail_code=17)
 
-            result = self._run(root, env, "planveyor_coder_init >/dev/null")
+            result = self._run(root, env, "planveyor_coder_init >/dev/null", timeout_seconds=180)
 
             self.assertEqual(result.returncode, 17)
             self.assertIn("Could not detect session id", result.stderr)
@@ -886,6 +891,7 @@ class InitCaptureTests(unittest.TestCase):
                 "local rc=$?; printf 'invalid_runner\\n' > .planveyor.runner.coder; return $rc; }; "
                 "planveyor_runner() { print -r -- invalid_runner; }; "
                 "planveyor_coder_init >/dev/null",
+                timeout_seconds=180,
             )
             self.assertEqual(result.returncode, 0, result.stderr)
             self.assertEqual([call["role"] for call in self._codex_calls(log_dir)], ["coder"])
@@ -927,6 +933,7 @@ class InitCaptureTests(unittest.TestCase):
                 root,
                 env,
                 "planveyor_runner_set planner claude >/dev/null && planveyor_planner_init >/dev/null",
+                timeout_seconds=180,
             )
             self.assertEqual(result.returncode, 0, result.stderr)
 
@@ -1850,7 +1857,7 @@ class InitCaptureTests(unittest.TestCase):
             ]
             payloads: list[dict[str, object]] = []
             for worker in workers:
-                stdout, stderr = worker.communicate(timeout=5)
+                stdout, stderr = worker.communicate(timeout=15)
                 self.assertEqual(worker.returncode, 0, stderr)
                 payloads.append(json.loads(stdout))
             probe_ids = [str(payload["probe_id"]) for payload in payloads]
@@ -1947,7 +1954,7 @@ class InitCaptureTests(unittest.TestCase):
                 root,
                 env,
                 "planveyor_role_run planner --json",
-                timeout_seconds=60,
+                timeout_seconds=180,
             )
 
             self.assertEqual(result.returncode, 0, result.stderr)
@@ -2081,7 +2088,7 @@ class InitCaptureTests(unittest.TestCase):
                 "planveyor_plan_set docs/plans/260101_0000_test_runtime.md >/dev/null && "
                 "planveyor_runner_set planner claude >/dev/null && "
                 "planveyor_planner_init >/dev/null",
-                timeout_seconds=60,
+                timeout_seconds=180,
             )
             self.assertEqual(
                 claude_runner_setup.returncode,
@@ -2092,7 +2099,7 @@ class InitCaptureTests(unittest.TestCase):
                 root,
                 env,
                 "planveyor_role_run planner --json",
-                timeout_seconds=60,
+                timeout_seconds=180,
             )
             self.assertEqual(claude_runner_result.returncode, 0, claude_runner_result.stderr)
             claude_runner_payload = json.loads(claude_runner_result.stdout)
@@ -2131,6 +2138,7 @@ class InitCaptureTests(unittest.TestCase):
                 "_planveyor_test_preflight_original \"$@\"; "
                 "} && "
                 "PLANVEYOR_ROLE_RUN_PREFLIGHT_DONE=true planveyor_role_run planner --json",
+                timeout_seconds=180,
             )
 
             self.assertEqual(result.returncode, 0, result.stderr)
@@ -2178,6 +2186,7 @@ class InitCaptureTests(unittest.TestCase):
                 + "local proof rc; proof=\"$(_planveyor_test_preflight_original \"$@\")\"; rc=$?; "
                 + "print -r -- \"$proof\"; planveyor_runner_set planner claude >/dev/null; return $rc; "
                 + "} && planveyor_role_run planner --json",
+                timeout_seconds=180,
             )
             self.assertEqual(changed.returncode, 125, changed.stderr)
             changed_payload = json.loads(changed.stdout)
@@ -2252,6 +2261,7 @@ class InitCaptureTests(unittest.TestCase):
                         setup
                         + "_planveyor_role_run_execute_for_plan planner "
                         + f"{plan_rel} --preflight-proof {shlex.quote(proof)} --json",
+                        timeout_seconds=180,
                     )
                     self.assertEqual(rejected.returncode, 125, rejected.stderr)
                     rejected_payload = json.loads(rejected.stdout)
@@ -2272,6 +2282,7 @@ class InitCaptureTests(unittest.TestCase):
                 + "mv .planveyor.runner.planner .planveyor.runner.planner.saved && "
                 + "ln -s .planveyor.runner.planner.saved .planveyor.runner.planner; return $rc; "
                 + "} && planveyor_role_run planner --json",
+                timeout_seconds=180,
             )
             self.assertEqual(unreadable.returncode, 125, unreadable.stderr)
             unreadable_payload = json.loads(unreadable.stdout)
@@ -2299,6 +2310,7 @@ class InitCaptureTests(unittest.TestCase):
                 "planveyor_runner_set planner claude >/dev/null; "
                 "_planveyor_test_supervise_original \"$@\"; "
                 "} && planveyor_role_run planner --json",
+                timeout_seconds=180,
             )
 
             self.assertEqual(result.returncode, 0, result.stderr)
@@ -2381,6 +2393,7 @@ class InitCaptureTests(unittest.TestCase):
                 "\"verdict\":\"continue\"}'; } && "
                 "planveyor_custom_role_step planner "
                 "--plan docs/plans/260101_0000_test_runtime.md --json",
+                timeout_seconds=180,
             )
 
             self.assertEqual(result.returncode, 0, result.stderr)
@@ -2926,7 +2939,7 @@ class InitCaptureTests(unittest.TestCase):
             )
             for surface, command in surfaces:
                 with self.subTest(surface=surface):
-                    result = self._run(root, env, command)
+                    result = self._run(root, env, command, timeout_seconds=180)
                     self.assertEqual(result.returncode, 0, result.stderr + result.stdout)
 
             calls = self._codex_calls(log_dir)
@@ -3254,7 +3267,7 @@ class InitCaptureTests(unittest.TestCase):
                 "planveyor_role_run coder --json"
             )
 
-            result = self._run(root, env, command)
+            result = self._run(root, env, command, timeout_seconds=180)
 
             self.assertEqual(result.returncode, 0, result.stderr + result.stdout)
             payload = json.loads(result.stdout)
@@ -3298,7 +3311,7 @@ class InitCaptureTests(unittest.TestCase):
                 "planveyor_role_run coder --json"
             )
 
-            result = self._run(root, env, command)
+            result = self._run(root, env, command, timeout_seconds=180)
 
             self.assertEqual(result.returncode, 125, result.stderr + result.stdout)
             payload = json.loads(result.stdout)
@@ -3326,7 +3339,7 @@ class InitCaptureTests(unittest.TestCase):
                 "planveyor_role_run coder --json"
             )
 
-            result = self._run(root, env, command)
+            result = self._run(root, env, command, timeout_seconds=180)
 
             self.assertEqual(result.returncode, 23, result.stderr + result.stdout)
             payload = json.loads(result.stdout)
@@ -3354,7 +3367,7 @@ class InitCaptureTests(unittest.TestCase):
                 "planveyor_role_run coder --json"
             )
 
-            result = self._run(root, env, command)
+            result = self._run(root, env, command, timeout_seconds=180)
 
             self.assertEqual(result.returncode, 126, result.stderr + result.stdout)
             payload = json.loads(result.stdout)
@@ -3403,6 +3416,7 @@ class InitCaptureTests(unittest.TestCase):
                 + "planveyor_coder() { "
                 + f"print -r -- {shlex.quote(malformed)} >> {shlex.quote(str(plan_path))}; "
                 + "return 0; } && planveyor_role_run coder --json",
+                timeout_seconds=180,
             )
             self.assertEqual(first.returncode, 126, first.stderr + first.stdout)
             failed = json.loads(first.stdout)
@@ -3452,6 +3466,7 @@ class InitCaptureTests(unittest.TestCase):
                 + f"touch {shlex.quote(str(child_env_marker))}; "
                 + f"print -r -- {shlex.quote(fresh)} >> {shlex.quote(str(plan_path))}; "
                 + "return 0; } && planveyor_role_run coder --json",
+                timeout_seconds=180,
             )
             self.assertEqual(second.returncode, 0, second.stderr + second.stdout)
             rerun = json.loads(second.stdout)
@@ -3477,6 +3492,7 @@ class InitCaptureTests(unittest.TestCase):
                 + f"export PLANVEYOR_ROLE_OUTCOME_REJECTION_RECEIPT_SHA256={shlex.quote(rejection_hash)}; "
                 + f"planveyor_coder() {{ touch {shlex.quote(str(child_started))}; return 0; }} && "
                 + "planveyor_role_run coder --json",
+                timeout_seconds=180,
             )
             self.assertEqual(duplicate.returncode, 125, duplicate.stderr + duplicate.stdout)
             duplicate_payload = json.loads(duplicate.stdout)
@@ -3499,6 +3515,7 @@ class InitCaptureTests(unittest.TestCase):
                 + "unset PLANVEYOR_ROLE_OUTCOME_REJECTION_RECEIPT_SHA256; "
                 + f"planveyor_coder() {{ touch {shlex.quote(str(partial_started))}; return 0; }} && "
                 + "planveyor_role_run coder --json",
+                timeout_seconds=180,
             )
             self.assertEqual(partial.returncode, 125, partial.stderr + partial.stdout)
             partial_payload = json.loads(partial.stdout)
@@ -3544,7 +3561,7 @@ class InitCaptureTests(unittest.TestCase):
                     "planveyor_role_run coder --json"
                 )
 
-                result = self._run(root, env, command)
+                result = self._run(root, env, command, timeout_seconds=180)
 
                 self.assertEqual(result.returncode, 126, result.stderr)
                 payload = json.loads(result.stdout)
@@ -3748,6 +3765,7 @@ class InitCaptureTests(unittest.TestCase):
                 "planveyor_planner() { :; } && umask 002; before=$(umask); "
                 "planveyor_role_run planner --json >/dev/null; rc=$?; after=$(umask); "
                 "print -r -- \"$before:$after:$rc\"",
+                timeout_seconds=180,
             )
             umask_before, umask_after, rc = result.stdout.strip().split(":")
             self.assertEqual(umask_before, umask_after)
@@ -4050,6 +4068,7 @@ class InitCaptureTests(unittest.TestCase):
                     "planveyor_planner() { :; } && "
                     f"_planveyor_role_run_test_fail_stage() {{ [[ \"$1\" == primary ]] && print -r -- {stage}; }} && "
                     "planveyor_role_run planner --json",
+                    timeout_seconds=180,
                 )
                 self.assertEqual(result.returncode, 126, result.stderr)
                 payload = json.loads(result.stdout)
@@ -4078,6 +4097,7 @@ class InitCaptureTests(unittest.TestCase):
                     "planveyor_planner() { :; } && "
                     f"_planveyor_role_run_test_fail_stage() {{ [[ \"$1\" == latest ]] && print -r -- {stage}; }} && "
                     "planveyor_role_run planner --json",
+                    timeout_seconds=180,
                 )
                 self.assertEqual(result.returncode, 126, result.stderr)
                 payload = json.loads(result.stdout)
@@ -4114,6 +4134,7 @@ class InitCaptureTests(unittest.TestCase):
                     "planveyor_runner_set planner codex >/dev/null && "
                     f"planveyor_session_set planner {planner_sid} runner=codex >/dev/null && "
                     f"planveyor_planner() {{ :; }} && {hook} && planveyor_role_run planner --json",
+                    timeout_seconds=180,
                 )
                 self.assertEqual(result.returncode, 126, result.stderr)
                 payload = json.loads(result.stdout)
@@ -4167,7 +4188,7 @@ class InitCaptureTests(unittest.TestCase):
                 f"planveyor_session_set planner {planner_sid} runner=codex >/dev/null && "
                 "planveyor_planner() { :; } && planveyor_role_run planner --json"
             )
-            first = self._run(root, env, base_command)
+            first = self._run(root, env, base_command, timeout_seconds=180)
             self.assertEqual(first.returncode, 0, first.stderr)
             for run_id in historical_ids[:4]:
                 self.assertFalse((receipt_root / f"{run_id}.json").exists(), run_id)
@@ -4185,7 +4206,7 @@ class InitCaptureTests(unittest.TestCase):
                         0o600,
                     )
 
-            second = self._run(root, env, base_command)
+            second = self._run(root, env, base_command, timeout_seconds=180)
             self.assertEqual(second.returncode, 0, second.stderr)
             self.assertFalse((receipt_root / "historical-04.json").exists())
             self.assertFalse((output_root / "historical-04").exists())
@@ -4244,7 +4265,7 @@ class InitCaptureTests(unittest.TestCase):
             ]
             for production_orphan in production_orphans:
                 production_orphan.mkdir()
-            orphan_blocked = self._run(root, env, base_command)
+            orphan_blocked = self._run(root, env, base_command, timeout_seconds=180)
             self.assertEqual(orphan_blocked.returncode, 126, orphan_blocked.stderr)
             orphan_blocked_payload = json.loads(orphan_blocked.stdout)
             self.assertEqual(
@@ -4275,7 +4296,7 @@ class InitCaptureTests(unittest.TestCase):
             symlink_receipt.symlink_to(next(receipt_root.glob("*.json")))
             orphan = output_root / "orphan-output"
             orphan.mkdir()
-            blocked = self._run(root, env, base_command)
+            blocked = self._run(root, env, base_command, timeout_seconds=180)
             self.assertEqual(blocked.returncode, 126, blocked.stderr)
             blocked_payload = json.loads(blocked.stdout)
             self.assertEqual(blocked_payload["readback_reason"], "unclassified_carriers")
@@ -4326,6 +4347,7 @@ class InitCaptureTests(unittest.TestCase):
                 f"print -r -- {shlex.quote(json.dumps(prune_payload, sort_keys=True))}; "
                 "return 1; "
                 "} && planveyor_role_run planner --json",
+                timeout_seconds=180,
             )
             self.assertEqual(result.returncode, 126, result.stderr)
             payload = json.loads(result.stdout)
@@ -4932,6 +4954,7 @@ class InitCaptureTests(unittest.TestCase):
                     "planveyor_runner_set architect codex >/dev/null && "
                     f"planveyor_session_set architect {architect_sid} runner=codex >/dev/null && "
                     f"planveyor_role_run {role_key} --json",
+                    timeout_seconds=180,
                 )
 
                 self.assertEqual(result.returncode, 0, result.stderr)
@@ -4982,6 +5005,7 @@ class InitCaptureTests(unittest.TestCase):
                     "planveyor_plan_set docs/plans/260101_0000_test_runtime.md >/dev/null && "
                     f"planveyor_session_set {session_key} {sid} runner=codex >/dev/null && "
                     f"planveyor_role_run {role_key} --json",
+                    timeout_seconds=180,
                 )
 
                 self.assertEqual(result.returncode, 0, result.stderr)
@@ -5057,6 +5081,7 @@ class InitCaptureTests(unittest.TestCase):
                 root,
                 env,
                 setup + "unfunction planveyor_planner && planveyor_role_run planner --json",
+                timeout_seconds=180,
             )
             self.assertEqual(missing_wrapper.returncode, 125, missing_wrapper.stderr)
             missing_payload = json.loads(missing_wrapper.stdout)
@@ -5098,6 +5123,7 @@ class InitCaptureTests(unittest.TestCase):
                 setup
                 + f"_planveyor_role_run_supervise() {{ print -r -- {shlex.quote(supervise_payload)}; }} && "
                 + "planveyor_role_run planner --json",
+                timeout_seconds=180,
             )
             self.assertEqual(spawn_error.returncode, 125, spawn_error.stderr)
             spawn_payload = json.loads(spawn_error.stdout)
@@ -5165,6 +5191,7 @@ class InitCaptureTests(unittest.TestCase):
                         setup
                         + f"planveyor_planner() {{ print -r -- {shlex.quote(message)} >&2; return 23; }} && "
                         + "planveyor_role_run planner --json",
+                        timeout_seconds=180,
                     )
                     self.assertEqual(result.returncode, 23, result.stderr)
                     payload = json.loads(result.stdout)
@@ -5207,6 +5234,7 @@ class InitCaptureTests(unittest.TestCase):
                 setup
                 + "planveyor_planner() { print -r -- 'API Error: status 529 code 1305 overload' >&2; return 0; } && "
                 + "planveyor_role_run planner --json",
+                timeout_seconds=180,
             )
             self.assertEqual(success_noise.returncode, 0, success_noise.stderr)
             success_payload = json.loads(success_noise.stdout)
@@ -5648,6 +5676,7 @@ class InitCaptureTests(unittest.TestCase):
                 "planveyor_runner_set planner codex >/dev/null && "
                 f"planveyor_session_set planner {planner_sid} runner=codex >/dev/null && "
                 "planveyor_role_run planner --json",
+                timeout_seconds=180,
             )
             self.assertEqual(fresh.returncode, 126, fresh.stderr)
             fresh_payload = json.loads(fresh.stdout)
@@ -5808,6 +5837,7 @@ class InitCaptureTests(unittest.TestCase):
                 f"planveyor_session_set reviewer_code_risk {sid_after} runner=codex >/dev/null; "
                 "} && "
                 "planveyor_role_run reviewer_code_risk --json",
+                timeout_seconds=180,
             )
 
             self.assertEqual(result.returncode, 0, result.stderr)
@@ -5846,6 +5876,7 @@ class InitCaptureTests(unittest.TestCase):
                 'print -r -- "PLANVEYOR_ROLE_RUN_TARGET_PLAN=$PLANVEYOR_ROLE_RUN_TARGET_PLAN" >> .tmp/role-run-carrier-env.txt; '
                 "} && "
                 "planveyor_role_run planner --json",
+                timeout_seconds=180,
             )
 
             self.assertEqual(result.returncode, 0, result.stderr)
@@ -5893,6 +5924,7 @@ class InitCaptureTests(unittest.TestCase):
                 "planveyor_arch_resume >/dev/null && "
                 "planveyor_manager_init >/dev/null && "
                 "planveyor_manager_resume >/dev/null",
+                timeout_seconds=180,
             )
 
             self.assertEqual(result.returncode, 0, result.stderr)
@@ -5971,9 +6003,15 @@ class InitCaptureTests(unittest.TestCase):
                 env,
                 "planveyor_runner_set reviewer claude >/dev/null && "
                 "planveyor_reviewer_code_risk_init >/dev/null",
+                timeout_seconds=180,
             )
             self.assertEqual(result.returncode, 0, result.stderr)
-            contracts_result = self._run(root, env, "planveyor_reviewer_code_contracts_init >/dev/null")
+            contracts_result = self._run(
+                root,
+                env,
+                "planveyor_reviewer_code_contracts_init >/dev/null",
+                timeout_seconds=180,
+            )
             self.assertEqual(contracts_result.returncode, 0, contracts_result.stderr)
             self.assertFalse((root / ".planveyor.session.reviewer").exists())
             for lane in lanes:
@@ -6038,6 +6076,7 @@ class InitCaptureTests(unittest.TestCase):
                 "planveyor_runner_set reviewer claude >/dev/null && "
                 f"planveyor_session_set reviewer_code_risk {lane_sid} runner=claude >/dev/null && "
                 "planveyor_reviewer_code_risk >/dev/null",
+                timeout_seconds=180,
             )
 
             self.assertEqual(result.returncode, 0, result.stderr)
@@ -6052,22 +6091,47 @@ class InitCaptureTests(unittest.TestCase):
             self.assertNotIn("--session-id", argv)
 
     def test_public_owner_runbook_documents_neutral_init_run_artifact_lookup(self) -> None:
-        text = OWNER_RUNBOOK.read_text(encoding="utf-8")
+        cases = (
+            (
+                OWNER_RUNBOOK,
+                "## Init-run artifacts\n",
+                "\n## Bounded handoffs\n",
+                (
+                    "is only an attach pointer",
+                    "does not prove that the init or role run finished successfully",
+                    "does not cover",
+                ),
+                ("resume", "live", "tee", "stdout/stderr", "interactive TTY"),
+            ),
+            (
+                OWNER_RUNBOOK_RU,
+                "## Артефакты запусков инициализации\n",
+                "\n## Передача работы с чёткими границами\n",
+                (
+                    "только указатель для подключения к сессии",
+                    "не доказывает, что инициализация или запуск роли завершились успешно",
+                    "не охватывает",
+                ),
+                ("resume", "живой", "tee", "stdout/stderr", "интерактивного TTY"),
+            ),
+        )
+        for runbook, start, end, claims, unsupported_surfaces in cases:
+            with self.subTest(runbook=runbook.name):
+                text = runbook.read_text(encoding="utf-8")
 
-        _before, heading, remainder = text.partition("## Init-run artifacts\n")
-        self.assertTrue(heading)
-        section, next_heading, _after = remainder.partition("\n## Bounded handoffs\n")
-        self.assertTrue(next_heading)
-        self.assertIn("`.planveyor.init_runs/by_sid/<SID>/`", section)
-        self.assertIn("`.planveyor.init_runs/pending/<role>/<run_id>/`", section)
-        self.assertIn("run.log", section)
-        self.assertIn("meta.json", section)
-        self.assertIn("только attach pointer", section)
-        self.assertIn("не доказывает, что init или role run завершился успешно", section)
-        self.assertIn("не охватывает", section)
-        for unsupported_surface in ("resume", "live", "tee", "stdout/stderr", "interactive TTY"):
-            with self.subTest(unsupported_surface=unsupported_surface):
-                self.assertIn(unsupported_surface, section)
+                _before, heading, remainder = text.partition(start)
+                self.assertTrue(heading)
+                section, next_heading, _after = remainder.partition(end)
+                self.assertTrue(next_heading)
+                self.assertIn("`.planveyor.init_runs/by_sid/<SID>/`", section)
+                self.assertIn("`.planveyor.init_runs/pending/<role>/<run_id>/`", section)
+                self.assertIn("run.log", section)
+                self.assertIn("meta.json", section)
+                for claim in claims:
+                    self.assertIn(claim, section)
+                for unsupported_surface in unsupported_surfaces:
+                    with self.subTest(unsupported_surface=unsupported_surface):
+                        self.assertIn(unsupported_surface, section)
 
 
 

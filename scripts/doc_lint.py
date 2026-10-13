@@ -8,6 +8,9 @@ Checks:
 4) Shared reviewer/manager deadlock contract drift across the exact seven-file bundle.
 5) Harvest/followups durable-carrier drift for range receipts/backlogs.
 6) Optional explicit-root basic hygiene for finalized docs artifacts.
+7) Translation pairs registered in ``i18n/pairs.json`` (global or selected scope): registry
+   shape, sync stamps, stale pairs and unregistered ``*.ru.md`` copies. A
+   registered copy also gets the per-file checks whenever its source does.
 
 Default scope is the durable/canonical docs surface for this repo, not plans,
 snapshots, or review artifacts.
@@ -17,9 +20,10 @@ from __future__ import annotations
 
 import argparse
 from dataclasses import dataclass
+import hashlib
 import json
 import os
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 import re
 import subprocess
 import sys
@@ -119,18 +123,25 @@ def _selected_product_root(value: str | None) -> Path | None:
 DEFAULT_ROOTS = (
     REPO_ROOT / "AGENTS.md",
     REPO_ROOT / "README.md",
+    REPO_ROOT / "README.ru.md",
+    REPO_ROOT / "CONTRIBUTING.md",
+    REPO_ROOT / "SECURITY.md",
     REPO_ROOT / "planveyor_owner_book.md",
     REPO_ROOT / "docs" / "code_drafts" / "_template.md",
+    REPO_ROOT / "docs" / "guides",
     REPO_ROOT / "docs" / "roles",
     REPO_ROOT / "docs" / "playbooks",
     REPO_ROOT / "docs" / "tools",
 )
-DEFAULT_EXCLUDES = (
-    REPO_ROOT / "docs" / "snapshots",
-    REPO_ROOT / "docs" / "plans",
-    REPO_ROOT / "docs" / "code_reviews",
-    REPO_ROOT / "docs" / "doc_reviews",
+# Historical buckets excluded by default.  The translation-pair scan derives
+# its exclusions from the same list, relative to the checked repository.
+DEFAULT_EXCLUDE_DIRS_REL: tuple[str, ...] = (
+    "docs/snapshots",
+    "docs/plans",
+    "docs/code_reviews",
+    "docs/doc_reviews",
 )
+DEFAULT_EXCLUDES = tuple(REPO_ROOT / rel_dir for rel_dir in DEFAULT_EXCLUDE_DIRS_REL)
 DEFAULT_EXCLUDE_FILES: tuple[Path, ...] = ()
 
 EXTERNAL_SCHEMES = ("http://", "https://", "mailto:", "tel:", "tg:", "ftp://")
@@ -433,6 +444,60 @@ ADR_REQUIRED_SECTION_TITLES: tuple[str, ...] = (
     "revisit signals",
     "superseded by / supersedes",
 )
+
+# Translation pairs: an English human document `name.md` and its Russian copy
+# `name.ru.md` next to it.  The registry names every pair up front, so a lost
+# copy or stamp is caught, not only a stamp that happens to be present.
+I18N_PAIRS_REGISTRY = "i18n/pairs.json"
+I18N_PAIRS_SCHEMA = "planveyor_i18n_pairs.v1"
+I18N_SOURCE_SUFFIX = ".md"
+I18N_COPY_SUFFIX = ".ru.md"
+# The first line of a copy, followed by LF.  pair-sha256 covers every source
+# byte; self-sha256 covers the copy without exactly that line and its LF.
+# Hashes use the bytes as they are: CR is refused, nothing is normalized.
+I18N_STAMP_PREFIX = b"<!-- i18n:"
+I18N_STAMP_RE = re.compile(
+    r"<!-- i18n: pair=(?P<pair>\S+) pair-sha256=(?P<pair_sha256>[0-9a-f]{64}) "
+    r"self-sha256=(?P<self_sha256>[0-9a-f]{64}) -->"
+)
+I18N_STAMP_SHAPE = "<!-- i18n: pair=<source> pair-sha256=<64 hex> self-sha256=<64 hex> -->"
+I18N_STAMP_COMMAND = "PYTHONDONTWRITEBYTECODE=1 python3 -B scripts/i18n_pairs.py stamp"
+# Directories the unregistered-copy scan never enters: Git metadata, local
+# scratch space, linked worktrees and third-party dependency trees.
+I18N_SCAN_SKIP_DIR_NAMES = frozenset({".git", ".tmp", ".worktrees", ".venv", "node_modules"})
+
+
+@dataclass(frozen=True)
+class I18nPair:
+    source: str
+    copy: str
+
+
+@dataclass(frozen=True)
+class I18nPairsRegistry:
+    path: Path
+    # False when the file cannot be read or has the wrong schema: then no pair
+    # is known and the unregistered-copy scan is skipped instead of guessing.
+    usable: bool
+    pairs: tuple[I18nPair, ...]
+    # Every `copy` string named by an entry, valid or not, so a bad entry is
+    # reported once as a registry problem and not again as an unregistered copy.
+    named_copies: frozenset[str]
+    findings: tuple[Finding, ...]
+
+
+@dataclass(frozen=True)
+class I18nStamp:
+    pair: str
+    pair_sha256: str
+    self_sha256: str
+
+
+@dataclass(frozen=True)
+class I18nPairsReport:
+    registry: I18nPairsRegistry
+    pair_findings: tuple[tuple[I18nPair, tuple[Finding, ...]], ...]
+    unregistered_findings: tuple[Finding, ...]
 
 
 def rel(path: Path) -> str:
@@ -1101,6 +1166,430 @@ def lint_adr_bundle(repo_root: Path | None = None) -> list[Finding]:
             )
 
     return findings
+
+
+def _i18n_registry_finding(registry_path: Path, message: str) -> Finding:
+    return Finding(
+        file=registry_path,
+        line=1,
+        severity="ERROR",
+        message=f"i18n pairs registry: {message}",
+    )
+
+
+def _is_i18n_registry_path(value: Any) -> bool:
+    if not isinstance(value, str) or not value:
+        return False
+    if "\\" in value or any(char.isspace() or not char.isprintable() for char in value):
+        return False
+    pure = PurePosixPath(value)
+    return (
+        not pure.is_absolute()
+        and pure.as_posix() == value
+        and not any(part in {".", ".."} for part in pure.parts)
+    )
+
+
+def load_i18n_pairs_registry(repo_root: Path) -> I18nPairsRegistry | None:
+    """Read ``i18n/pairs.json`` of ``repo_root``; ``None`` means there is no registry.
+
+    A source checkout has the engine facade/runtime and Copier source tree;
+    losing its registry is an error. Without those source markers or a registry,
+    pair checks stay off so delivered sibling documents need no second language.
+    """
+    root = repo_root.resolve()
+    registry_path = root / I18N_PAIRS_REGISTRY
+
+    def unusable(message: str) -> I18nPairsRegistry:
+        return I18nPairsRegistry(
+            path=registry_path,
+            usable=False,
+            pairs=(),
+            named_copies=frozenset(),
+            findings=(_i18n_registry_finding(registry_path, message),),
+        )
+
+    if not registry_path.exists() and not registry_path.is_symlink():
+        if (
+            (root / "copier.yml").is_file()
+            and (root / "copier_template").is_dir()
+            and (root / "bin/planveyor").is_file()
+            and (root / "scripts/planveyor.zsh").is_file()
+        ):
+            return unusable(f"{I18N_PAIRS_REGISTRY} is missing from the Planveyor source checkout")
+        return None
+
+    def reject_duplicates(items: list[tuple[str, Any]]) -> dict[str, Any]:
+        result: dict[str, Any] = {}
+        for key, value in items:
+            if key in result:
+                raise ValueError(f"duplicate key {key!r}")
+            result[key] = value
+        return result
+
+    try:
+        raw = json.loads(registry_path.read_bytes().decode("utf-8"), object_pairs_hook=reject_duplicates)
+    except OSError as exc:
+        return unusable(f"cannot read {I18N_PAIRS_REGISTRY}: {exc.strerror or exc}")
+    except UnicodeDecodeError:
+        return unusable(f"{I18N_PAIRS_REGISTRY} is not UTF-8")
+    except ValueError as exc:
+        return unusable(f"{I18N_PAIRS_REGISTRY} is not valid JSON: {exc}")
+    if not isinstance(raw, dict) or set(raw) != {"schema", "pairs"}:
+        return unusable('expected a JSON object with exactly the keys "schema" and "pairs"')
+    if raw["schema"] != I18N_PAIRS_SCHEMA:
+        return unusable(f'"schema" must be {I18N_PAIRS_SCHEMA!r}, got {raw["schema"]!r}')
+    if not isinstance(raw["pairs"], list):
+        return unusable('"pairs" must be a list')
+
+    pairs: list[I18nPair] = []
+    named_copies: set[str] = set()
+    sources: set[str] = set()
+    findings: list[Finding] = []
+    for index, entry in enumerate(raw["pairs"]):
+        label = f"pairs[{index}]"
+        if isinstance(entry, dict) and isinstance(entry.get("copy"), str):
+            named_copies.add(entry["copy"])
+        if not isinstance(entry, dict) or set(entry) != {"source", "copy"}:
+            findings.append(
+                _i18n_registry_finding(
+                    registry_path,
+                    f'{label} must be an object with exactly the keys "source" and "copy"',
+                )
+            )
+            continue
+        bad_field = next((field for field in ("source", "copy") if not _is_i18n_registry_path(entry[field])), None)
+        if bad_field is not None:
+            findings.append(
+                _i18n_registry_finding(
+                    registry_path,
+                    f"{label}.{bad_field} must be a repository-relative POSIX path without spaces, "
+                    f"got {entry[bad_field]!r}",
+                )
+            )
+            continue
+        source: str = entry["source"]
+        copy: str = entry["copy"]
+        if not source.endswith(I18N_SOURCE_SUFFIX) or source.endswith(I18N_COPY_SUFFIX):
+            findings.append(
+                _i18n_registry_finding(
+                    registry_path,
+                    f"{label}.source must name a `*{I18N_SOURCE_SUFFIX}` document that is not "
+                    f"a `*{I18N_COPY_SUFFIX}` copy, got {source!r}",
+                )
+            )
+            continue
+        expected_copy = source[: -len(I18N_SOURCE_SUFFIX)] + I18N_COPY_SUFFIX
+        if copy != expected_copy:
+            findings.append(
+                _i18n_registry_finding(
+                    registry_path,
+                    f"{label}.copy must sit next to its source as {expected_copy!r}, got {copy!r}",
+                )
+            )
+            continue
+        if source in sources:
+            findings.append(
+                _i18n_registry_finding(registry_path, f"{label} repeats the pair for {source!r}")
+            )
+            continue
+        sources.add(source)
+        pairs.append(I18nPair(source=source, copy=copy))
+
+    return I18nPairsRegistry(
+        path=registry_path,
+        usable=True,
+        pairs=tuple(pairs),
+        named_copies=frozenset(named_copies),
+        findings=tuple(findings),
+    )
+
+
+def i18n_first_cr_line(data: bytes) -> int | None:
+    """Return the 1-based line of the first CR byte, or ``None`` when there is none."""
+    index = data.find(b"\r")
+    if index < 0:
+        return None
+    return data.count(b"\n", 0, index) + 1
+
+
+def read_i18n_stamp(copy_bytes: bytes) -> tuple[str, I18nStamp | None, bytes]:
+    """Split a Russian copy into its sync stamp and body.
+
+    Returns ``(state, stamp, body)``.  ``state`` is ``"missing"`` when the first
+    line does not start like a stamp (``body`` is then the whole file),
+    ``"malformed"`` when it starts like one but is not exactly one stamp line
+    followed by LF, and ``"ok"`` otherwise.  ``body`` drops exactly the first
+    line and its LF; no other byte changes.
+    """
+    newline = copy_bytes.find(b"\n")
+    first_line = copy_bytes if newline < 0 else copy_bytes[:newline]
+    if not first_line.startswith(I18N_STAMP_PREFIX):
+        return "missing", None, copy_bytes
+    body = b"" if newline < 0 else copy_bytes[newline + 1 :]
+    try:
+        match = I18N_STAMP_RE.fullmatch(first_line.decode("utf-8"))
+    except UnicodeDecodeError:
+        match = None
+    if newline < 0 or match is None:
+        return "malformed", None, body
+    return "ok", I18nStamp(match["pair"], match["pair_sha256"], match["self_sha256"]), body
+
+
+def i18n_pair_digests(source_bytes: bytes, copy_body: bytes) -> tuple[str, str]:
+    """Return ``(pair-sha256, self-sha256)`` over the exact bytes."""
+    return hashlib.sha256(source_bytes).hexdigest(), hashlib.sha256(copy_body).hexdigest()
+
+
+def format_i18n_stamp(source: str, pair_sha256: str, self_sha256: str) -> str:
+    return f"<!-- i18n: pair={source} pair-sha256={pair_sha256} self-sha256={self_sha256} -->"
+
+
+def _read_i18n_pair_file(path: Path) -> bytes | None:
+    try:
+        return path.read_bytes() if path.is_file() else None
+    except OSError:
+        return None
+
+
+def lint_i18n_pair(repo_root: Path, pair: I18nPair, *, strict: bool) -> list[Finding]:
+    """Check one registered pair: both files, CR, the stamp and its hashes."""
+    root = repo_root.resolve()
+    source_path = root / pair.source
+    copy_path = root / pair.copy
+    source_bytes = _read_i18n_pair_file(source_path)
+    copy_bytes = _read_i18n_pair_file(copy_path)
+    findings: list[Finding] = []
+    if source_bytes is None:
+        findings.append(
+            Finding(
+                file=source_path,
+                line=1,
+                severity="ERROR",
+                message=f"i18n pair source is missing: {pair.source} (copy {pair.copy})",
+            )
+        )
+    if copy_bytes is None:
+        findings.append(
+            Finding(
+                file=copy_path,
+                line=1,
+                severity="ERROR",
+                message=f"i18n pair copy is missing: {pair.copy} (source {pair.source})",
+            )
+        )
+    if source_bytes is None or copy_bytes is None:
+        return findings
+
+    for path, data, role in ((source_path, source_bytes, "source"), (copy_path, copy_bytes, "copy")):
+        cr_line = i18n_first_cr_line(data)
+        if cr_line is None:
+            continue
+        findings.append(
+            Finding(
+                file=path,
+                line=cr_line,
+                severity="ERROR",
+                message=f"i18n pair {role} contains CR bytes; pair hashes cover exact bytes, use LF line endings",
+            )
+        )
+    if findings:
+        return findings
+
+    state, stamp, body = read_i18n_stamp(copy_bytes)
+    if state == "missing":
+        return [
+            Finding(
+                file=copy_path,
+                line=1,
+                severity="ERROR",
+                message=(
+                    f"i18n sync stamp is missing: the first line must be the stamp for {pair.source}; "
+                    f"run `{I18N_STAMP_COMMAND} {pair.copy}`"
+                ),
+            )
+        ]
+    if stamp is None:
+        return [
+            Finding(
+                file=copy_path,
+                line=1,
+                severity="ERROR",
+                message=f"i18n sync stamp is malformed: the first line must be exactly `{I18N_STAMP_SHAPE}` followed by LF",
+            )
+        ]
+    if stamp.pair != pair.source:
+        return [
+            Finding(
+                file=copy_path,
+                line=1,
+                severity="ERROR",
+                message=(
+                    f"i18n sync stamp names pair={stamp.pair}, but {I18N_PAIRS_REGISTRY} pairs "
+                    f"this copy with {pair.source}"
+                ),
+            )
+        ]
+
+    pair_sha256, self_sha256 = i18n_pair_digests(source_bytes, body)
+    severity = "ERROR" if strict else "WARN"
+    if stamp.pair_sha256 != pair_sha256:
+        findings.append(
+            Finding(
+                file=copy_path,
+                line=1,
+                severity=severity,
+                message=(
+                    f"i18n pair is stale: source {pair.source} changed after the last sync "
+                    f"(pair-sha256 mismatch); update the copy, then run `{I18N_STAMP_COMMAND} {pair.copy}`"
+                ),
+            )
+        )
+    if stamp.self_sha256 != self_sha256:
+        findings.append(
+            Finding(
+                file=copy_path,
+                line=1,
+                severity=severity,
+                message=(
+                    f"i18n pair is stale: copy {pair.copy} changed after the last sync "
+                    f"(self-sha256 mismatch); carry the change to the source if needed, "
+                    f"then run `{I18N_STAMP_COMMAND} {pair.copy}`"
+                ),
+            )
+        )
+    return findings
+
+
+def iter_i18n_copy_files(repo_root: Path) -> list[Path]:
+    """List the ``*.ru.md`` files of the working tree for the registry check.
+
+    The scan covers the whole tree, so a copy is caught wherever it appears.
+    It does not enter Git metadata, local scratch, worktree or dependency
+    directories (``I18N_SCAN_SKIP_DIR_NAMES``), nested checkouts (directories
+    with their own ``.git``), or the historical buckets doc-lint excludes by
+    default (``DEFAULT_EXCLUDE_DIRS_REL``).
+    """
+    root = repo_root.resolve()
+    excluded = {root / rel_dir for rel_dir in DEFAULT_EXCLUDE_DIRS_REL}
+    found: list[Path] = []
+    for dirpath, dirnames, filenames in os.walk(root):
+        current = Path(dirpath)
+        dirnames[:] = sorted(
+            name
+            for name in dirnames
+            if name not in I18N_SCAN_SKIP_DIR_NAMES
+            and current / name not in excluded
+            and not (current / name / ".git").exists()
+        )
+        found.extend(current / name for name in sorted(filenames) if name.endswith(I18N_COPY_SUFFIX))
+    return found
+
+
+def inspect_i18n_pairs(repo_root: Path, *, strict: bool) -> I18nPairsReport | None:
+    """Return the pair check report, or ``None`` when ``repo_root`` has no registry."""
+    registry = load_i18n_pairs_registry(repo_root)
+    if registry is None:
+        return None
+    root = repo_root.resolve()
+    pair_findings = tuple(
+        (pair, tuple(lint_i18n_pair(root, pair, strict=strict))) for pair in registry.pairs
+    )
+    unregistered: list[Finding] = []
+    if registry.usable:
+        for copy_path in iter_i18n_copy_files(root):
+            rel_copy = copy_path.relative_to(root).as_posix()
+            if rel_copy in registry.named_copies:
+                continue
+            unregistered.append(
+                Finding(
+                    file=copy_path,
+                    line=1,
+                    severity="ERROR",
+                    message=f"{rel_copy} is not registered in {I18N_PAIRS_REGISTRY}; add its pair or rename the file",
+                )
+            )
+    return I18nPairsReport(
+        registry=registry,
+        pair_findings=pair_findings,
+        unregistered_findings=tuple(unregistered),
+    )
+
+
+def lint_i18n_pairs(
+    repo_root: Path,
+    *,
+    strict: bool,
+    roots: Sequence[Path] | None = None,
+    exclude_dirs: Sequence[Path] = (),
+    exclude_files: Sequence[Path] = (),
+    allow_default_excluded_explicit_files: Sequence[Path] = (),
+) -> list[Finding]:
+    """Check registered pairs globally, or just pairs selected by ``roots``.
+
+    Selecting either member selects the pair, including a missing member.
+    Registry errors always apply because the registry defines the scope.
+    Unregistered copies are reported only inside the selected scope. A stale
+    pair is a warning, or an error with ``strict``. No registry in a sibling
+    means no findings; a missing source-checkout registry is an error.
+    """
+    report = inspect_i18n_pairs(repo_root, strict=strict)
+    if report is None:
+        return []
+
+    def selected(path: Path) -> bool:
+        if roots is None:
+            return True
+        selected_roots = list(roots)
+        # A removed directory still selects the declared pairs beneath it.
+        # Missing *.md roots select only that exact file, as in the normal lint.
+        if any(
+            not scope_root.exists()
+            and scope_root.suffix.lower() != ".md"
+            and scope_root.resolve() in path.resolve().parents
+            for scope_root in roots
+        ):
+            selected_roots.append(path)
+        return _target_is_selected_by_scope(
+            path,
+            selected_roots,
+            exclude_dirs,
+            exclude_files,
+            allow_default_excluded_explicit_files=allow_default_excluded_explicit_files,
+        )
+
+    root = repo_root.resolve()
+    findings = list(report.registry.findings)
+    for pair, pair_findings in report.pair_findings:
+        if selected(root / pair.source) or selected(root / pair.copy):
+            findings.extend(pair_findings)
+    findings.extend(finding for finding in report.unregistered_findings if selected(finding.file))
+    return findings
+
+
+def with_registered_i18n_copies(
+    markdown_files: Sequence[Path],
+    repo_root: Path,
+    exclude_files: Sequence[Path] = (),
+) -> list[Path]:
+    """Return ``markdown_files`` plus the registered copy of every selected source.
+
+    A copy gets the same per-file checks as its source.  The result is a set,
+    so a copy the roots already select is still checked once.
+    """
+    selected = {path.resolve() for path in markdown_files}
+    registry = load_i18n_pairs_registry(repo_root)
+    if registry is None:
+        return sorted(selected)
+    root = repo_root.resolve()
+    excluded = {path.resolve() for path in exclude_files}
+    for pair in registry.pairs:
+        copy_path = (root / pair.copy).resolve()
+        if (root / pair.source).resolve() not in selected or copy_path in excluded:
+            continue
+        if copy_path.is_file():
+            selected.add(copy_path)
+    return sorted(selected)
 
 
 def rel_to(path: Path, root: Path) -> str:
@@ -2106,7 +2595,10 @@ def lint_file(
     findings: list[Finding] = []
 
     fence: str | None = None
-    lines = markdown_file.read_text(encoding="utf-8").splitlines()
+    try:
+        lines = markdown_file.read_text(encoding="utf-8").splitlines()
+    except UnicodeDecodeError:
+        return [Finding(markdown_file, 1, "ERROR", "Markdown file is not UTF-8")]
     for line_no, raw_line in enumerate(lines, start=1):
         fence = update_fence_state(raw_line, fence)
         if fence is not None:
@@ -2166,7 +2658,15 @@ def lint_file(
             ):
                 anchors = anchor_cache.get(resolved)
                 if anchors is None:
-                    anchors = extract_heading_anchors(resolved)
+                    try:
+                        anchors = extract_heading_anchors(resolved)
+                    except UnicodeDecodeError:
+                        if not any(
+                            finding.file == resolved and finding.message == "Markdown file is not UTF-8"
+                            for finding in findings
+                        ):
+                            findings.append(Finding(resolved, 1, "ERROR", "Markdown file is not UTF-8"))
+                        continue
                     anchor_cache[resolved] = anchors
                 if anchor not in anchors:
                     findings.append(
@@ -2271,6 +2771,16 @@ def parse_args() -> argparse.Namespace:
         choices=sorted(_KNOWN_CONTENT_PROFILES),
         help="Public profiles use generic references; callers may pass an explicit ProductRootPolicy.",
     )
+    parser.add_argument(
+        "--i18n-strict",
+        action="store_true",
+        help=(
+            f"Check translation pairs from {I18N_PAIRS_REGISTRY} strictly: a stale pair (source or "
+            "copy changed after the last sync stamp) is an ERROR instead of a WARN. Use it in release "
+            "and site-build routes. Default scope and this flag check every pair; otherwise "
+            "--root checks just the selected pairs, with stale pairs reported as warnings."
+        ),
+    )
     return parser.parse_args()
 
 
@@ -2327,11 +2837,15 @@ def main() -> int:
         for root in roots
         if args.root and not args.exclude and root.is_file()
     )
-    markdown_files = iter_markdown_files(
-        roots,
-        exclude_dirs,
+    markdown_files = with_registered_i18n_copies(
+        iter_markdown_files(
+            roots,
+            exclude_dirs,
+            exclude_files,
+            allow_default_excluded_explicit_files=allow_default_excluded_explicit_files,
+        ),
+        selected_repo_root,
         exclude_files,
-        allow_default_excluded_explicit_files=allow_default_excluded_explicit_files,
     )
     anchor_cache: dict[Path, set[str]] = {}
 
@@ -2365,6 +2879,16 @@ def main() -> int:
         allow_default_excluded_explicit_files=allow_default_excluded_explicit_files,
     ):
         all_findings.extend(lint_adr_bundle(selected_repo_root))
+    all_findings.extend(
+        lint_i18n_pairs(
+            selected_repo_root,
+            strict=args.i18n_strict,
+            roots=roots if args.root and not args.i18n_strict else None,
+            exclude_dirs=exclude_dirs,
+            exclude_files=exclude_files,
+            allow_default_excluded_explicit_files=allow_default_excluded_explicit_files,
+        )
+    )
     if not args.root or scope_covers_descoped_debt_guard_bundle(
         roots,
         exclude_dirs,
@@ -2382,16 +2906,27 @@ def main() -> int:
         )
     )
     for markdown_file in markdown_files:
-        all_findings.extend(
-            lint_file(
-                markdown_file,
-                code_refs_scope=args.code_refs_scope if args.check_code_refs else None,
-                check_anchors=args.check_anchors,
-                anchor_cache=anchor_cache,
-                product_policy=product_policy,
-                product_root=product_root,
-            )
+        file_findings = lint_file(
+            markdown_file,
+            code_refs_scope=args.code_refs_scope if args.check_code_refs else None,
+            check_anchors=args.check_anchors,
+            anchor_cache=anchor_cache,
+            product_policy=product_policy,
+            product_root=product_root,
         )
+        for finding in file_findings:
+            if finding.message == "Markdown file is not UTF-8" and any(
+                existing.file.resolve() == finding.file.resolve()
+                and (
+                    existing.message == finding.message
+                    or existing.message.startswith("i18n sync stamp is malformed:")
+                )
+                for existing in all_findings
+            ):
+                # A malformed stamp or an earlier anchor read already reports
+                # these invalid bytes; other file findings remain independent.
+                continue
+            all_findings.append(finding)
 
     if not all_findings:
         print("doc-lint: OK")

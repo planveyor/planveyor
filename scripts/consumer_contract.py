@@ -22,6 +22,7 @@ except ImportError:  # Keep the CLI diagnostic actionable when bootstrap is inco
     yaml = None
 
 from contract_authority_snapshot import ContractAuthorityError, parse_local_marker_bytes
+import retrieval_telemetry_receipt
 
 SOURCE_URL = "https://github.com/planveyor/planveyor.git"
 MARKER = Path("docs/_meta/planveyor_contract_authority.v1.json")
@@ -618,6 +619,16 @@ def notices(runtime: Path, old: str, new: str) -> list[dict[str, object]]:
     return result
 
 
+# The generated plan only lists changed paths and never retrieves documentation.
+# A listed retrieval helper such as docs_retrieve.py still trips the receipt
+# lint, so record the same bounded no-op receipt as review-range scaffolds.
+RETRIEVAL_NO_OP_RECEIPT = (
+    "## Retrieval telemetry receipt\n"
+    "- used_for_decision: `false`\n"
+    "- no_op_reason: `not_used_for_decision`\n\n"
+)
+
+
 def adaptation_plan(candidate: Path, runtime: Path, old: str, new: str,
                     changed_contract: list[str], changed_engine: list[str], selected_notices: list[dict[str, object]]) -> Path:
     now = datetime.now().astimezone()
@@ -645,6 +656,8 @@ def adaptation_plan(candidate: Path, runtime: Path, old: str, new: str,
     body = body.replace("## Tests\n", "## Tests\n- Проверить локальные stack/Reviewer overrides и точный diff.\n" + "\n".join(f"- {x}" for x in checks) + "\n", 1)
     body = body.replace("## Commands\n", "## Commands\n- `\"$PLANVEYOR_RUNTIME_ROOT/bin/planveyor\" --project \"$PWD\" planveyor_consumer_doctor`\n", 1)
     body = body.replace("## Evidence (chronological, append-only)\n", "## Evidence (chronological, append-only)\n- План создан механическим обновлением; проверки sibling и решения Architect/Reviewer ещё открыты.\n" + "\n".join(f"- Действие: {x}" for x in actions) + "\n", 1)
+    if retrieval_telemetry_receipt.needs_retrieval_telemetry_receipt(body.splitlines()):
+        body = body.replace("## Problem\n", RETRIEVAL_NO_OP_RECEIPT + "## Problem\n", 1)
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(body, encoding="utf-8")
     lint = command([os.fspath(runtime / "bin/planveyor"), "--project", os.fspath(candidate),

@@ -2,7 +2,7 @@
 
 Это приложение для разработчиков Planveyor. Сюда вынесены таблицы из всех глав: файлы и функции, с которых стоит начать чтение реализации, и именованные тесты с тем, что они проверяют. Разделы идут в порядке глав. Номера строк в коде меняются, поэтому ищите функцию или тест по имени.
 
-Описания тестов сделаны по их исходному коду. Прошли ли эти тесты на вашей версии, показывает только их запуск: команды — в [маршрутах проверки](../../tools/verify_suite.md).
+Описания тестов сделаны по их исходному коду. Прошли ли эти тесты на вашей версии, показывает только их запуск: команды — в [маршрутах проверки](../../tools/verify_suite.ru.md).
 
 ## Роли и файлы задачи
 
@@ -207,8 +207,8 @@
 
 | Маршрут | Каноническая инструкция | Точка входа в реализацию |
 | --- | --- | --- |
-| Init | [Руководство по sibling](../stack-sibling.md), создание проекта | [sibling_runbook.py](../../../scripts/sibling_runbook.py): `handle_init()` → [consumer_contract.py](../../../scripts/consumer_contract.py): `init()` |
-| Upgrade | [Руководство по sibling](../stack-sibling.md), получение новой версии | [sibling_runbook.py](../../../scripts/sibling_runbook.py): `handle_upgrade()` → [consumer_contract.py](../../../scripts/consumer_contract.py): `upgrade()` и `adaptation_plan()` |
+| Init | [Руководство по sibling](../stack-sibling.ru.md), создание проекта | [sibling_runbook.py](../../../scripts/sibling_runbook.py): `handle_init()` → [consumer_contract.py](../../../scripts/consumer_contract.py): `init()` |
+| Upgrade | [Руководство по sibling](../stack-sibling.ru.md), получение новой версии | [sibling_runbook.py](../../../scripts/sibling_runbook.py): `handle_upgrade()` → [consumer_contract.py](../../../scripts/consumer_contract.py): `upgrade()` и `adaptation_plan()` |
 
 Имена Python-функций в таблице — адреса для чтения реализации. Пользовательские вызовы берутся из guide и `planveyor_help`; внутренние helpers не следует превращать в альтернативный публичный интерфейс.
 
@@ -241,8 +241,8 @@
 
 | Маршрут | Каноническая инструкция | Точка входа в реализацию |
 | --- | --- | --- |
-| Upstream | [CONTRIBUTING](../../../CONTRIBUTING.md) и [Lifecycle и пакеты](../lifecycle-and-packets.md) | [upstream_request.py](../../../scripts/upstream_request.py): `cmd_import()` и `cmd_ack()`; [шаблон запроса](../../upstream_packets/_template.md) |
-| Rollout | [Lifecycle/packets](../lifecycle-and-packets.md) | [rollout_packet.py](../../../scripts/rollout_packet.py): `cmd_create()`, `cmd_adoption_plan()`, `cmd_outcome_set()`, `cmd_reconcile()` |
+| Upstream | [CONTRIBUTING](../../../CONTRIBUTING.ru.md) и [Lifecycle и пакеты](../lifecycle-and-packets.ru.md) | [upstream_request.py](../../../scripts/upstream_request.py): `cmd_import()` и `cmd_ack()`; [шаблон запроса](../../upstream_packets/_template.md) |
+| Rollout | [Lifecycle/packets](../lifecycle-and-packets.ru.md) | [rollout_packet.py](../../../scripts/rollout_packet.py): `cmd_create()`, `cmd_adoption_plan()`, `cmd_outcome_set()`, `cmd_reconcile()` |
 
 ### Что проверяют тесты
 
@@ -324,7 +324,7 @@
 - [Prompts README](../../tools/prompts/README.md): shared corpus и declared target-local источники.
 - [Docs architecture](../../playbooks/docs_architecture.md): source ownership, delivery и производные outputs.
 - [planveyor.zsh](../../../scripts/planveyor.zsh): `_planveyor_prompt_file_for_role_phase` и публичные entrypoints.
-- [Runtime modules](../../../scripts/planveyor/README.md): назначение и порядок загрузки модулей.
+- [Runtime modules](../../../scripts/planveyor/README.ru.md): назначение и порядок загрузки модулей.
 - [check_planveyor_profile_contract.py](../../../scripts/check_planveyor_profile_contract.py): `EXACT_BUNDLE`, `INVARIANT_IDS`, `_check_doc_lint`.
 - [build_role_bundles.py](../../../scripts/build_role_bundles.py): сборка runtime-контекста из исходников.
 - [shared_docs_mirror_drift.py](../../../scripts/shared_docs_mirror_drift.py): declared mirror membership и read-only report.

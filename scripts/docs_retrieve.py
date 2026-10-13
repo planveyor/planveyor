@@ -26,6 +26,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 from docs_context_registry import contexts_for_path, format_contexts_inline
+from docs_index_build import corpus_rules, read_index_config, translation_copy_suffixes, validate_index_config
 
 
 DEFAULT_DB = ".tmp/planveyor_docs_index.sqlite"
@@ -104,6 +105,13 @@ def _ensure_db_ready(conn: sqlite3.Connection) -> dict[str, str]:
     if not schema_version:
         raise RuntimeDataError("Index DB has no schema_version in meta. Rebuild the index.")
 
+    try:
+        config = read_index_config(conn)
+        rules = corpus_rules("canon", config["root"], config["chunk_target_tokens"])
+        validate_index_config(conn, rules=rules)
+    except RuntimeError as e:
+        raise RuntimeDataError(str(e)) from e
+
     tool_version = _meta_get(conn, "tool_version") or ""
     return {
         "schema_version": schema_version,
@@ -112,8 +120,10 @@ def _ensure_db_ready(conn: sqlite3.Connection) -> dict[str, str]:
 
 
 def _run_match_query(conn: sqlite3.Connection, *, corpus: str, query: str, k: int) -> list[tuple]:
+    suffixes = translation_copy_suffixes()
+    exclusions = "".join(" AND path NOT GLOB ?" for _ in suffixes)
     return conn.execute(
-        """
+        f"""
         SELECT
           path,
           start_line,
@@ -121,11 +131,11 @@ def _run_match_query(conn: sqlite3.Connection, *, corpus: str, query: str, k: in
           bm25(doc_chunks_fts) AS bm25_raw,
           snippet(doc_chunks_fts, 4, '[', ']', ' … ', 12) AS snippet
         FROM doc_chunks_fts
-        WHERE corpus = ? AND doc_chunks_fts MATCH ?
+        WHERE corpus = ? AND doc_chunks_fts MATCH ?{exclusions}
         ORDER BY bm25_raw
         LIMIT ?
         """,
-        (corpus, query, int(k)),
+        (corpus, query, *("*" + suffix for suffix in suffixes), int(k)),
     ).fetchall()
 
 
@@ -570,7 +580,7 @@ def _run(argv: list[str], *, parser: _Parser) -> int:
     query_mode = "raw"
     db_meta: dict[str, str] = {"schema_version": "", "tool_version": ""}
     try:
-        conn = sqlite3.connect(db_path.as_posix())
+        conn = sqlite3.connect(db_path.resolve().as_uri() + "?mode=ro", uri=True)
         try:
             db_meta = _ensure_db_ready(conn)
             hits, query_mode = query_hits(conn, corpus=str(args.corpus), query=str(args.query), k=k)

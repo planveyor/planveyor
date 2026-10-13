@@ -35,7 +35,9 @@ AUTHORITY_BRIDGE_RUNTIME_FILES = (
     REPO_ROOT / "scripts" / "fs_object_identity.py",
 )
 OWNER_RUNBOOK = REPO_ROOT / "docs" / "tools" / "owner_runbook_codex.md"
+OWNER_RUNBOOK_RU = REPO_ROOT / "docs" / "tools" / "owner_runbook_codex.ru.md"
 LAUNCH_GUIDE = REPO_ROOT / "docs" / "guides" / "launch-and-role-modes.md"
+LAUNCH_GUIDE_RU = REPO_ROOT / "docs" / "guides" / "launch-and-role-modes.ru.md"
 PROJECT_README = REPO_ROOT / "README.md"
 PROJECT_README_RU = REPO_ROOT / "README.ru.md"
 OWNER_BOOK = REPO_ROOT / "planveyor_owner_book.md"
@@ -806,7 +808,8 @@ class BareEntrypointsDoctorTests(unittest.TestCase):
             "argv_tail": (),
             "capture_output": True,
             "check": False,
-            "timeout": 120,
+            # The manual dashboard readback took 45 seconds on a loaded machine.
+            "timeout": 240,
         }
         sourced_command = f"source {shlex.quote(str(PLANVEYOR_SCRIPT))} && {command}"
         if home is not None:
@@ -2775,27 +2778,37 @@ _planveyor_codex() {
             self.assertIn(f"Hint: prepend {target_dir} to PATH before testing bare commands in a fresh shell.", doctor.stdout)
 
     def test_owner_runbook_does_not_promise_unavailable_bare_installer(self) -> None:
-        text = OWNER_RUNBOOK.read_text(encoding="utf-8")
+        for runbook in (OWNER_RUNBOOK, OWNER_RUNBOOK_RU):
+            with self.subTest(runbook=runbook.name):
+                text = runbook.read_text(encoding="utf-8")
 
-        self.assertNotIn("planveyor_bare_entrypoints_install", text)
-        self.assertNotIn("repair_command=", text)
+                self.assertNotIn("planveyor_bare_entrypoints_install", text)
+                self.assertNotIn("repair_command=", text)
 
     def test_owner_runbook_documents_selected_gate_claims(self) -> None:
-        text = OWNER_RUNBOOK.read_text(encoding="utf-8")
+        for runbook in (OWNER_RUNBOOK, OWNER_RUNBOOK_RU):
+            with self.subTest(runbook=runbook.name):
+                text = runbook.read_text(encoding="utf-8")
 
+                self.assertIn(
+                    "planveyor_plan_bundle --preflight docs/plans/YYYYMMDD_HHMM_topic.md",
+                    text,
+                )
+                self.assertIn(
+                    "planveyor_plan_bundle --check docs/plans/YYYYMMDD_HHMM_topic.md",
+                    text,
+                )
         self.assertIn(
-            "planveyor_plan_bundle --preflight docs/plans/YYYYMMDD_HHMM_topic.md",
-            text,
+            "`--preflight` checks the proposed bundle before review. `--check` evaluates "
+            "the completed bundle. Neither of them replaces target tests, a review of the "
+            "current diff, or the required semantic acceptance artifact.",
+            OWNER_RUNBOOK.read_text(encoding="utf-8"),
         )
         self.assertIn(
-            "planveyor_plan_bundle --check docs/plans/YYYYMMDD_HHMM_topic.md",
-            text,
-        )
-        self.assertIn(
-            "`--preflight` проверяет proposed bundle до review. `--check` оценивает "
-            "completed bundle. Ни один из них не заменяет target tests, review current diff "
-            "или обязательный semantic acceptance artifact.",
-            text,
+            "`--preflight` проверяет предложенный набор файлов до ревью. `--check` оценивает "
+            "готовый набор. Ни один из них не заменяет тесты целевого проекта, ревью текущего "
+            "diff или обязательный артефакт приёмки по смыслу.",
+            OWNER_RUNBOOK_RU.read_text(encoding="utf-8"),
         )
 
     def test_terminal_capture_options_are_forwarded_without_shell_reinterpretation(self) -> None:
@@ -3171,7 +3184,9 @@ _planveyor_codex() {
 
     def test_launch_docs_keep_normal_tui_and_recovery_boundaries(self) -> None:
         guide = LAUNCH_GUIDE.read_text(encoding="utf-8")
+        guide_ru = LAUNCH_GUIDE_RU.read_text(encoding="utf-8")
         runbook = OWNER_RUNBOOK.read_text(encoding="utf-8")
+        runbook_ru = OWNER_RUNBOOK_RU.read_text(encoding="utf-8")
         facade = PLANVEYOR_SCRIPT.read_text(encoding="utf-8")
         readmes = (
             PROJECT_README.read_text(encoding="utf-8"),
@@ -3183,18 +3198,32 @@ _planveyor_codex() {
             AGENTS_GUIDE.read_text(encoding="utf-8"),
         )
 
-        self.assertIn(
-            "| Запустить single-plan Manager collab в live TUI | `./bin/planveyor planveyor_manager_collab_tui` |",
-            guide,
-        )
-        self.assertNotIn(
-            "| Открыть native/collab TUI | `./bin/planveyor planveyor_manager_collab_tui --q` |",
-            guide,
-        )
-        self.assertIn("Queue — отдельный advanced branch", guide)
-        self.assertIn("planveyor_manager_collab_tui --q", guide)
-        self.assertRegex(runbook, r"\n\./bin/planveyor planveyor_manager_collab_tui\n")
-        self.assertIn("Queue — отдельный advanced branch", runbook)
+        for language, text, live_tui_row, stale_queue_row, queue_branch in (
+            (
+                "en",
+                guide,
+                "| Run single-plan Manager collab in the live TUI | `./bin/planveyor planveyor_manager_collab_tui` |",
+                "| Open native/collab TUI | `./bin/planveyor planveyor_manager_collab_tui --q` |",
+                "The queue is a separate advanced branch",
+            ),
+            (
+                "ru",
+                guide_ru,
+                "| Запустить Manager в режиме collab для одного плана в живом TUI | `./bin/planveyor planveyor_manager_collab_tui` |",
+                "| Открыть native/collab TUI | `./bin/planveyor planveyor_manager_collab_tui --q` |",
+                "Очередь — отдельный расширенный маршрут",
+            ),
+        ):
+            with self.subTest(launch_guide=language):
+                self.assertIn(live_tui_row, text)
+                self.assertNotIn(stale_queue_row, text)
+                self.assertNotIn("| `./bin/planveyor planveyor_manager_collab_tui --q` |", text)
+                self.assertIn(queue_branch, text)
+                self.assertIn("planveyor_manager_collab_tui --q", text)
+        for text in (runbook, runbook_ru):
+            self.assertRegex(text, r"\n\./bin/planveyor planveyor_manager_collab_tui\n")
+        self.assertIn("The queue is a separate advanced branch", runbook)
+        self.assertIn("Очередь — отдельный расширенный маршрут", runbook_ru)
         self.assertIn(
             'planveyor_manager_collab_tui) echo "planveyor_manager_collab_tui" ;;',
             facade,
@@ -3214,20 +3243,29 @@ _planveyor_codex() {
         ):
             with self.subTest(init_command=init_command):
                 self.assertIn(init_command, guide)
+                self.assertIn(init_command, guide_ru)
                 self.assertIn(init_command, runbook)
+                self.assertIn(init_command, runbook_ru)
 
-        self.assertIn("planveyor_reviewer_init` не заменяет", guide)
-        self.assertIn("planveyor_reviewer_init` не заменяет", runbook)
-        self.assertIn("planveyor_plan_set <PLAN_PATH>", guide)
-        self.assertIn("не доказывает authentication", guide)
-        self.assertIn("source identity", guide)
+        self.assertIn("planveyor_reviewer_init` does not replace", guide)
+        self.assertIn("planveyor_reviewer_init` не заменяет", guide_ru)
+        self.assertIn("planveyor_reviewer_init` does not replace", runbook)
+        self.assertIn("planveyor_reviewer_init` не заменяет", runbook_ru)
+        for text in (guide, guide_ru):
+            self.assertIn("planveyor_plan_set <PLAN_PATH>", text)
+            self.assertIn("source identity", text)
+        self.assertIn("does not prove authentication", guide)
+        self.assertIn("не доказывают ни аутентификацию", guide_ru)
         self.assertIn("source identity", runbook)
-        self.assertIn("Настроенный клиент", guide)
-        self.assertIn("Настроенный клиент", runbook)
+        self.assertIn("source identity", runbook_ru)
+        self.assertIn("configured agent harness", guide)
+        self.assertIn("Настроенный агентный харнес", guide_ru)
+        self.assertIn("configured agent harness", runbook)
+        self.assertIn("Настроенный агентный харнес", runbook_ru)
         for readme in readmes:
             self.assertIn("source identity", readme)
-        self.assertIn("configured client", readmes[0])
-        self.assertIn("Настроенный клиент", readmes[1])
+        self.assertIn("configured agent harness", readmes[0])
+        self.assertIn("Настроенный агентный харнес", readmes[1])
         self.assertIn("source identity", AGENTS_GUIDE.read_text(encoding="utf-8"))
         for document in readmes + short_references:
             self.assertIn("git", document)
@@ -3496,7 +3534,7 @@ _planveyor_codex() {
         playbook = DECOMPOSITION_PLAYBOOK.read_text(encoding="utf-8")
         docs = "\n".join(
             path.read_text(encoding="utf-8")
-            for path in (PROMPTS_README, DECOMPOSITION_PLAYBOOK, OWNER_RUNBOOK, PLANS_README)
+            for path in (PROMPTS_README, DECOMPOSITION_PLAYBOOK, OWNER_RUNBOOK, OWNER_RUNBOOK_RU, PLANS_README)
         )
 
         for text in (direct_prompt, manager_prompt, docs):

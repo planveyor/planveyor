@@ -1,5 +1,7 @@
 # Owner runbook: verify suite
 
+**English** · [Русский](verify_suite.ru.md)
+
 `planveyor_verify` is a read-only aggregate check for the installed Planveyor corpus and its registered integrity modules. The default route is fast integrity verification; `--full` adds one canonical unittest discovery. Its implementation and exact module set are owned by the runtime; this guide explains the operator contract.
 
 ## Run it

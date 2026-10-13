@@ -8,7 +8,7 @@
 
 План заводит скилл `$planveyor-plan-draft` в чате Codex: он создаёт план по [шаблону](../../plans/_template.md) со статусом `Architect initial draft`. Черновик кода Planner позже делает по [своему шаблону](../../code_drafts/_template.md). Роли Architect, Planner, Coder и Reviewer и разделы, которые пишет каждая, описывает глава [«Роли и файлы задачи»](roles-artifacts.md); полный словарь статусов приводят [правила планов](../../plans/README.md).
 
-Задачу ведут командами `planveyor sibling …` в [sibling](glossary.md). Команды работают с одним текущим планом, а сделать текущим другой можно командой `planveyor sibling plan docs/plans/YYMMDD_HHMM_topic.md`. Очередь из нескольких планов — отдельный режим Manager, его описывает [руководство запуска](../launch-and-role-modes.md).
+Задачу ведут командами `planveyor sibling …` в [sibling](glossary.md). Команды работают с одним текущим планом, а сделать текущим другой можно командой `planveyor sibling plan docs/plans/YYMMDD_HHMM_topic.md`. Очередь из нескольких планов — отдельный режим Manager, его описывает [руководство запуска](../launch-and-role-modes.ru.md).
 
 ## Статусы и кто их ставит
 
@@ -19,7 +19,7 @@
 | Статус | Кто ставит | Что происходит |
 | --- | --- | --- |
 | `Architect initial draft` | Architect | Architect обсуждает задачу с Owner и пишет раздел «Как я понял задачу» |
-| `Architect draft` | Architect | Owner подтвердил понимание задачи, Architect оформляет план по шаблону |
+| `Architect draft` | Architect | Решений Owner больше не нужно, Architect оформляет план по шаблону |
 | `Ready for Planner` | Architect | Решения записаны, план передан Planner |
 | `Planner intake`, `Planner finalize` | Planner | Planner задаёт вопросы, затем составляет черновик кода |
 | `Ready for Coder` | Planner | Черновик готов, предварительная проверка точного набора файлов плана пройдена |
@@ -41,7 +41,7 @@ Oracle — скрипт `scripts/plan_status_oracle.py`, из командной
 
 Статус Oracle берёт только из шапки, из единственной строки `**Status:**`; если таких строк две, он завершается с кодом 3 и печатает обе. Запись `Done` в журнале или в сообщении роли статус не меняет. Ещё Oracle читает журнал вопросов, файл ревью и служебный блок `## Meta`. В этом блоке Architect записывает решение `machine_authority_decision`: появляется ли в задаче новая машиночитаемая запись или формат, по которым скрипты Planveyor сами пропускают, направляют, записывают или закрывают работу. Обычной задаче хватает короткой формы `not_applicable` с причиной; в GetReorderCandidates это `no_machine_authority_change`. Полная форма описывает саму запись: где она лежит, кто её пишет и читает, что будет при ошибке. Её подтверждает Owner ответом в журнале вопросов. Пока решения нет, оно не подтверждено, отклонено или записано дважды, линтер плана и Oracle не пускают план к Planner ([формат](../../plans/README.md#machine-authority-admission)).
 
-В ответе с ключом `--json` чаще всего смотрят на статус (`status_norm`), открытые вопросы к Owner (`open_owner_questions`) и состояние ревью (`review_readback_state`). Поле `route_guard_triggered` значит, что Oracle нашёл противоречие и по текущему статусу работать дальше нельзя; причину и роль, к которой вернётся работа, называют `route_guard_reason` и `route_guard_next_owner`. Как вызвать Oracle для своего проекта, показывает руководство [«Lifecycle и пакеты»](../lifecycle-and-packets.md).
+В ответе с ключом `--json` чаще всего смотрят на статус (`status_norm`), открытые вопросы к Owner (`open_owner_questions`) и состояние ревью (`review_readback_state`). Поле `route_guard_triggered` значит, что Oracle нашёл противоречие и по текущему статусу работать дальше нельзя; причину и роль, к которой вернётся работа, называют `route_guard_reason` и `route_guard_next_owner`. Как вызвать Oracle для своего проекта, показывает руководство [«Lifecycle и пакеты»](../lifecycle-and-packets.ru.md).
 
 ## Набор файлов и две его проверки
 
@@ -142,7 +142,7 @@ planveyor sibling plan docs/plans/YYMMDD_HHMM_topic.md
 planveyor sibling answer Q2
 ```
 
-`planveyor sibling plan` печатает текущий план, статус, открытые вопросы к вам с номерами и следующий шаг: `answer`, `architect`, `run`, `close` или причину остановки от Oracle; с путём к файлу команда делает текущим другой план. Полный порядок команд описывает [руководство по sibling](../stack-sibling.md).
+`planveyor sibling plan` печатает текущий план, статус, открытые вопросы к вам с номерами и следующий шаг: `answer`, `architect`, `run`, `close` или причину остановки от Oracle; с путём к файлу команда делает текущим другой план. Полный порядок команд описывает [руководство по sibling](../stack-sibling.ru.md).
 
 ## Частые ошибки
 

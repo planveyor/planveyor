@@ -23,8 +23,10 @@ ROOT = Path(__file__).resolve().parent.parent
 
 
 def run(argv, *, cwd=None, env=None, input_text=None, check=True):
+    # A native `sibling run` alone can take two minutes on a loaded machine;
+    # the limit only stops a hung child.
     completed = subprocess.run(argv, cwd=cwd, env=env, text=True, input=input_text,
-                               capture_output=True, timeout=120, check=False)
+                               capture_output=True, timeout=600, check=False)
     if check and completed.returncode:
         raise AssertionError(f"{argv}: {completed.returncode}\n{completed.stdout}\n{completed.stderr}")
     return completed

@@ -1,29 +1,31 @@
-# Сниппеты Planveyor
+# Planveyor snippets
 
-Эта страница содержит короткие public recipes для lifecycle, evidence и
-documentation search. Application-specific framework, database, worker, UI
-protocol, deployment и credential recipes принадлежат selected consumer.
+**English** · [Русский](snippet.ru.md)
+
+This page holds short public recipes for lifecycle, evidence, and
+documentation search. Recipes for an application-specific framework, database,
+worker, UI protocol, deployment, or credentials belong to the selected consumer.
 
 ## Public entry
 
-Запускай Planveyor из physical Planveyor root:
+Run Planveyor from the physical Planveyor root:
 
 ~~~bash
 ./bin/planveyor <planveyor_function> [args…]
 ~~~
 
-До первого public command проверь доступный `git`, physical Planveyor Git checkout и `HEAD`, разрешающийся в commit. Facade делает это до `--project` и до doctor.
+Before the first public command, check for an available `git`, a physical Planveyor Git checkout, and a `HEAD` that resolves to a commit. The facade does this before `--project` and before doctor.
 
-Для consumer project передай его явно:
+For a consumer project, pass it explicitly:
 
 ~~~bash
 ./bin/planveyor --project /absolute/path/to/consumer <planveyor_function> [args…]
 ~~~
 
-Не подключай implementation shell file через source. Один вызов не делает
-постоянное изменение cwd, credentials или local state.
+Do not source an implementation shell file. One call makes no lasting change to
+cwd, credentials, or local state.
 
-## Быстрая диагностика
+## Quick diagnostics
 
 ~~~bash
 ./bin/planveyor planveyor_entry_doctor
@@ -31,14 +33,14 @@ protocol, deployment и credential recipes принадлежат selected consu
 ./bin/planveyor planveyor_verify --format json
 ~~~
 
-Doctor/readback доказывает только runtime observation текущего вызова. Он не
-доказывает semantic acceptance, provider availability, plan admissibility, SID
-или dispatch. Cached plan pointer — только local selection; при его отсутствии
-`planveyor_planpath` предлагает `planveyor_plan_set <PLAN_PATH>`, но не
-подтверждает readiness. Полный first-hour route, normal TUI без `--q` и separate
-queue находятся в `docs/guides/launch-and-role-modes.md`.
+Doctor and readbacks prove only what the current call observed. They do not
+prove semantic acceptance, provider availability, plan admissibility, a SID, or
+dispatch. The cached plan pointer is only a local selection; when it is missing,
+`planveyor_planpath` suggests `planveyor_plan_set <PLAN_PATH>` but does not
+confirm readiness. The full first-hour route, the normal TUI without `--q`, and
+the separate queue are described in `docs/guides/launch-and-role-modes.md`.
 
-## Plan и exact bundle
+## Plan and exact bundle
 
 ~~~bash
 ./bin/planveyor planveyor_plan_status_oracle docs/plans/<plan>.md --json
@@ -46,11 +48,11 @@ queue находятся в `docs/guides/launch-and-role-modes.md`.
 ./bin/planveyor planveyor_plan_bundle --check docs/plans/<plan>.md
 ~~~
 
-Используй exact plan path. Cached plan pointer, chat prose и старый receipt не
-являются routing truth. Перед финальным transition role owner сохраняет
-current evidence в plan/review artifact; Manager не заменяет этот шаг.
+Use the exact plan path. The cached plan pointer, chat prose, and an old receipt
+are not routing truth. Before the final transition, the role owner saves current
+evidence in the plan or review artifact; Manager does not replace this step.
 
-## Range и review
+## Range and review
 
 ~~~bash
 ./bin/planveyor planveyor_merge_range_stats_json BASE HEAD
@@ -59,11 +61,11 @@ git diff --check BASE..HEAD
 rg -n "^<<<<<<< |^======= |^>>>>>>> " .
 ~~~
 
-Выбирай target-local harness только из plan/canon. Для UI work scenario,
-preconditions, comparator, human verdict и assets обязаны быть declared
-current target facts. При отсутствии lane используй N/A с причиной.
+Choose a target-local harness only from the plan or canon. For UI work, the
+scenario, preconditions, comparator, human verdict, and assets must be declared
+current target facts. If there is no lane, use `N/A` with a reason.
 
-## Поиск документации
+## Documentation search
 
 ~~~bash
 rg -n "<anchor-token>" docs
@@ -72,15 +74,15 @@ rg -n "<anchor-token>" docs
 ./bin/planveyor planveyor_docs_context_check --corpus plans --format text
 ~~~
 
-Держи запрос коротким и используй stable domain terms из текущего plan/canon.
-Search result — discovery, не decision evidence. Если retrieval повлиял на
-решение, добавь Retrieval telemetry receipt с current read/open result или
-declared no-op reason.
+Keep the query short and use stable domain terms from the current plan or canon.
+A search result is discovery, not decision evidence. If retrieval influenced a
+decision, add a `Retrieval telemetry receipt` with the current read/open result
+or a declared `no-op` reason.
 
-Derived index и logs — local/disposable state. Не коммить их и не указывай
-personal absolute path в artifact.
+The derived index and logs are local, disposable state. Do not commit them, and
+do not put a personal absolute path in an artifact.
 
-## Follow-ups и process improvements
+## Follow-ups and process improvements
 
 ~~~bash
 ./bin/planveyor planveyor_followups_query ready-candidates --format json
@@ -88,11 +90,11 @@ personal absolute path в artifact.
 ./bin/planveyor planveyor_process_improvements_promote --help
 ~~~
 
-Backlog row, promoted dev-plan и process-improvement row имеют разные owners.
-NO FOLLOWUPS относится только к ordinary harvest lane; это не закрывает
-separate process-improvement work и не authorizes deletion.
+A backlog row, a promoted dev plan, and a process-improvement row have different
+owners. `NO FOLLOWUPS` applies only to the ordinary harvest lane; it does not
+close separate process-improvement work and does not authorize deletion.
 
-## Post-merge и docs hygiene
+## Post-merge and docs hygiene
 
 ~~~bash
 ./bin/planveyor planveyor_post_merge_packetization_gate --range BASE..HEAD
@@ -100,13 +102,13 @@ separate process-improvement work и не authorizes deletion.
 ./bin/planveyor planveyor_doc_lint
 ~~~
 
-Если shared carrier требует delivery, source owner materializes source-local
-rollout packet. Consumer owner принимает packet локально. Не заменяй этот flow
-ручным copy или broad docs sweep.
+If a shared carrier needs delivery, the source owner creates a source-local
+rollout packet. The consumer owner accepts the packet locally. Do not replace
+this flow with a manual copy or a broad docs sweep.
 
-Исторические plans, reviews и snapshots не являются active canon. До cleanup
-сохрани durable facts в canon, audit или follow-up; active docs не должны
-ссылаться на временные files как на source of truth.
+Historical plans, reviews, and snapshots are not the active canon. Before
+cleanup, save durable facts in the canon, an audit, or a follow-up; active docs
+must not point to temporary files as the source of truth.
 
 ## Packets
 
@@ -133,19 +135,19 @@ rollout packet. Consumer owner принимает packet локально. Не 
   --target-plan docs/plans/<target-adoption>.md
 ~~~
 
-Packet передаёт source evidence и requested adoption. Он не authorizes target
-mutation, queue activation, commit или push. Unknown target writable carrier
-остаётся blocker.
+A packet carries source evidence and the requested adoption. It does not
+authorize a target mutation, queue activation, a commit, or a push. An unknown
+writable carrier in the target remains a blocker.
 
-## Security и portability
+## Security and portability
 
-- Не записывай credentials, cookies, tokens, headers, account paths или
-  provider output в docs/receipts; используй <REDACTED>.
-- Используй repo-relative paths, <source-repo>/<target-repo> placeholders и
-  explicit /absolute/path/to/consumer только для documented facade selection.
-- Не подменяй target-local command generic framework example.
-- Если evidence отсутствует, зафиксируй blocker вместо fabricated proof.
+- Do not write credentials, cookies, tokens, headers, account paths, or provider
+  output into docs or receipts; use `<REDACTED>`.
+- Use repo-relative paths and `<source-repo>`/`<target-repo>` placeholders; use
+  an explicit `/absolute/path/to/consumer` only for documented facade selection.
+- Do not replace a target-local command with a generic framework example.
+- If evidence is missing, record a blocker instead of fabricated proof.
 
-См. также docs/guides/launch-and-role-modes.md,
-docs/guides/lifecycle-and-packets.md и
-docs/playbooks/portability_substitution_rules.md.
+See also `docs/guides/launch-and-role-modes.md`,
+`docs/guides/lifecycle-and-packets.md`, and
+`docs/playbooks/portability_substitution_rules.md`.

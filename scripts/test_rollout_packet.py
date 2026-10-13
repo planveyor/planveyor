@@ -3528,6 +3528,54 @@ class PostMergePacketizationGateTests(unittest.TestCase):
         self.assertEqual(mirror_partition.target_writable_carriers, (mirror_path,))
         self.assertEqual(mirror_partition.authority, mirror_record.authority)
 
+    def test_russian_copies_keep_original_packetization_classification(self) -> None:
+        scripts_dir = str(REPO_ROOT / "scripts")
+        if scripts_dir not in sys.path:
+            sys.path.insert(0, scripts_dir)
+        import post_merge_packetization_gate as packetization
+
+        def projection(path: str) -> tuple[object, ...]:
+            result = packetization.resolve_target_applicability(REPO_ROOT, changed_files=[path])
+            self.assertEqual(len(result.records), 1)
+            record = result.records[0]
+            return (
+                record.target_repo,
+                record.target_kind,
+                record.authority,
+                record.source_only_reason,
+                record.blocking_reason,
+                record.ignored_reason,
+                result.packetization_report_required,
+                packetization.classify_changed_file(path),
+            )
+
+        runbook_copy = "docs/tools/owner_runbook_codex.ru.md"
+        self.assertEqual(
+            projection(runbook_copy),
+            (
+                "current-consumer",
+                "source_only",
+                "checked-in source-only root policy",
+                "owner runbook is planveyor operator guidance",
+                None,
+                None,
+                True,
+                packetization.Classification(
+                    ("current-consumer",),
+                    source_only_reason="owner runbook is planveyor operator guidance",
+                ),
+            ),
+        )
+        for original, russian_copy in (
+            ("docs/tools/owner_runbook_codex.md", runbook_copy),
+            ("docs/guides/stack-sibling.md", "docs/guides/stack-sibling.ru.md"),
+            ("docs/guides/learn/README.md", "docs/guides/learn/README.ru.md"),
+            ("docs/tools/prompts/README.md", "docs/tools/prompts/README.ru.md"),
+            ("docs/tools/verify_suite.md", "docs/tools/verify_suite.ru.md"),
+        ):
+            with self.subTest(path=russian_copy):
+                self.assertEqual(projection(russian_copy), projection(original))
+
     def test_packetization_gate_reports_missing_packet_for_declared_consumer_mirror(self) -> None:
         with tempfile.TemporaryDirectory(prefix="packetization_gate_") as tmpdir:
             root = Path(tmpdir)

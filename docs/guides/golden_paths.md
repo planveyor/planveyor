@@ -1,42 +1,44 @@
-# Реестр повторяемых потоков
+# Golden paths
 
-Этот файл даёт короткие entrypoint pointers. Он не выбирает status, queue mode,
-runner или target-local contract вместо текущего plan.
+**English** · [Русский](golden_paths.ru.md)
+
+This file gives short pointers to entry points. It does not choose the status,
+queue mode, runner, or target-local contract in place of the current plan.
 
 ## Post-merge audit
 
-- **Когда:** после delivery wave, когда нужен durable audit до cleanup.
-- **Carrier:** `docs/playbooks/post_merge_audit.md` и review template.
-- **Результат:** audit, explicit follow-ups или no-op reason; решение о cleanup остаётся у Owner.
+- **When:** after a delivery wave, when a durable audit is needed before cleanup.
+- **Carrier:** `docs/playbooks/post_merge_audit.md` and the review template.
+- **Result:** an audit, explicit follow-ups, or a no-op reason; the cleanup decision stays with the Owner.
 
 ## Post-merge plan harvest
 
-- **Когда:** до cleanup, если terminal plans/reviews могли оставить actionable debt.
+- **When:** before cleanup, if terminal plans or reviews may have left actionable debt.
 - **Carrier:** `docs/playbooks/post_merge_plan_harvest.md`.
-- **Результат:** deduplicated follow-ups/process improvements или exact no-op.
+- **Result:** deduplicated follow-ups and process improvements, or an exact no-op.
 
 ## Process-improvement promotion
 
-- **Когда:** role/review обнаружил gap в shared process.
-- **Carrier:** `docs/process_improvements/README.md` и source backlog template.
-- **Результат:** triage, bounded delivery carrier или explicit deferred/rejected decision.
+- **When:** a role or a review found a gap in the shared process.
+- **Carrier:** `docs/process_improvements/README.md` and the source backlog template.
+- **Result:** triage, a bounded delivery carrier, or an explicit decision to defer or reject.
 
 ## Source rollout packet lifecycle
 
-- **Когда:** source change нужно передать consumer.
-- **Carrier:** `docs/rollout_packets/_template.md` и
+- **When:** a source change has to be passed to a consumer.
+- **Carrier:** `docs/rollout_packets/_template.md` and
   `docs/guides/lifecycle-and-packets.md`.
-- **Граница:** packet остаётся handoff; source не ставит его в execution queue.
+- **Boundary:** the packet stays a handoff; the source does not put it in an execution queue.
 
 ## Target adoption rollout packet adoption
 
-- **Когда:** consumer получает packet и должен применить его locally.
-- **Carrier:** target-local adoption plan/import receipt и exact outcome carrier.
-- **Граница:** outcome — решение consumer через facade prefix `--project /absolute/path/to/consumer`; source ACK materialize-ит receipt pointer и сам по себе может оставить packet в ожидании outcome. Обычный flow пишет outcome до ACK.
+- **When:** a consumer receives a packet and has to apply it locally.
+- **Carrier:** the target-local adoption plan, which is also the import receipt, and the exact outcome carrier.
+- **Boundary:** the outcome is the consumer's decision, made through the facade prefix `--project /absolute/path/to/consumer`. The source ACK materializes a receipt pointer and by itself may leave the packet waiting for the outcome. The normal flow writes the outcome before the ACK.
 
 ## Planning-contour continuity
 
-- **Когда:** planning wave возобновляется после смены контекста.
+- **When:** a planning wave resumes after a context change.
 - **Carrier:** `docs/guides/planning_contour_continuity.md`, ADR 007,
-  `docs/plans/README.md` и `docs/_meta/plan_vocab.json`.
-- **Граница:** guide — только navigation; current plan and Oracle own route truth.
+  `docs/plans/README.md`, and `docs/_meta/plan_vocab.json`.
+- **Boundary:** the guide is for navigation only; the route truth belongs to the current plan and Oracle.

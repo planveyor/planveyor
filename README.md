@@ -1,8 +1,12 @@
 # Planveyor
 
+**English** · [Русский](README.ru.md)
+
 Planveyor is a standalone, repo-backed toolkit for plan-driven work with Architect, Planner, Coder, Reviewer, and Manager roles. It keeps plans, reviews, follow-ups, packet records, and process guidance as inspectable repository artifacts.
 
 ## Start here
+
+First install Planveyor as described in [Install Planveyor](docs/guides/install.md): the requirements, an example environment, and the checks. [Agent harnesses](docs/guides/harnesses.md) shows which agent harness each route uses.
 
 For a project under your own stack, follow the permanent [stack sibling runbook](docs/guides/stack-sibling.md): create the sibling, draft a plan, answer Architect, run Manager, preview and explicitly commit each exact set. The human commands use one group, `planveyor sibling`; project, selected plan and source version are discovered from the chosen facade and project context.
 
@@ -14,15 +18,15 @@ Run commands from the Planveyor root through the child-only facade:
 ./bin/planveyor planveyor_help
 ```
 
-The facade discovers its own root from `bin/planveyor`; it does not require a checkout at a fixed home-directory path. Before any public command, confirm an executable `git`, a physical Planveyor Git checkout, and a `HEAD` that resolves to a commit: this preflight runs before `--project` and before doctor. A supported Python is needed to load the facade source identity. A configured client and its usual external authentication are needed only by a live role or Manager command that invokes that client; Codex and Codex authentication apply only to Codex paths. Doctor, runtime info, and help do not check them. Set `PLANVEYOR_CODEX_HOME` only when you explicitly need an external Codex-home location.
+The facade discovers its own root from `bin/planveyor`; it does not require a checkout at a fixed home-directory path. Before any public command, confirm an executable `git`, a physical Planveyor Git checkout, and a `HEAD` that resolves to a commit: this preflight runs before `--project` and before doctor. A supported Python is needed to load the facade source identity. A configured agent harness and its usual external authentication are needed only by a live role or Manager command that invokes that harness; Codex and Codex authentication apply only to Codex paths. Doctor, runtime info, and help do not check them. Set `PLANVEYOR_CODEX_HOME` only when you explicitly need an external Codex-home location.
 
 Do not source implementation shell files into a parent shell. The public command contract is the facade above.
 
-`planveyor_entry_doctor` and `planveyor_runtime_info` are local readbacks, not proof of consumer contract, plan admission, session ID, authentication, provider availability, or role dispatch. For the supported interpreter, explicit-plan oracle, plan pointer, Manager SID, live TUI, and separate queue sequence, use [Launch and role modes](docs/guides/launch-and-role-modes.md). Manager collab also needs five agent roles in your Codex config; see [Codex setup](docs/guides/launch-and-role-modes.md#настройка-codex).
+`planveyor_entry_doctor` and `planveyor_runtime_info` are local readbacks, not proof of consumer contract, plan admission, session ID, authentication, provider availability, or role dispatch. For the supported interpreter, explicit-plan oracle, plan pointer, Manager SID, live TUI, and separate queue sequence, use [Launch and role modes](docs/guides/launch-and-role-modes.md). Manager collab also needs five agent roles in your Codex config; see [Codex setup](docs/guides/launch-and-role-modes.md#codex-setup).
 
 ## Supported verification environment
 
-The first release supports one environment: macOS with an activated Python 3.12 environment that contains Copier 9.18.2 and PyYAML as pinned in `requirements-dev.lock`, plus Git, zsh, and ripgrep on `PATH`. Prepare that environment yourself (for example, a conda environment named `planveyor` with `make bootstrap-python` run inside it) and activate it before calling `bin/planveyor` or `make`: Planveyor uses the `python3` found on `PATH`. It never installs or repairs dependencies; a missing prerequisite stops the command with an error that names it. The source-identity loader technically accepts Python 3.10–3.12, but the environment above is the supported path. The configured CI workflow is not a hosted-run result; hosted CI and other Python versions come after the release.
+The first release supports one environment: macOS with an activated Python 3.12 environment that contains Copier 9.18.2 and PyYAML as pinned in `requirements-dev.lock`, plus Git, zsh, ripgrep, and `make` on `PATH`. Prepare that environment yourself (for example, a conda environment named `planveyor` with `make bootstrap-python` run inside it) and activate it before calling `bin/planveyor` or `make`: Planveyor uses the `python3` found on `PATH`. It never installs or repairs dependencies; a missing prerequisite stops the command with an error that names it. The source-identity loader technically accepts Python 3.10–3.12, but the environment above is the supported path. The configured CI workflow is not a hosted-run result; hosted CI and other Python versions come after the release.
 
 For local verification, `make verify` is the fast default route. `make test-scripts` is direct canonical full discovery, while `make verify-full` is the alternative aggregate full route; use one of those full routes for a single full claim, not both. Windows and Linux native validation have not been completed and are not supported by this statement.
 
@@ -45,8 +49,10 @@ For local verification, `make verify` is the fast default route. `make test-scri
 
 The focused public guides are:
 
-- [Stack sibling: create, set up, and work](docs/guides/stack-sibling.md) (Russian)
+- [Install Planveyor](docs/guides/install.md)
+- [Stack sibling: create, set up, and work](docs/guides/stack-sibling.md)
 - [Launch and role modes](docs/guides/launch-and-role-modes.md)
+- [Agent harnesses](docs/guides/harnesses.md)
 - [Lifecycle and packets](docs/guides/lifecycle-and-packets.md)
 - [Golden paths](docs/guides/golden_paths.md)
 - [Owner guide](planveyor_owner_book.md)

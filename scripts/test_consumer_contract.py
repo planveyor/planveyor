@@ -22,6 +22,7 @@ REPO_ROOT = SCRIPTS.parent
 sys.path.insert(0, os.fspath(SCRIPTS))
 
 import consumer_contract as contract
+import retrieval_telemetry_receipt
 
 
 MANAGED = "docs/playbook.md"
@@ -55,7 +56,8 @@ def run(argv: list[str], *, cwd: Path | None = None, input_text: str | None = No
         capture_output=True,
         stdin=subprocess.DEVNULL if input_text is None else None,
         check=False,
-        timeout=60,
+        # A facade upgrade took thirty seconds on a loaded machine.
+        timeout=180,
     )
     if check and completed.returncode:
         raise AssertionError(
@@ -361,6 +363,30 @@ class ConsumerContractDiagnosticsTests(unittest.TestCase):
             self.assertEqual(Path(cache).parent, Path(tempfile.gettempdir()))
             self.assertRegex(Path(cache).name, r"\Aplanveyor-copier-cache-[0-9a-f]{12}\Z")
         self.assertEqual(Path(first), contract.copier_cache_home(Path("/runtime/first")))
+
+
+class ConsumerContractAdaptationPlanTests(unittest.TestCase):
+    def render(self, changed_engine: list[str]) -> list[str]:
+        with tempfile.TemporaryDirectory(prefix="consumer-adaptation-plan-") as tmpdir:
+            candidate = Path(tmpdir)
+            (candidate / "docs/plans").mkdir(parents=True)
+            shutil.copyfile(REPO_ROOT / "copier_template/docs/plans/_template.md", candidate / "docs/plans/_template.md")
+            lint_passed = subprocess.CompletedProcess([], 0, "", "")
+            with mock.patch.object(contract, "command", return_value=lint_passed) as lint:
+                path = contract.adaptation_plan(candidate, REPO_ROOT, "a" * 40, "b" * 40, [], changed_engine, [])
+            self.assertEqual(lint.call_count, 1)
+            return path.read_text(encoding="utf-8").splitlines()
+
+    def test_listed_retrieval_helper_gets_a_bounded_no_op_receipt(self) -> None:
+        lines = self.render(["scripts/docs_retrieve.py", "scripts/doc_lint.py"])
+        self.assertIn("## Retrieval telemetry receipt", lines)
+        self.assertLess(lines.index("## Retrieval telemetry receipt"), lines.index("## Problem"))
+        self.assertEqual(retrieval_telemetry_receipt.lint_retrieval_telemetry_receipt(lines), [])
+
+    def test_plan_without_retrieval_tokens_has_no_receipt(self) -> None:
+        lines = self.render(["scripts/doc_lint.py"])
+        self.assertNotIn("## Retrieval telemetry receipt", lines)
+        self.assertEqual(retrieval_telemetry_receipt.lint_retrieval_telemetry_receipt(lines), [])
 
 
 class ConsumerContractInitIdentityTests(unittest.TestCase):

@@ -33,6 +33,13 @@ RUNTIME_MODULE_INVENTORY = (
     ("home_runtime.zsh", "lazy"),
     ("provider_runtime.zsh", "conditional"),
 )
+# The Russian copy `scripts/planveyor/README.ru.md` names the same load modes in Russian.
+RUNTIME_MODULE_LOAD_MODES_RU = {
+    "eager bootstrap dependency": "немедленно, как зависимость начальной загрузки",
+    "eager": "немедленно",
+    "lazy": "по требованию",
+    "conditional": "по условию",
+}
 _RUNTIME_CLOSURE_FILES = (
     "contract_authority_bootstrap.py",
     "contract_authority_shell_loader.zsh",
@@ -172,16 +179,34 @@ class RuntimePortabilityTests(unittest.TestCase):
         actual_names = tuple(sorted(path.name for path in PLANVEYOR_MODULE_DIR.glob("*.zsh")))
         self.assertEqual(actual_names, expected_names)
 
-        readme = (PLANVEYOR_MODULE_DIR / "README.md").read_text(encoding="utf-8")
-        start = readme.index("## Runtime inventory")
-        end = readme.index("\n## Порядок eager-загрузки", start)
-        inventory = readme[start:end]
-        self.assertIn("Фасад (не модуль): `scripts/planveyor.zsh`.", inventory)
-        rows = tuple(
-            (name, mode.strip())
-            for name, mode in re.findall(r"^\| `([^`]+)` \| ([^|]+) \|", inventory, flags=re.MULTILINE)
+        documents = (
+            (
+                "README.md",
+                "## Runtime inventory",
+                "\n## Eager load order",
+                "Facade (not a module): `scripts/planveyor.zsh`.",
+                RUNTIME_MODULE_INVENTORY,
+            ),
+            (
+                "README.ru.md",
+                "## Опись модулей движка",
+                "\n## Порядок немедленной загрузки",
+                "Фасад (не модуль): `scripts/planveyor.zsh`.",
+                tuple((name, RUNTIME_MODULE_LOAD_MODES_RU[mode]) for name, mode in RUNTIME_MODULE_INVENTORY),
+            ),
         )
-        self.assertEqual(rows, RUNTIME_MODULE_INVENTORY)
+        for filename, start_heading, end_heading, facade_line, expected_rows in documents:
+            with self.subTest(readme=filename):
+                readme = (PLANVEYOR_MODULE_DIR / filename).read_text(encoding="utf-8")
+                start = readme.index(start_heading)
+                end = readme.index(end_heading, start)
+                inventory = readme[start:end]
+                self.assertIn(facade_line, inventory)
+                rows = tuple(
+                    (name, mode.strip())
+                    for name, mode in re.findall(r"^\| `([^`]+)` \| ([^|]+) \|", inventory, flags=re.MULTILINE)
+                )
+                self.assertEqual(rows, expected_rows)
 
     def test_unset_tooling_root_resolves_from_loaded_script_path(self) -> None:
         with tempfile.TemporaryDirectory(prefix="planveyor_copy_") as tmpdir:

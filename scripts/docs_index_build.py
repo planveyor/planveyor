@@ -8,6 +8,8 @@ Goals:
   - canon: docs/** excluding noisy dirs + docs/plans/** + docs/followups/**
   - followups: docs/followups/** excluding template
   - plans: docs/plans/** excluding template/readme
+- In repositories with i18n/pairs.json, Russian copies `*.ru.md` are not indexed
+  in any corpus (read them by explicit path).
 - Default DB is per-worktree (in .tmp/). Shared DB only via explicit --db.
 """
 
@@ -46,6 +48,10 @@ FOLLOWUPS_INCLUDE_PREFIX = "docs/followups/"
 FOLLOWUPS_EXCLUDE_FILES = {"docs/followups/_template_followups_backlog.md"}
 PLANS_INCLUDE_PREFIX = "docs/plans/"
 PLANS_EXCLUDE_FILES = {"docs/plans/_template.md", "docs/plans/README.md"}
+# A human document `name.md` may have a Russian copy `name.ru.md` next to it.
+# In a target that opts in through i18n/pairs.json, search must not hand roles
+# both versions; an explicit read by path still opens copies.
+TRANSLATION_COPY_SUFFIXES = (".ru.md",)
 
 
 HEADING_RE = re.compile(r"^(#{1,6})\s+(.+?)\s*$")
@@ -71,13 +77,20 @@ def _sha256_hex(text: str) -> str:
     return hashlib.sha256(text.encode("utf-8")).hexdigest()
 
 
-def corpus_rules(corpus: str, root: str, chunk_target_tokens: int) -> dict:
+def translation_copy_suffixes(project_root: Path | None = None) -> tuple[str, ...]:
+    # Match doc_lint's target-local registry opt-in. Invalid JSON or a broken
+    # symlink must not silently turn the copy filter off; doc_lint diagnoses it.
+    registry = (project_root or Path.cwd()).resolve() / "i18n/pairs.json"
+    return TRANSLATION_COPY_SUFFIXES if registry.exists() or registry.is_symlink() else ()
+
+
+def corpus_rules(corpus: str, root: str, chunk_target_tokens: int, *, project_root: Path | None = None) -> dict:
     # Backward-compat helper (kept small): returns an index-level config
     # (same for all corpuses). The per-corpus build chooses the file list + chunking,
     # but the fingerprint must remain stable across canon/followups/plans builds.
     if corpus not in {"canon", "followups", "plans"}:
         raise ValueError(f"Unsupported corpus: {corpus}")
-    return {
+    rules = {
         "tool_version": TOOL_VERSION,
         "schema_version": SCHEMA_VERSION,
         "root": root,
@@ -94,6 +107,10 @@ def corpus_rules(corpus: str, root: str, chunk_target_tokens: int) -> dict:
             "exclude_files": sorted(PLANS_EXCLUDE_FILES),
         },
     }
+    suffixes = translation_copy_suffixes(project_root)
+    if suffixes:
+        rules["exclude_suffixes"] = list(suffixes)
+    return rules
 
 
 def compute_fingerprint(rules: dict) -> str:
@@ -148,63 +165,78 @@ def _meta_set(conn: sqlite3.Connection, key: str, value: str) -> None:
     conn.execute("INSERT INTO meta(key, value) VALUES(?, ?) ON CONFLICT(key) DO UPDATE SET value=excluded.value", (key, value))
 
 
-def init_or_validate_meta(conn: sqlite3.Connection, *, rules: dict, fingerprint: str, force_rebuild: bool) -> None:
-    existing_schema = _meta_get(conn, "schema_version")
-    existing_fp = _meta_get(conn, "fingerprint")
-    existing_cfg = _meta_get(conn, "index_config_json")
-    legacy_cfg = _meta_get(conn, "corpus_rules_json")
+def read_index_config(conn: sqlite3.Connection) -> dict:
+    schema = _meta_get(conn, "schema_version")
+    if schema != SCHEMA_VERSION:
+        raise RuntimeError(f"Unsupported or missing index schema_version={schema!r}; rebuild the index.")
+    config_json = _meta_get(conn, "index_config_json")
+    legacy_json = _meta_get(conn, "corpus_rules_json")
+    try:
+        config = json.loads(config_json or legacy_json or "null")
+    except (ValueError, TypeError) as e:
+        raise RuntimeError("Index config is invalid; rebuild the index.") from e
+    if not isinstance(config, dict):
+        raise RuntimeError("Index config is missing or invalid; rebuild the index.")
+    fingerprint = _meta_get(conn, "fingerprint")
+    if not fingerprint or fingerprint != compute_fingerprint(config):
+        raise RuntimeError("Index fingerprint mismatch with stored config; rebuild the index.")
+    if not isinstance(config.get("root"), str) or not config["root"]:
+        raise RuntimeError("Index config has an invalid root; rebuild the index.")
+    tokens = config.get("chunk_target_tokens")
+    if type(tokens) is not int or tokens <= 0:
+        raise RuntimeError("Index config has invalid chunk_target_tokens; rebuild the index.")
+    if not config_json:
+        config.pop("corpus", None)
+    return config
 
-    if existing_schema and existing_schema != SCHEMA_VERSION:
+
+def validate_index_config(conn: sqlite3.Connection, *, rules: dict) -> bool:
+    """Validate current/known older rules; return whether copy pruning is needed."""
+    existing = read_index_config(conn)
+    normalized = dict(existing)
+    # Existing backwards-compatible, additive plans-corpus migration.
+    if "plans" not in normalized:
+        normalized["plans"] = rules["plans"]
+    prune_copies = "exclude_suffixes" not in normalized and "exclude_suffixes" in rules
+    if prune_copies:
+        normalized["exclude_suffixes"] = rules["exclude_suffixes"]
+    if compute_fingerprint(normalized) != compute_fingerprint(rules):
         raise RuntimeError(
-            f"Unsupported index schema_version={existing_schema} (expected {SCHEMA_VERSION}). "
+            "Index fingerprint mismatch.\n"
+            f"- db fingerprint: {_meta_get(conn, 'fingerprint')}\n"
+            f"- expected: {compute_fingerprint(rules)}\n"
             "Rebuild with --force-rebuild or use a different --db."
         )
+    return prune_copies
 
-    if existing_fp and existing_fp != fingerprint:
-        if not force_rebuild:
-            # Backward-compat migration: older versions stored per-corpus rules under
-            # `corpus_rules_json`, which made the fingerprint differ between canon/followups.
-            # If the normalized config matches current rules, transparently upgrade meta.
-            if legacy_cfg and not existing_cfg:
-                try:
-                    legacy_obj = json.loads(legacy_cfg)
-                except json.JSONDecodeError:
-                    legacy_obj = None
 
-                if isinstance(legacy_obj, dict):
-                    legacy_obj.pop("corpus", None)
-                    legacy_norm = _json_dumps_stable(legacy_obj)
-                    current_norm = _json_dumps_stable(rules)
-                    if legacy_norm == current_norm:
-                        existing_fp = fingerprint
-                    else:
-                        legacy_obj = None
-
-            # Backward-compat migration: previous config had no `plans` corpus.
-            # If everything else matches, upgrade meta in-place.
-            if existing_fp != fingerprint and existing_cfg:
-                try:
-                    existing_obj = json.loads(existing_cfg)
-                except json.JSONDecodeError:
-                    existing_obj = None
-                if isinstance(existing_obj, dict) and "plans" not in existing_obj:
-                    rules_legacy = dict(rules)
-                    rules_legacy.pop("plans", None)
-                    if _json_dumps_stable(existing_obj) == _json_dumps_stable(rules_legacy):
-                        existing_fp = fingerprint
-
-            if existing_fp != fingerprint:
-                raise RuntimeError(
-                    "Index fingerprint mismatch.\n"
-                    f"- db fingerprint: {existing_fp}\n"
-                    f"- expected: {fingerprint}\n"
-                    "Rebuild with --force-rebuild or use a different --db."
-                )
+def init_or_validate_meta(conn: sqlite3.Connection, *, rules: dict, fingerprint: str, force_rebuild: bool) -> bool:
+    populated = conn.execute("SELECT 1 FROM meta LIMIT 1").fetchone() or conn.execute(
+        "SELECT 1 FROM doc_chunks_fts LIMIT 1"
+    ).fetchone()
+    prune_copies = False
+    if populated and not force_rebuild:
+        prune_copies = validate_index_config(conn, rules=rules)
+        if prune_copies:
+            # This exact rule only removes derived rows. Apply it to every
+            # corpus before updating the shared fingerprint, even when the
+            # caller requested just one corpus. Other rows remain untouched.
+            corpuses = {str(row[0]) for row in conn.execute("SELECT DISTINCT corpus FROM doc_chunks_fts")}
+            for suffix in rules["exclude_suffixes"]:
+                conn.execute("DELETE FROM doc_chunks_fts WHERE path GLOB ?", ("*" + suffix,))
+            for corpus in ("canon", "followups", "plans"):
+                if corpus in corpuses or _meta_get(conn, f"built_at_utc.{corpus}") is not None:
+                    files, chunks = conn.execute(
+                        "SELECT count(DISTINCT path), count(*) FROM doc_chunks_fts WHERE corpus = ?", (corpus,)
+                    ).fetchone()
+                    _meta_set(conn, f"files_total.{corpus}", str(files))
+                    _meta_set(conn, f"chunks_total.{corpus}", str(chunks))
 
     _meta_set(conn, "schema_version", SCHEMA_VERSION)
     _meta_set(conn, "tool_version", TOOL_VERSION)
     _meta_set(conn, "fingerprint", fingerprint)
     _meta_set(conn, "index_config_json", _json_dumps_stable(rules))
+    return prune_copies
 
 
 @dataclass(frozen=True)
@@ -217,8 +249,11 @@ class Chunk:
 
 
 def iter_files_for_corpus(*, corpus: str, root: Path) -> Iterator[Path]:
+    suffixes = translation_copy_suffixes()
     for path in sorted(root.rglob("*.md")):
         rel = path.as_posix()
+        if path.name.endswith(suffixes):
+            continue
         if corpus == "canon":
             if any(rel.startswith(prefix) for prefix in CANON_EXCLUDE_PREFIXES):
                 continue
@@ -523,7 +558,7 @@ def main(argv: list[str]) -> int:
             conn.execute("DROP TABLE IF EXISTS meta")
 
         ensure_schema(conn)
-        init_or_validate_meta(conn, rules=rules, fingerprint=fp, force_rebuild=bool(args.force_rebuild))
+        migrated_copies = init_or_validate_meta(conn, rules=rules, fingerprint=fp, force_rebuild=bool(args.force_rebuild))
 
         files_total, chunks_total = rebuild_corpus(conn, corpus=args.corpus, root=root, chunk_target_tokens=chunk_target_tokens)
         _meta_set(conn, f"built_at_utc.{args.corpus}", str(int(time.time())))
@@ -548,6 +583,8 @@ def main(argv: list[str]) -> int:
     print(f"- files_indexed: {files_total}")
     print(f"- chunks_indexed: {chunks_total}")
     print(f"- fingerprint: {fp[:12]}…")
+    if migrated_copies:
+        print("- index_migration: translation_copy_exclusion (all corpuses)")
     return 0
 
 

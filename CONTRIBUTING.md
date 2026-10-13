@@ -1,5 +1,7 @@
 # Contributing to Planveyor
 
+**English** · [Русский](CONTRIBUTING.ru.md)
+
 Keep changes bounded, reviewable, and safe to publish. A Planveyor artifact should explain its purpose through the current plan, review, issue, or packet that requires it.
 
 ## Before editing
@@ -28,8 +30,11 @@ Use the smallest route that proves the changed contract: `make verify` is fast/d
 - Keep `target-local` configuration, credentials, application details, and consumer-repository policy outside this root corpus.
 - Do not include secrets, tokens, cookies, private hostnames, private paths, account data, or copied third-party prompt bodies. Use `<REDACTED>` or a neutral placeholder when needed.
 - Treat generated indexes as derived views and rebuild them through their documented renderer rather than editing old rows by hand.
+- A document with a Russian copy `name.ru.md` changes together with the copy, in the same change. The pairs are listed in `i18n/pairs.json`, the terms in `i18n/terms.md`. After both versions are updated, refresh the sync stamp with `python3 scripts/i18n_pairs.py stamp <copy>`.
 
 ## Validation
+
+`make doc-lint` warns when a translation is stale. CI runs `bash scripts/run_doc_lint.sh --i18n-strict`, which treats stale translations as errors. Update both versions and check their meaning before refreshing the sync stamp.
 
 Run the smallest relevant checks first, then the documentation and lifecycle checks required by the changed contract. Use `planveyor_help` and the affected playbook to identify the installed command. Include the command and its outcome in the review artifact when it is material to acceptance.
 
@@ -49,4 +54,4 @@ If the work uncovers broader design or packaging needs, record a bounded follow-
 
 ## Proposing a change from a sibling
 
-A sibling does not edit Planveyor files. Write the proposal in the sibling as a request from `docs/upstream_packets/_template.md`, check and commit it there, then send it as a GitHub issue with `gh`, which you install and sign in to yourself; the request file becomes the issue body (`gh issue create --body-file`). The procedure is in the “Предложить изменение Planveyor” section of the [stack sibling guide](docs/guides/stack-sibling.md#предложить-изменение-planveyor) (in Russian). An accepted change returns to the sibling as a Planveyor contract upgrade with a notice in `docs/contract_notices/`.
+A sibling does not edit Planveyor files. Write the proposal in the sibling as a request from `docs/upstream_packets/_template.md`, check and commit it there, then send it as a GitHub issue with `gh`, which you install and sign in to yourself; the request file becomes the issue body (`gh issue create --body-file <request file> --repo planveyor/planveyor`). The procedure is in the “Propose a change to Planveyor” section of the [stack sibling guide](docs/guides/stack-sibling.md#propose-a-change-to-planveyor). An accepted change returns to the sibling as a Planveyor contract upgrade with a notice in `docs/contract_notices/`.

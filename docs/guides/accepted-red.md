@@ -1,29 +1,31 @@
-# Accepted-red и forensic capture
+# Accepted-red and forensic capture
 
-Документ описывает контракт, который реализуют `planveyor_plan_bundle` (режимы `--closeout-json`, `--capture-rejected`, `--verify-rejected`, `--cleanup-rejected`), oracle плана, `planveyor_docs_closeout` и queue helper. Команды ниже идут через facade: `"$PLANVEYOR_RUNTIME_ROOT/bin/planveyor" --project "$PWD" <команда>` из корня проекта.
+**English** · [Русский](accepted-red.ru.md)
 
-## Когда ревью «принято красным»
+This document describes the contract that `planveyor_plan_bundle` (modes `--closeout-json`, `--capture-rejected`, `--verify-rejected`, `--cleanup-rejected`), the plan Oracle, `planveyor_docs_closeout`, and the queue helper implement. The commands below run through the facade from the project root: `"$PLANVEYOR_RUNTIME_ROOT/bin/planveyor" --project "$PWD" <command>`.
 
-Plan закрыт не зелёной поставкой, а заменой: Reviewer оставил открытые S1 blockers, Architect принял расширение scope и передал работу преемнику. Oracle (`planveyor_plan_status_oracle --json`) называет такой plan `terminal_disposition=accepted_red_supersession`, если выполнены все условия:
+## When a review is "accepted red"
+
+The plan is closed by replacement, not by a green delivery: Reviewer left open S1 blockers, and Architect accepted the scope expansion and handed the work to a successor. Oracle (`planveyor_plan_status_oracle --json`) reports such a plan as `terminal_disposition=accepted_red_supersession` when all of these conditions hold:
 
 - `**Status:** Superseded`;
-- `plan_meta.scope_expansion.state` равно `architect_accepted`, а `source_ref` — `<ревью>#B<N>`, один из blockers ревью;
-- в `plan_meta.next_plans` ровно один преемник; у преемника `plan_meta.parent` указывает на этот plan, а в шапке преемника (до первого заголовка `##`) есть ссылки `<ревью>#B<N>` ровно на все blockers ревью;
-- в разделе `## Review artifacts` объявлено ровно одно ревью с тем же именем, что у plan: `docs/code_reviews/<stem>.md` или `docs/doc_reviews/<stem>.md`, и второго такого файла нет;
-- ревью красное: `**Status:**` содержит `❌`, есть строка `**Target:** BUNDLE=current bundle_sha256=<64 hex>` и один раздел `## S1 Blocker`, где каждый blocker — подраздел `### B<N>` с полями `- Blocker ID: B<N>` и `- Current state: open`;
-- code draft `docs/code_drafts/<stem>__code_draft.md` ссылается на этот plan в `code_draft_meta.plan` и перечисляет непустые `targets`.
+- `plan_meta.scope_expansion.state` is `architect_accepted`, and `source_ref` is `<review>#B<N>`, one of the review blockers;
+- `plan_meta.next_plans` holds exactly one successor; the successor's `plan_meta.parent` points to this plan, and the successor header (before the first `##` heading) has `<review>#B<N>` references to exactly all blockers of the review;
+- the `## Review artifacts` section declares exactly one review with the same name as the plan: `docs/code_reviews/<stem>.md` or `docs/doc_reviews/<stem>.md`, and there is no second such file;
+- the review is red: `**Status:**` contains `❌`, there is a line `**Target:** BUNDLE=current bundle_sha256=<64 hex>`, and there is one `## S1 Blocker` section where each blocker is a `### B<N>` subsection with the fields `- Blocker ID: B<N>` and `- Current state: open`;
+- the code draft `docs/code_drafts/<stem>__code_draft.md` refers to this plan in `code_draft_meta.plan` and lists non-empty `targets`.
 
-Если plan в `Superseded`, `scope_expansion.state=architect_accepted` и преемник один, а остальное не сходится, oracle всё равно называет plan accepted-red, с причиной `accepted_red_carrier_invalid`, `accepted_red_review_route_invalid` или `accepted_red_review_invalid`. Так же, с `accepted_red_carrier_invalid`, читается plan без этих признаков, для которого уже есть ref `refs/planveyor/rejected-baselines/<stem>/…`. У целого plan причина (`terminal_disposition_reason`) показывает этап: `accepted_red_current_snapshot` — capture ещё нет, отклонённые байты на месте; `accepted_red_durable_capture` — ref есть и цел; `accepted_red_snapshot_mismatch_without_durable_ref` — ref нет, а байты уже не совпадают с ревью; `accepted_red_snapshot_mismatch_without_valid_durable_ref` — ref битый.
+If the plan is in `Superseded`, `scope_expansion.state=architect_accepted`, and there is one successor, but the rest does not match, Oracle still reports the plan as accepted-red, with the reason `accepted_red_carrier_invalid`, `accepted_red_review_route_invalid`, or `accepted_red_review_invalid`. A plan without these signs that already has a ref `refs/planveyor/rejected-baselines/<stem>/…` is read the same way, with `accepted_red_carrier_invalid`. For a plan that meets all the conditions, the reason (`terminal_disposition_reason`) shows the stage: `accepted_red_current_snapshot` means there is no capture yet and the rejected bytes are in place; `accepted_red_durable_capture` means the ref exists and is intact; `accepted_red_snapshot_mismatch_without_durable_ref` means there is no ref and the bytes no longer match the review; `accepted_red_snapshot_mismatch_without_valid_durable_ref` means the ref is broken.
 
-Для accepted-red plan oracle всегда отвечает `delivery_green=false`, `staging_policy=forbidden`, `durable_capture_required=true`. Байты targets, которые видел Reviewer, — доказательство, а не поставка: их нельзя stage-ить и коммитить от имени этого plan.
+For an accepted-red plan, Oracle always answers `delivery_green=false`, `staging_policy=forbidden`, `durable_capture_required=true`. The target bytes that Reviewer saw are evidence, not a delivery: do not stage or commit them on behalf of this plan.
 
-## Кто что запускает
+## Who runs what
 
-- Architect принимает маршрут: ставит `architect_accepted`, заводит преемника и переводит plan в `Superseded` (`docs/tools/prompts/architect_status_driven.md`).
-- Исправление ведёт отдельный незавершённый plan восстановления (recovery plan) обычным циклом ролей.
-- Capture, проверку и cleanup запускает владелец вручную. Manager и роли эти режимы не вызывают. В очереди queue helper на accepted-red plan отвечает `terminal_closeout_admission_rejected` с `reason_code=accepted_red_reconciliation_required`, и Manager отдаёт payload владельцу (`docs/roles/manager.md`); закрытие документов такого plan остаётся `blocked`, пока нет cleanup. Порядок действий владельца при инциденте — `docs/playbooks/manual_terminal_recovery.md`.
+- Architect accepts the route: sets `architect_accepted`, creates the successor, and moves the plan to `Superseded` (`docs/tools/prompts/architect_status_driven.md`).
+- A separate unfinished recovery plan carries the fix through the normal role cycle.
+- The Owner runs capture, verification, and cleanup by hand. Manager and the roles do not call these modes. In a queue, the queue helper answers an accepted-red plan with `terminal_closeout_admission_rejected` and `reason_code=accepted_red_reconciliation_required`, and Manager hands the payload to the Owner (`docs/roles/manager.md`). The docs closeout of such a plan stays `blocked` until cleanup. The Owner's steps during an incident are in `docs/playbooks/manual_terminal_recovery.md`.
 
-## Жизненный цикл
+## Lifecycle
 
 ```zsh
 "$PLANVEYOR_RUNTIME_ROOT/bin/planveyor" --project "$PWD" planveyor_plan_bundle --verify-rejected <SOURCE_PLAN>
@@ -33,50 +35,50 @@ Plan закрыт не зелёной поставкой, а заменой: Rev
 "$PLANVEYOR_RUNTIME_ROOT/bin/planveyor" --project "$PWD" planveyor_docs_closeout <SOURCE_PLAN> --json
 ```
 
-Режимы `planveyor_plan_bundle` отвечают JSON `planveyor_plan_bundle_closeout.v1` в stdout с кодом 0, а при отказе — JSON `planveyor_rejected_baseline_error.v1` со `state=blocked` и `reason_code` в stderr с кодом 2. `--recovery-plan` допустим только с `--capture-rejected`; опции closeout, preflight и message в этих режимах запрещены.
+The `planveyor_plan_bundle` modes answer with JSON `planveyor_plan_bundle_closeout.v1` on stdout and exit code 0. On refusal they answer with JSON `planveyor_rejected_baseline_error.v1` with `state=blocked` and `reason_code` on stderr and exit code 2. `--recovery-plan` is allowed only with `--capture-rejected`; the closeout, preflight, and message options are forbidden in these modes.
 
-1. **Проверка** (`--verify-rejected`) только читает. Пока capture нет, ответ — `recovery_state=capture_required`, если байты targets совпадают с ревью, или `snapshot_mismatch_without_durable_ref`, если уже нет: сохранить отклонённые байты тогда нельзя.
-2. **Capture** (`--capture-rejected`) сохраняет отклонённые байты в Git. Он требует:
-   - `--recovery-plan`: plan восстановления, отдельный от source, не в `Done` и не в `Superseded`, со строкой ``- Superseded incident plan: `<SOURCE_PLAN>`.`` и ровно одним своим code draft `docs/code_drafts/<stem плана восстановления>__code_draft.md`, чьи `targets` пересекаются с targets source;
-   - index для targets совпадает с HEAD: отклонённые байты не stage-нуты;
-   - текущий `bundle_sha256` source совпадает с `bundle_sha256` из `**Target:**` ревью.
+1. **Verification** (`--verify-rejected`) only reads. While there is no capture, the answer is `recovery_state=capture_required` if the target bytes match the review, or `snapshot_mismatch_without_durable_ref` if they no longer match: then the rejected bytes cannot be saved.
+2. **Capture** (`--capture-rejected`) saves the rejected bytes in Git. It requires:
+   - `--recovery-plan`: a recovery plan separate from the source, not in `Done` and not in `Superseded`, with the line ``- Superseded incident plan: `<SOURCE_PLAN>`.`` and exactly one code draft of its own, `docs/code_drafts/<recovery plan stem>__code_draft.md`, whose `targets` overlap the source targets;
+   - the index for the targets matches HEAD: the rejected bytes are not staged;
+   - the current `bundle_sha256` of the source matches the `bundle_sha256` in the review's `**Target:**` line.
 
-   Повторный capture при целом ref ничего не меняет и возвращает текущее состояние. После capture — `recovery_state=cleanup_required`.
-3. **Cleanup** (`--cleanup-rejected`) возвращает каждый target к байтам HEAD, а target, которого нет в HEAD, удаляет. Он требует целый capture, тот же HEAD, что при capture, index targets, равный HEAD, и targets только в двух состояниях: отклонённые байты или байты HEAD. Поэтому plan восстановления меняет эти targets только после cleanup. После cleanup — `recovery_state=completed`, `closeout_kind=accepted_red_recovered`, `bundle_ok=true`; `delivery_green` остаётся `false`. Повторный cleanup ничего не меняет.
-4. **Закрытие.** `--closeout-json` для accepted-red plan печатает тот же payload, а не обычный exact-bundle; при битом carrier — отказ `accepted_red_closeout_invalid_carrier`. `--stage`, `--commit-ready` и `--commit-exact` отказывают с `staging_forbidden`. `planveyor_docs_closeout` отвечает `completed` с `reason_code=accepted_red_recovery_completed` только после cleanup и проверки receipt, до этого — `blocked`, обычно с `accepted_red_recovery_incomplete` или причиной `accepted_red_*`. Если других правок документов нет, ответ содержит `final_docs_commit=no_op` с причиной `accepted_red_evidence_ref_materialized`.
+   A repeated capture with an intact ref changes nothing and returns the current state. After capture: `recovery_state=cleanup_required`.
+3. **Cleanup** (`--cleanup-rejected`) returns each target to its HEAD bytes and deletes a target that is not in HEAD. It requires an intact capture, the same HEAD as at capture, a target index equal to HEAD, and targets in only two states: the rejected bytes or the HEAD bytes. So the recovery plan changes these targets only after cleanup. After cleanup: `recovery_state=completed`, `closeout_kind=accepted_red_recovered`, `bundle_ok=true`; `delivery_green` stays `false`. A repeated cleanup changes nothing.
+4. **Closeout.** For an accepted-red plan, `--closeout-json` prints the same payload instead of the usual exact-bundle one; with a broken carrier it refuses with `accepted_red_closeout_invalid_carrier`. `--stage`, `--commit-ready`, and `--commit-exact` refuse with `staging_forbidden`. `planveyor_docs_closeout` answers `completed` with `reason_code=accepted_red_recovery_completed` only after cleanup and a receipt check. Before that it answers `blocked`, usually with `accepted_red_recovery_incomplete` or an `accepted_red_*` reason. If there are no other document edits, the answer contains `final_docs_commit=no_op` with the reason `accepted_red_evidence_ref_materialized`.
 
-После cleanup plan восстановления может менять targets из своего code draft: состояние `active_checkout_state=recovery_owned_overlap` допустимо. Изменение другого отклонённого target даёт `drifted`, и проверка отказывает с `active_checkout_drift`.
+After cleanup, the recovery plan may change the targets from its own code draft: the state `active_checkout_state=recovery_owned_overlap` is allowed. A change to another rejected target gives `drifted`, and the check refuses with `active_checkout_drift`.
 
-## Что сохраняется
+## What is stored
 
-Capture создаёт commit, родитель которого — текущий HEAD (`captured_parent`), и ref `refs/planveyor/rejected-baselines/<stem>/<review_bundle_sha256>` на него. Дерево commit — дерево HEAD, в котором записаны:
+Capture creates a commit whose parent is the current HEAD (`captured_parent`) and a ref `refs/planveyor/rejected-baselines/<stem>/<review_bundle_sha256>` that points to it. The commit tree is the HEAD tree with these entries written into it:
 
-- отклонённые байты всех targets source в том виде, в каком их видел Reviewer;
-- четыре файла маршрута: source plan, его code draft, ревью и преемник;
-- `.planveyor/rejected-baselines/<stem>/<review_bundle_sha256>/manifest.json` со схемой `planveyor_rejected_baseline.v1`: source и plan восстановления, code draft и targets восстановления, ревью и его `bundle_sha256`, преемник, `captured_parent`, для каждого target и файла маршрута — путь, sha256, размер, mode и blob oid.
+- the rejected bytes of all source targets, as Reviewer saw them;
+- four routing files: the source plan, its code draft, the review, and the successor;
+- `.planveyor/rejected-baselines/<stem>/<review_bundle_sha256>/manifest.json` with the schema `planveyor_rejected_baseline.v1`: the source and recovery plans, the recovery code draft and targets, the review and its `bundle_sha256`, the successor, `captured_parent`, and for each target and routing file the path, sha256, size, mode, and blob oid.
 
-Cleanup добавляет дочерний commit с `cleanup.json` рядом с manifest (схема `planveyor_rejected_baseline_cleanup.v1`: итоговое состояние каждого target и повторная сверка файлов маршрута) и переносит ref на него.
+Cleanup adds a child commit with `cleanup.json` next to the manifest (schema `planveyor_rejected_baseline_cleanup.v1`: the final state of each target and a repeated check of the routing files) and moves the ref to it.
 
-HEAD, ветки и index capture и cleanup не меняют, рабочее дерево меняет только cleanup. Ref публикуется одной транзакцией `git update-ref` при условии, что HEAD не сдвинулся; иначе отказ `recovery_ref_cas_conflict`.
+Capture and cleanup do not change HEAD, branches, or the index; only cleanup changes the working tree. The ref is published in one `git update-ref` transaction, on the condition that HEAD has not moved; otherwise the refusal is `recovery_ref_cas_conflict`.
 
-## Как проверяется
+## How it is checked
 
-- Каждое чтение заново проверяет ref целиком: цепочку родителей, manifest, receipt cleanup и blob-и targets. Битый ref даёт `durable_capture_state=invalid`; capture и cleanup поверх него отказывают с `recovery_ref_invalid`.
-- Четыре файла маршрута должны совпадать байт в байт с сохранёнными при capture: иначе `routing_carrier_drift`, `--closeout-json` отказывает, а `planveyor_docs_closeout` отвечает `blocked`. Правка преемника до закрытия документов source тоже считается дрейфом.
-- Проверки отвергают Git replace refs, `info/grafts` и переменные `GIT_DIR`, `GIT_WORK_TREE`, `GIT_COMMON_DIR`, `GIT_INDEX_FILE`, `GIT_REPLACE_REF_BASE` в окружении helper.
-- Обходы для исторических случаев (snapshot bridge и перепривязка маршрута) в нейтральном движке не заданы: capture возможен, только пока текущие байты targets совпадают с ревью.
+- Every read checks the whole ref again: the parent chain, the manifest, the cleanup receipt, and the target blobs. A broken ref gives `durable_capture_state=invalid`; capture and cleanup on top of it refuse with `recovery_ref_invalid`.
+- The four routing files must match the copies saved at capture byte for byte. Otherwise the result is `routing_carrier_drift`: `--closeout-json` refuses, and `planveyor_docs_closeout` answers `blocked`. An edit to the successor before the docs closeout of the source also counts as drift.
+- The checks reject Git replace refs, `info/grafts`, and the variables `GIT_DIR`, `GIT_WORK_TREE`, `GIT_COMMON_DIR`, `GIT_INDEX_FILE`, `GIT_REPLACE_REF_BASE` in the helper environment.
+- Workarounds for historical cases (snapshot bridge and route rebind) are not set in the neutral engine: capture is possible only while the current target bytes match the review.
 
-## Частые отказы
+## Common refusals
 
-| `reason_code` | Что значит | Что делать |
+| `reason_code` | What it means | What to do |
 |---|---|---|
-| `not_accepted_red`, `routing_contract_invalid` | условия accepted-red не выполнены, carriers неполны или в окружении есть Git-переменные | сверить plan, преемника, code draft и ревью с первым разделом |
-| `recovery_plan_invalid` | plan восстановления не подходит | поправить его строку source, статус или code draft |
-| `rejected_target_staged` | отклонённые targets stage-нуты | убрать их из index |
-| `snapshot_mismatch` | байты targets уже не совпадают с ревью | capture невозможен; решение — за владельцем |
-| `recovery_ref_cas_conflict` | HEAD сдвинулся во время записи ref или ref уже занят | повторить на неподвижном HEAD, прочитав `--verify-rejected` |
-| `capture_required` | cleanup без capture | сначала capture |
-| `head_drift` | HEAD изменился после capture | cleanup проводят на том же HEAD, что capture (`captured_parent`) |
-| `rejected_target_drift` | target не совпадает ни с отклонёнными байтами, ни с HEAD | разобрать изменения этого target |
-| `routing_carrier_drift` | файл маршрута изменён после capture | вернуть байты из capture commit |
-| `staging_forbidden` | попытка stage или commit accepted-red plan | не stage-ить; закрывать через cleanup |
+| `not_accepted_red`, `routing_contract_invalid` | the accepted-red conditions do not hold, the carriers are incomplete, or the environment has Git variables | check the plan, the successor, the code draft, and the review against the first section |
+| `recovery_plan_invalid` | the recovery plan does not fit | fix its source line, status, or code draft |
+| `rejected_target_staged` | the rejected targets are staged | remove them from the index |
+| `snapshot_mismatch` | the target bytes no longer match the review | capture is not possible; the decision belongs to the Owner |
+| `recovery_ref_cas_conflict` | HEAD moved while the ref was being written, or the ref is already taken | read `--verify-rejected`, then repeat on a stable HEAD |
+| `capture_required` | cleanup without capture | run capture first |
+| `head_drift` | HEAD changed after capture | run cleanup on the same HEAD as capture (`captured_parent`) |
+| `rejected_target_drift` | a target matches neither the rejected bytes nor HEAD | sort out the changes to this target |
+| `routing_carrier_drift` | a routing file changed after capture | restore its bytes from the capture commit |
+| `staging_forbidden` | an attempt to stage or commit an accepted-red plan | do not stage; close through cleanup |

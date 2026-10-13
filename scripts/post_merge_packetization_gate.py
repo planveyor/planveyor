@@ -70,6 +70,9 @@ REPORT_FILENAME_MARKER = "_packetization_gate_range_"
 TARGET_LOCAL_SCOPE = "target-local"
 SOURCE_ONLY_ROOTS = {
     "docs/tools/owner_runbook_codex.md": "owner runbook is planveyor operator guidance",
+    # The Russian copy is the same operator guidance and keeps the original's
+    # classification; it is listed by exact path, not by a `.ru.md` rule.
+    "docs/tools/owner_runbook_codex.ru.md": "owner runbook is planveyor operator guidance",
 }
 SHARED_PREFIXES = (
     "docs/roles/",

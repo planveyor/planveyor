@@ -1,33 +1,35 @@
-# Lifecycle и пакеты
+# Lifecycle and packets
 
-Эта инструкция описывает общую Planveyor lifecycle. Она не заменяет scope, acceptance criteria или status текущего plan.
+**English** · [Русский](lifecycle-and-packets.ru.md)
 
-## План, очередь и review
+This guide describes the shared Planveyor lifecycle. It does not replace the scope, the acceptance criteria, or the status of the current plan.
 
-Выбери literal project и plan path, затем прочитай routing truth через facade:
+## Plan, queue, and review
+
+Choose the literal project and plan path, then read the routing truth through the facade:
 
 ```zsh
 ./bin/planveyor --project /absolute/path/to/consumer \
   planveyor_plan_status_oracle --json docs/plans/<plan>.md
 ```
 
-Запусти plan lint и target validation, требуемые выбранным project и текущим plan, до handoff. Queue state materialize-ится только explicit `planveyor_q_*` helpers; active plan pointer не заменяет queue truth. Перед заменой или очисткой очереди сначала прочитай её состояние, затем используй явный Manager mode.
+Before the handoff, run the plan lint and the target validation that the selected project and the current plan require. Only the explicit `planveyor_q_*` helpers materialize the queue state; the active plan pointer does not replace the queue truth. Before you replace or clear the queue, read its state first, then use an explicit Manager mode.
 
-Exact bundle, review artifact и CENSOR остаются отдельными evidence carriers. Положительный текст role response, historical receipt или broad static scan не закрывают current bundle без соответствующего readback.
+The exact bundle, the review artifact, and CENSOR remain separate evidence carriers. Positive text in a role response, a historical receipt, or a broad static scan does not close the current bundle without the matching readback.
 
-## Post-merge и closeout
+## Post-merge and closeout
 
-После terminal delivery перенеси durable решения в canon, сохрани реальные follow-ups и process improvements в их собственных carriers, затем выполни target checks и documentation checks. Временные plans и review artifacts удаляются только после fresh cleanup evidence и явного Owner решения.
+After a delivery reaches a terminal status, move the durable decisions into the canon, save the real follow-ups and process improvements in their own carriers, then run the target checks and the documentation checks. Temporary plans and review artifacts are deleted only after fresh cleanup evidence and an explicit Owner decision.
 
-См. также:
+See also:
 
-- [post-merge audit](../playbooks/post_merge_audit.md);
-- [post-merge plan harvest](../playbooks/post_merge_plan_harvest.md);
-- [post-merge docs hygiene](../playbooks/post_merge_docs_hygiene.md).
+- [post-merge audit](../playbooks/post_merge_audit.md) (in Russian);
+- [post-merge plan harvest](../playbooks/post_merge_plan_harvest.md) (in Russian);
+- [post-merge docs hygiene](../playbooks/post_merge_docs_hygiene.md) (in Russian).
 
-## Rollout, adoption и ACK
+## Rollout, adoption, and ACK
 
-Пакет — handoff между Planveyor source и consumer, не executable plan в source repository. Source-local helpers запускаются из physical Planveyor root без `--project`; используй только source-local packet paths и literal `<target-repo>`.
+A packet is a handoff between the Planveyor source and a consumer, not an executable plan in the source repository. Source-local helpers run from the physical Planveyor root without `--project`; use only source-local packet paths and a literal `<target-repo>`.
 
 ```zsh
 ./bin/planveyor planveyor_rollout_packet_create <target-repo> <topic-slug> \
@@ -37,7 +39,7 @@ Exact bundle, review artifact и CENSOR остаются отдельными ev
   docs/rollout_packets/<packet>.md --print-target-plan-seed
 ```
 
-Нормальный порядок delivery: consumer materialize-ит target-local adoption plan/import receipt, затем записывает одно outcome в выбранном consumer project через public facade:
+The normal delivery order: the consumer materializes the target-local adoption plan/import receipt, then records one outcome in the selected consumer project through the public facade:
 
 ```zsh
 ./bin/planveyor --project /absolute/path/to/consumer \
@@ -46,7 +48,7 @@ Exact bundle, review artifact и CENSOR остаются отдельными ev
   --packet-path docs/rollout_packets/<packet>.md --outcome <canonical-or-alias>
 ```
 
-Эта запись меняет только target-local structured carrier. Затем source фиксирует отдельный receipt:
+This write changes only the target-local structured carrier. Then the source records a separate receipt:
 
 ```zsh
 ./bin/planveyor planveyor_rollout_packet_ack \
@@ -54,17 +56,17 @@ Exact bundle, review artifact и CENSOR остаются отдельными ev
   --target-plan docs/plans/<target-adoption>.md
 ```
 
-ACK materialize-ит pointer на `docs/plans/<target-adoption>.md`, но сам по себе не доказывает готовый target outcome и может оставить packet в состоянии ожидания outcome.
+ACK materializes a pointer to `docs/plans/<target-adoption>.md`, but by itself it does not prove a finished target outcome and may leave the packet waiting for the outcome.
 
-Используй `planveyor_rollout_packet_lint`, `planveyor_rollout_packet_inbox`, `planveyor_rollout_packet_adoption_plan`, `planveyor_rollout_packet_query` и `planveyor_rollout_packet_reconcile` для readback и planning state. Upstream request — отдельный carrier; public lifecycle использует `planveyor_upstream_request_show`, `planveyor_upstream_request_import`, `planveyor_upstream_request_ack` и `planveyor_upstream_request_query`.
+Use `planveyor_rollout_packet_lint`, `planveyor_rollout_packet_inbox`, `planveyor_rollout_packet_adoption_plan`, `planveyor_rollout_packet_query`, and `planveyor_rollout_packet_reconcile` for readback and planning state. An upstream request is a separate carrier; the public lifecycle uses `planveyor_upstream_request_show`, `planveyor_upstream_request_import`, `planveyor_upstream_request_ack`, and `planveyor_upstream_request_query`.
 
-Report/reuse gate читает exact range без изменения packet:
+The report/reuse gate reads the exact range without changing a packet:
 
 ```zsh
 ./bin/planveyor planveyor_post_merge_packetization_gate --range BASE..HEAD
 ```
 
-Для packet restamp/recovery назови source-local packet явно:
+To restamp or recover a packet, name the source-local packet explicitly:
 
 ```zsh
 ./bin/planveyor planveyor_post_merge_packetization_gate_recover \
@@ -72,4 +74,4 @@ Report/reuse gate читает exact range без изменения packet:
   --source-plan docs/plans/<source>.md --stage-packets
 ```
 
-`--range` обязателен для recovery; `--source-plan` — optional provenance; можно повторять `--packet`. Вызов без named packet остаётся report/reuse path и не заменяет packet update. Эти helpers не разрешают direct sibling writes, queue activation или publication.
+`--range` is required for recovery; `--source-plan` is optional provenance; `--packet` can be repeated. A call without a named packet stays on the report/reuse path and does not replace a packet update. These helpers do not authorize direct sibling writes, queue activation, or publication.

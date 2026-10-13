@@ -238,6 +238,38 @@ class SiblingContractDocsTest(unittest.TestCase):
         ):
             self.assertNotIn(obsolete, guidance, carrier)
 
+    def _assert_ordinary_owner_task_en(self, text: str, carrier: str) -> None:
+        guidance = " ".join(text.replace("`", "").split()).lower()
+        for marker in (
+            "direct owner assignment",
+            "ordinary",
+            "bounded discovery",
+            "source_ref#item_id",
+            "status=open",
+            "plan=null",
+            "disposition_kind=null",
+            "disposition_ref=null",
+            "disposition_commit_oid=null",
+            "unchanged",
+            "automatic backlink is forbidden",
+            "if there is no match",
+            "already active plan",
+            "architect/owner triage",
+            "prepare/finalize/backlink are not its preconditions",
+            "promotion writer",
+            "exact proof",
+        ):
+            self.assertIn(marker, guidance, carrier)
+        self.assertRegex(guidance, r"without an artificial row|do not create an artificial row", carrier)
+        for obsolete in (
+            "do not create a new plan",
+            "instead of a second plan",
+            "standard promotion, not a second plan",
+            "--prepare-v2",
+            "--finalize-v2",
+        ):
+            self.assertNotIn(obsolete, guidance, carrier)
+
     def test_stack_brief_adaptation_requires_purpose_and_readiness_only(self) -> None:
         for base in (ROOT, TEMPLATE_ROOT):
             with self.subTest(base=base):
@@ -583,27 +615,37 @@ class SiblingContractDocsTest(unittest.TestCase):
             self.assertIn(f"`{relative}`", text)
 
     def test_public_human_runbook_keeps_explicit_commits_and_both_exchange_scenarios(self) -> None:
-        text = (ROOT / "docs/guides/stack-sibling.md").read_text(encoding="utf-8")
-        self._assert_ordinary_owner_task(text, "public runbook")
-        self.assertIn("zero findings допустимы", text)
-        self.assertIn("Теоретическая readiness не доказывает живой проход", text)
-        self.assertIn("trace всех вызовов, inputs, stdout/stderr, exit codes", text)
-        for command in ("init", "plan", "architect", "answer", "run", "close", "ready"):
-            self.assertIn(f"planveyor sibling {command}", text)
-        self.assertIn("planveyor --project ~/my-stack sibling upgrade", text)
-        self.assertIn("planveyor sibling close --commit", text)
-        self.assertIn("planveyor-mssql", text)
-        self.assertIn("provenance", text)
-        self.assertIn("gh issue create --body-file", text)
-        self.assertIn("Source-only ACK", text)
-        self.assertIn("../playbooks/analysis_wave.md", text)
-        self.assertIn("../playbooks/decomposition_wave.md", text)
-        self.assertNotRegex(
-            text,
-            r"(?m)^\s*(?:setopt\b|python(?:3)?\s|git\s[^\n]*(?:commit|rev-parse)|.*git add -A)",
-        )
-        for operator_detail in ("~/sibling.env", "~/.zshenv", "--source-commit", "hashlib", "status=closed"):
-            self.assertNotIn(operator_detail, text)
+        guide = ROOT / "docs/guides/stack-sibling.md"
+        texts = {
+            "en": guide.read_text(encoding="utf-8"),
+            "ru": guide.with_name("stack-sibling.ru.md").read_text(encoding="utf-8"),
+        }
+        self._assert_ordinary_owner_task(texts["ru"], "public runbook, Russian copy")
+        self.assertIn("zero findings допустимы", texts["ru"])
+        self.assertIn("Теоретическая readiness не доказывает живой проход", texts["ru"])
+        self.assertIn("trace всех вызовов, inputs, stdout/stderr, exit codes", texts["ru"])
+        self._assert_ordinary_owner_task_en(texts["en"], "public runbook")
+        self.assertIn("zero findings are allowed", texts["en"])
+        self.assertIn("Theoretical readiness does not prove a live pass", texts["en"])
+        self.assertIn("trace of all calls, inputs, stdout/stderr, exit codes", texts["en"])
+        for language, text in texts.items():
+            with self.subTest(language=language):
+                for command in ("init", "plan", "architect", "answer", "run", "close", "ready"):
+                    self.assertIn(f"planveyor sibling {command}", text)
+                self.assertIn("planveyor --project ~/my-stack sibling upgrade", text)
+                self.assertIn("planveyor sibling close --commit", text)
+                self.assertIn("planveyor-mssql", text)
+                self.assertIn("provenance", text)
+                self.assertIn("gh issue create --body-file", text)
+                self.assertIn("Source-only ACK", text)
+                self.assertIn("../playbooks/analysis_wave.md", text)
+                self.assertIn("../playbooks/decomposition_wave.md", text)
+                self.assertNotRegex(
+                    text,
+                    r"(?m)^\s*(?:setopt\b|python(?:3)?\s|git\s[^\n]*(?:commit|rev-parse)|.*git add -A)",
+                )
+                for operator_detail in ("~/sibling.env", "~/.zshenv", "--source-commit", "hashlib", "status=closed"):
+                    self.assertNotIn(operator_detail, text)
 
     def test_fresh_sibling_delivers_required_paths_and_explicit_engine_references(self) -> None:
         with tempfile.TemporaryDirectory(prefix="planveyor-sibling-docs-") as temporary:

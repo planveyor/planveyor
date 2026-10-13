@@ -8,7 +8,7 @@
 2) Прочитай `docs/roles/architect.md` (bootstrap).
 3) Прочитай `docs/tools/prompts/manager_collab_pipeline.md` и `docs/tools/prompts/manager_collab_merge_pipeline.md`.
 4) Если нужен historical context по collab-контрактам, используй stable retrieval/archive recipe:
-   - `"$PLANVEYOR_RUNTIME_ROOT/docs/tools/snippet.md"` (разделы «Поиск документации», «Post-merge и docs hygiene»);
+   - `"$PLANVEYOR_RUNTIME_ROOT/docs/tools/snippet.ru.md"` (разделы «Поиск документации», «Проверка после слияния и гигиена документов»);
    - `planveyor_docs_retrieve plans --files "<collab topic keywords>"`;
    - если temp docs уже удалены, используй `planveyor_docs_archive_query ...` с теми же anchor-токенами и открывай только top hits.
 

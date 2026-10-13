@@ -21,8 +21,10 @@ ROOT = Path(__file__).resolve().parents[1]
 SCRIPT = ROOT / "scripts" / "docs_retrieve.py"
 DOCS_GET = ROOT / "scripts" / "docs_get.py"
 DOCS_MULTI_GET = ROOT / "scripts" / "docs_multi_get.py"
+DOCS_INDEX_BUILD = ROOT / "scripts" / "docs_index_build.py"
 PLANVEYOR_ZSH = ROOT / "scripts" / "planveyor.zsh"
 FORBIDDEN_READ_LOG_KEYS = {"content", "snippet", "transcript", "prompt", "command_output"}
+RUSSIAN_GUIDE_TEXT = "# Sibling под свой стек\n\nalpha русская копия\n"
 
 
 def _write_index(db_path: Path) -> None:
@@ -42,7 +44,13 @@ def _write_index(db_path: Path) -> None:
             """
         )
         conn.execute("INSERT INTO meta(key, value) VALUES('schema_version', '1')")
-        conn.execute("INSERT INTO meta(key, value) VALUES('tool_version', 'test')")
+        index_build = _docs_index_build_module()
+        rules = index_build.corpus_rules("canon", "docs", index_build.DEFAULT_CHUNK_TARGET_TOKENS, project_root=db_path.parent)
+        conn.executemany(
+            "INSERT INTO meta(key, value) VALUES(?, ?)",
+            [("tool_version", "1"), ("fingerprint", index_build.compute_fingerprint(rules)),
+             ("index_config_json", json.dumps(rules))],
+        )
         conn.execute(
             "INSERT INTO doc_chunks_fts(corpus, path, start_line, heading, body) VALUES(?, ?, ?, ?, ?)",
             ("canon", "docs/example.md", "3", "Example", "alpha beta gamma"),
@@ -57,6 +65,81 @@ def _write_docs_fixture(root: Path) -> None:
     docs_dir.mkdir()
     docs_dir.joinpath("example.md").write_text("one\ntwo\nthree\n", encoding="utf-8")
     docs_dir.joinpath("second.md").write_text("alpha\nbeta\n", encoding="utf-8")
+
+
+def _write_translation_fixture(root: Path, *, registry: bool = True) -> None:
+    """English originals with Russian copies `name.ru.md` next to them."""
+
+    if registry:
+        registry_path = root / "i18n/pairs.json"
+        registry_path.parent.mkdir(parents=True, exist_ok=True)
+        registry_path.write_text(json.dumps({"schema": "planveyor_i18n_pairs.v1", "pairs": []}), encoding="utf-8")
+    files = {
+        "docs/guides/stack-sibling.md": "# Stack sibling\n\nalpha english guide\n",
+        "docs/guides/stack-sibling.ru.md": RUSSIAN_GUIDE_TEXT,
+        "docs/tools/owner_runbook_codex.md": "# Owner runbook\n\nalpha english runbook\n",
+        "docs/tools/owner_runbook_codex.ru.md": "# Runbook Owner\n\nalpha русский runbook\n",
+        "docs/plans/260101_0000_fixture.md": "# Plan: fixture\n\nalpha plan\n",
+        "docs/plans/README.ru.md": "# Планы\n\nalpha копия\n",
+        "docs/followups/fixture__followups_backlog.md": "# Followups\n\n- [ ] alpha followup\n",
+        "docs/followups/README.ru.md": "# Хвосты\n\n- [ ] alpha копия\n",
+    }
+    for rel_path, text in files.items():
+        path = root / rel_path
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(text, encoding="utf-8")
+
+
+def _write_legacy_index(db_path: Path, *, config: dict[str, object], fingerprint: str, stale_path: str) -> None:
+    """An index written by an older build, before a corpus rule existed."""
+
+    conn = sqlite3.connect(db_path.as_posix())
+    try:
+        conn.execute("CREATE TABLE meta (key TEXT PRIMARY KEY, value TEXT NOT NULL)")
+        conn.execute(
+            """
+            CREATE VIRTUAL TABLE doc_chunks_fts USING fts5(
+              corpus UNINDEXED,
+              path UNINDEXED,
+              start_line UNINDEXED,
+              heading,
+              body,
+              tokenize = 'porter'
+            )
+            """
+        )
+        meta = {
+            "schema_version": "1",
+            "tool_version": "1",
+            "fingerprint": fingerprint,
+            "index_config_json": json.dumps(config, ensure_ascii=False, sort_keys=True, separators=(",", ":")),
+        }
+        conn.executemany("INSERT INTO meta(key, value) VALUES(?, ?)", sorted(meta.items()))
+        conn.execute(
+            "INSERT INTO doc_chunks_fts(corpus, path, start_line, heading, body) VALUES(?, ?, ?, ?, ?)",
+            ("canon", stale_path, "1", "Stale", "alpha stale copy"),
+        )
+        conn.commit()
+    finally:
+        conn.close()
+
+
+def _indexed_paths(db_path: Path) -> list[tuple[str, str]]:
+    conn = sqlite3.connect(db_path.as_posix())
+    try:
+        rows = conn.execute("SELECT DISTINCT corpus, path FROM doc_chunks_fts ORDER BY corpus, path").fetchall()
+    finally:
+        conn.close()
+    return [(str(corpus), str(path)) for corpus, path in rows]
+
+
+def _docs_index_build_module():
+    scripts_dir = str(ROOT / "scripts")
+    if scripts_dir not in sys.path:
+        sys.path.insert(0, scripts_dir)
+    import docs_index_build
+
+    return docs_index_build
 
 
 def _read_jsonl(path: Path) -> list[dict[str, object]]:
@@ -350,6 +433,358 @@ class DocsRetrieveTests(unittest.TestCase):
                 check=True,
             )
             self.assertFalse((tmp / ".tmp" / "planveyor_docs_retrieve_reads.jsonl").exists())
+
+    def test_docs_index_build_skips_russian_copies_in_every_corpus(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            tmp = Path(tmpdir)
+            _write_translation_fixture(tmp)
+            db_path = tmp / ".tmp" / "docs.sqlite"
+            for corpus in ("canon", "followups", "plans"):
+                subprocess.run(
+                    [sys.executable, "-B", str(DOCS_INDEX_BUILD), "--db", str(db_path), "--corpus", corpus],
+                    cwd=tmp,
+                    text=True,
+                    capture_output=True,
+                    check=True,
+                )
+            indexed = _indexed_paths(db_path)
+
+        self.assertEqual(
+            indexed,
+            [
+                ("canon", "docs/guides/stack-sibling.md"),
+                ("canon", "docs/tools/owner_runbook_codex.md"),
+                ("followups", "docs/followups/fixture__followups_backlog.md"),
+                ("plans", "docs/plans/260101_0000_fixture.md"),
+            ],
+        )
+
+    def test_docs_index_migrates_only_additive_russian_copy_rule(self) -> None:
+        index_build = _docs_index_build_module()
+        rules = index_build.corpus_rules("canon", "docs", index_build.DEFAULT_CHUNK_TARGET_TOKENS, project_root=ROOT)
+        self.assertEqual(rules["exclude_suffixes"], [".ru.md"])
+        rules_before = {key: value for key, value in rules.items() if key != "exclude_suffixes"}
+        configs_before = {
+            "before_rule": rules_before,
+            "before_rule_and_plans": {key: value for key, value in rules_before.items() if key != "plans"},
+            "per_corpus": {**rules_before, "corpus": "canon"},
+        }
+        paths = {
+            "canon": "docs/guides/stack-sibling.md",
+            "followups": "docs/followups/fixture__followups_backlog.md",
+            "plans": "docs/plans/260101_0000_fixture.md",
+        }
+        for requested in paths:
+            for label, config in configs_before.items():
+                with self.subTest(corpus=requested, index=label), tempfile.TemporaryDirectory() as tmpdir:
+                    tmp = Path(tmpdir)
+                    _write_translation_fixture(tmp)
+                    db_path = tmp / "docs.sqlite"
+                    _write_legacy_index(
+                        db_path, config=config, fingerprint=index_build.compute_fingerprint(config),
+                        stale_path="docs/guides/stack-sibling.ru.md",
+                    )
+                    conn = sqlite3.connect(str(db_path))
+                    try:
+                        if label == "per_corpus":
+                            conn.execute("UPDATE meta SET key = 'corpus_rules_json' WHERE key = 'index_config_json'")
+                        for corpus, path in paths.items():
+                            conn.execute(
+                                "INSERT INTO doc_chunks_fts VALUES(?, ?, ?, ?, ?)",
+                                (corpus, path, "1", "Preserved", "alpha stable original"),
+                            )
+                            if corpus != "canon":
+                                conn.execute(
+                                    "INSERT INTO doc_chunks_fts VALUES(?, ?, ?, ?, ?)",
+                                    (corpus, path[:-3] + ".ru.md", "1", "Stale", "alpha"),
+                                )
+                            conn.executemany("INSERT INTO meta VALUES(?, ?)", [
+                                (f"built_at_utc.{corpus}", "1"),
+                                (f"files_total.{corpus}", "2"), (f"chunks_total.{corpus}", "2"),
+                            ])
+                        conn.commit()
+                    finally:
+                        conn.close()
+
+                    # Read old indexes safely without rewriting them. Exclusion
+                    # happens before LIMIT, so a copy cannot crowd out an original.
+                    before = db_path.read_bytes()
+                    for corpus, path in paths.items():
+                        retrieve = subprocess.run(
+                            [sys.executable, "-B", str(SCRIPT), "--db", str(db_path), "--corpus", corpus,
+                             "--k", "1", "--format", "json", "--no-log", "alpha"],
+                            cwd=tmp, text=True, capture_output=True,
+                        )
+                        self.assertEqual(retrieve.returncode, 0, retrieve.stdout + retrieve.stderr)
+                        self.assertEqual(json.loads(retrieve.stdout)["files"], [path])
+                    self.assertEqual(db_path.read_bytes(), before)
+
+                    rebuilt = subprocess.run(
+                        [sys.executable, "-B", str(DOCS_INDEX_BUILD), "--db", str(db_path), "--corpus", requested],
+                        cwd=tmp, text=True, capture_output=True,
+                    )
+                    self.assertEqual(rebuilt.returncode, 0, rebuilt.stdout + rebuilt.stderr)
+                    self.assertIn("index_migration: translation_copy_exclusion", rebuilt.stdout)
+                    indexed = _indexed_paths(db_path)
+                    self.assertFalse([path for _, path in indexed if path.endswith(".ru.md")], indexed)
+                    conn = sqlite3.connect(str(db_path))
+                    try:
+                        meta = dict(conn.execute("SELECT key, value FROM meta"))
+                        self.assertEqual(meta["fingerprint"], index_build.compute_fingerprint(rules))
+                        for corpus, path in paths.items():
+                            if corpus != requested:
+                                row = conn.execute(
+                                    "SELECT heading FROM doc_chunks_fts WHERE corpus = ? AND path = ?", (corpus, path)
+                                ).fetchone()
+                                self.assertEqual(row, ("Preserved",))
+                                self.assertEqual(meta[f"built_at_utc.{corpus}"], "1")
+                                self.assertEqual(meta[f"files_total.{corpus}"], "1")
+                                self.assertEqual(meta[f"chunks_total.{corpus}"], "1")
+                    finally:
+                        conn.close()
+
+    def test_docs_index_and_globs_keep_sibling_russian_files_without_registry(self) -> None:
+        index_build = _docs_index_build_module()
+        with tempfile.TemporaryDirectory() as tmpdir:
+            tmp = Path(tmpdir)
+            _write_translation_fixture(tmp, registry=False)
+            rules = index_build.corpus_rules("canon", "docs", index_build.DEFAULT_CHUNK_TARGET_TOKENS, project_root=tmp)
+            self.assertNotIn("exclude_suffixes", rules)
+            source_rules = index_build.corpus_rules("canon", "docs", index_build.DEFAULT_CHUNK_TARGET_TOKENS, project_root=ROOT)
+            self.assertEqual(rules, {key: value for key, value in source_rules.items() if key != "exclude_suffixes"})
+            db_path = tmp / "docs.sqlite"
+            _write_legacy_index(db_path, config=rules, fingerprint=index_build.compute_fingerprint(rules),
+                                stale_path="docs/guides/stack-sibling.ru.md")
+            env = {**os.environ, "PLANVEYOR_ROOT": str(ROOT)}
+            before = subprocess.run(
+                [sys.executable, "-B", str(SCRIPT), "--db", str(db_path), "--corpus", "canon",
+                 "--format", "json", "--no-log", "alpha"], cwd=tmp, env=env, text=True, capture_output=True,
+            )
+            self.assertEqual(before.returncode, 0, before.stdout + before.stderr)
+            self.assertEqual(json.loads(before.stdout)["files"], ["docs/guides/stack-sibling.ru.md"])
+            for corpus in ("canon", "followups", "plans"):
+                build = subprocess.run(
+                    [sys.executable, "-B", str(DOCS_INDEX_BUILD), "--db", str(db_path), "--corpus", corpus],
+                    cwd=tmp, env=env, text=True, capture_output=True,
+                )
+                self.assertEqual(build.returncode, 0, build.stdout + build.stderr)
+                self.assertNotIn("index_migration", build.stdout)
+            indexed = _indexed_paths(db_path)
+            self.assertEqual({corpus for corpus, path in indexed if path.endswith(".ru.md")}, {"canon", "followups", "plans"})
+            multi = subprocess.run(
+                [sys.executable, "-B", str(DOCS_MULTI_GET), "docs/guides/*.md", "--format", "json", "--no-read-log"],
+                cwd=tmp, env=env, text=True, capture_output=True,
+            )
+            self.assertEqual(multi.returncode, 0, multi.stdout + multi.stderr)
+            self.assertEqual([file["path"] for file in json.loads(multi.stdout)["files"]],
+                             ["docs/guides/stack-sibling.md", "docs/guides/stack-sibling.ru.md"])
+
+    def test_docs_index_rejects_unrelated_rules_and_damaged_metadata(self) -> None:
+        index_build = _docs_index_build_module()
+        changes = ("canon", "tool_version", "root", "tokens", "fingerprint", "config", "missing_config", "missing_fingerprint")
+        for change in changes:
+            with self.subTest(change=change), tempfile.TemporaryDirectory() as tmpdir:
+                tmp = Path(tmpdir)
+                _write_translation_fixture(tmp)
+                rules = index_build.corpus_rules("canon", "docs", index_build.DEFAULT_CHUNK_TARGET_TOKENS, project_root=tmp)
+                config = {key: value for key, value in rules.items() if key != "exclude_suffixes"}
+                if change == "canon":
+                    config["canon"] = {"exclude_prefixes": []}
+                elif change == "tool_version":
+                    config["tool_version"] = "other"
+                elif change == "root":
+                    config["root"] = "other-docs"
+                elif change == "tokens":
+                    config["chunk_target_tokens"] = 1200
+                db_path = tmp / "docs.sqlite"
+                _write_legacy_index(db_path, config=config, fingerprint=index_build.compute_fingerprint(config),
+                                    stale_path="docs/guides/stack-sibling.ru.md")
+                conn = sqlite3.connect(str(db_path))
+                try:
+                    if change == "fingerprint":
+                        conn.execute("UPDATE meta SET value = 'bad' WHERE key = 'fingerprint'")
+                    elif change == "config":
+                        conn.execute("UPDATE meta SET value = '{' WHERE key = 'index_config_json'")
+                    elif change.startswith("missing_"):
+                        key = "index_config_json" if change == "missing_config" else "fingerprint"
+                        conn.execute("DELETE FROM meta WHERE key = ?", (key,))
+                    conn.commit()
+                    before = conn.execute("SELECT key, value FROM meta ORDER BY key").fetchall()
+                finally:
+                    conn.close()
+                build = subprocess.run(
+                    [sys.executable, "-B", str(DOCS_INDEX_BUILD), "--db", str(db_path), "--corpus", "followups"],
+                    cwd=tmp, text=True, capture_output=True,
+                )
+                self.assertEqual(build.returncode, 2, build.stdout + build.stderr)
+                # Retrieval preserves the stored chunk/root parameters; only
+                # unknown rules or broken metadata make that read unsafe.
+                retrieve = subprocess.run(
+                    [sys.executable, "-B", str(SCRIPT), "--db", str(db_path), "--corpus", "canon",
+                     "--format", "json", "--no-log", "alpha"], cwd=tmp, text=True, capture_output=True,
+                )
+                if change in {"root", "tokens"}:
+                    self.assertEqual(retrieve.returncode, 0, retrieve.stdout + retrieve.stderr)
+                else:
+                    self.assertEqual(retrieve.returncode, 1, retrieve.stdout + retrieve.stderr)
+                    self.assertEqual(json.loads(retrieve.stdout)["files"], [])
+                self.assertEqual(_indexed_paths(db_path), [("canon", "docs/guides/stack-sibling.ru.md")])
+                conn = sqlite3.connect(str(db_path))
+                try:
+                    self.assertEqual(conn.execute("SELECT key, value FROM meta ORDER BY key").fetchall(), before)
+                finally:
+                    conn.close()
+
+    def test_docs_index_policy_removal_requires_explicit_rebuild(self) -> None:
+        index_build = _docs_index_build_module()
+        with tempfile.TemporaryDirectory() as tmpdir:
+            tmp = Path(tmpdir)
+            _write_translation_fixture(tmp, registry=False)
+            rules = index_build.corpus_rules("canon", "docs", index_build.DEFAULT_CHUNK_TARGET_TOKENS, project_root=tmp)
+            config = {**rules, "exclude_suffixes": [".ru.md"]}
+            db_path = tmp / "docs.sqlite"
+            _write_legacy_index(db_path, config=config, fingerprint=index_build.compute_fingerprint(config),
+                                stale_path="docs/guides/stack-sibling.md")
+            build = subprocess.run(
+                [sys.executable, "-B", str(DOCS_INDEX_BUILD), "--db", str(db_path), "--corpus", "followups"],
+                cwd=tmp, text=True, capture_output=True,
+            )
+            self.assertEqual(build.returncode, 2, build.stdout + build.stderr)
+            self.assertIn("Index fingerprint mismatch", build.stderr)
+            retrieve = subprocess.run(
+                [sys.executable, "-B", str(SCRIPT), "--db", str(db_path), "--corpus", "canon",
+                 "--format", "json", "--no-log", "alpha"], cwd=tmp, text=True, capture_output=True,
+            )
+            self.assertEqual(retrieve.returncode, 1, retrieve.stdout + retrieve.stderr)
+            self.assertEqual(json.loads(retrieve.stdout)["files"], [])
+
+    def test_docs_retrieve_missing_and_corrupt_index_still_fail(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            tmp = Path(tmpdir)
+            for label in ("missing", "corrupt", "no_tables"):
+                with self.subTest(index=label):
+                    db_path = tmp / (label + ".sqlite")
+                    if label == "corrupt":
+                        db_path.write_bytes(b"not sqlite")
+                    elif label == "no_tables":
+                        sqlite3.connect(str(db_path)).close()
+                    retrieve = subprocess.run(
+                        [sys.executable, "-B", str(SCRIPT), "--db", str(db_path), "--corpus", "canon",
+                         "--format", "json", "--no-log", "alpha"], cwd=tmp, text=True, capture_output=True,
+                    )
+                    self.assertEqual(retrieve.returncode, 1, retrieve.stdout + retrieve.stderr)
+                    self.assertEqual(json.loads(retrieve.stdout)["files"], [])
+                    self.assertNotIn("Traceback", retrieve.stderr)
+                    if label == "missing":
+                        self.assertFalse(db_path.exists())
+
+    def test_invalid_target_registry_keeps_copy_filter_active(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            tmp = Path(tmpdir)
+            _write_translation_fixture(tmp)
+            (tmp / "i18n/pairs.json").write_text("{", encoding="utf-8")
+            build = subprocess.run(
+                [sys.executable, "-B", str(DOCS_INDEX_BUILD), "--db", "docs.sqlite", "--corpus", "canon"],
+                cwd=tmp, text=True, capture_output=True,
+            )
+            self.assertEqual(build.returncode, 0, build.stdout + build.stderr)
+            self.assertFalse([path for _, path in _indexed_paths(tmp / "docs.sqlite") if path.endswith(".ru.md")])
+            multi = subprocess.run(
+                [sys.executable, "-B", str(DOCS_MULTI_GET), "docs/guides/*.md", "--format", "json", "--no-read-log"],
+                cwd=tmp, text=True, capture_output=True,
+            )
+            self.assertEqual(multi.returncode, 0, multi.stdout + multi.stderr)
+            self.assertEqual([file["path"] for file in json.loads(multi.stdout)["files"]], ["docs/guides/stack-sibling.md"])
+
+    def test_docs_multi_get_glob_skips_russian_copies_but_explicit_path_reads(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            tmp = Path(tmpdir)
+            _write_translation_fixture(tmp)
+
+            def run_multi_get(*args: str, stdin: str | None = None) -> subprocess.CompletedProcess[str]:
+                return subprocess.run(
+                    [sys.executable, "-B", str(DOCS_MULTI_GET), *args, "--format", "json", "--no-read-log"],
+                    cwd=tmp,
+                    input=stdin,
+                    text=True,
+                    capture_output=True,
+                    check=False,
+                )
+
+            by_glob = run_multi_get("docs/guides/*.md", "docs/tools/*")
+            recursive = run_multi_get("docs/**/*.md")
+            explicit = run_multi_get("docs/guides/stack-sibling.ru.md", "docs/guides/*.md")
+            from_stdin = run_multi_get("-", stdin="docs/tools/owner_runbook_codex.ru.md\n")
+            only_copies = run_multi_get("docs/guides/*.ru.md")
+
+        self.assertEqual(by_glob.returncode, 0, by_glob.stderr)
+        by_glob_payload = json.loads(by_glob.stdout)
+        self.assertEqual(
+            [doc["path"] for doc in by_glob_payload["files"]],
+            ["docs/guides/stack-sibling.md", "docs/tools/owner_runbook_codex.md"],
+        )
+        self.assertEqual(
+            by_glob_payload["meta"]["skipped_inputs"],
+            [
+                {"input": "docs/guides/stack-sibling.ru.md", "reason": "translation_copy"},
+                {"input": "docs/tools/owner_runbook_codex.ru.md", "reason": "translation_copy"},
+            ],
+        )
+
+        self.assertEqual(recursive.returncode, 0, recursive.stderr)
+        recursive_paths = [doc["path"] for doc in json.loads(recursive.stdout)["files"]]
+        self.assertIn("docs/plans/260101_0000_fixture.md", recursive_paths)
+        self.assertFalse([path for path in recursive_paths if path.endswith(".ru.md")], recursive_paths)
+
+        self.assertEqual(explicit.returncode, 0, explicit.stderr)
+        explicit_payload = json.loads(explicit.stdout)
+        self.assertEqual(
+            [doc["path"] for doc in explicit_payload["files"]],
+            ["docs/guides/stack-sibling.ru.md", "docs/guides/stack-sibling.md"],
+        )
+        self.assertEqual(explicit_payload["files"][0]["content"], RUSSIAN_GUIDE_TEXT)
+        self.assertEqual(explicit_payload["meta"]["skipped_inputs"], [])
+
+        self.assertEqual(from_stdin.returncode, 0, from_stdin.stderr)
+        self.assertEqual(
+            [doc["path"] for doc in json.loads(from_stdin.stdout)["files"]],
+            ["docs/tools/owner_runbook_codex.ru.md"],
+        )
+
+        self.assertEqual(only_copies.returncode, 1, only_copies.stdout + only_copies.stderr)
+        only_copies_payload = json.loads(only_copies.stdout)
+        self.assertFalse(only_copies_payload["ok"])
+        self.assertEqual(
+            only_copies_payload["meta"]["skipped_inputs"],
+            [{"input": "docs/guides/stack-sibling.ru.md", "reason": "translation_copy"}],
+        )
+
+    def test_docs_get_reads_explicit_russian_copy(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            tmp = Path(tmpdir)
+            _write_translation_fixture(tmp)
+
+            proc = subprocess.run(
+                [
+                    sys.executable,
+                    "-B",
+                    str(DOCS_GET),
+                    "docs/guides/stack-sibling.ru.md",
+                    "--full",
+                    "--format",
+                    "json",
+                    "--no-read-log",
+                ],
+                cwd=tmp,
+                text=True,
+                capture_output=True,
+                check=True,
+            )
+
+        payload = json.loads(proc.stdout)
+        self.assertTrue(payload["ok"])
+        self.assertEqual(payload["path"], "docs/guides/stack-sibling.ru.md")
+        self.assertEqual(payload["content"], RUSSIAN_GUIDE_TEXT)
 
 
 if __name__ == "__main__":

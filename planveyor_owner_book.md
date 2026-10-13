@@ -1,31 +1,33 @@
 # Planveyor Owner guide
 
-Основной путь для проекта под свой стек — [постоянный runbook sibling](docs/guides/stack-sibling.md). Он ведёт от нового каталога до принятой адаптации и полезных задач одной группой `planveyor sibling`:
+**English** · [Русский](planveyor_owner_book.ru.md)
+
+For a project under your own stack, the main path is the permanent [stack sibling runbook](docs/guides/stack-sibling.md). It takes you from a new directory to an accepted adaptation and useful tasks with one command group, `planveyor sibling`:
 
 ```sh
 planveyor sibling init ~/my-stack
 ```
 
-Затем в каталоге проекта: draft skill → `architect` → реальные ответы через `answer` → `run` → preview `close` → разрешённый `close --commit`. После коммита плана отдельный `run` закрывает документы; новый preview и `--commit` принимают именно подготовленный хвост. `ready` проверяет контракт, выбранный план и закрытие; живые проверки стека остаются частью принятого плана.
+Then, in the project directory: plan skill → `architect` → real answers through `answer` → `run` → `close` preview → authorized `close --commit`. After the plan commit, a separate `run` closes out the documents; a new preview and `--commit` accept exactly the prepared documentation changes. `ready` checks the contract, the selected plan, and the closeout; live stack checks remain part of the accepted plan.
 
-## Среда и facade
+## Environment and facade
 
-Из physical Planveyor root прямой вызов — `./bin/planveyor`. В подготовленной среде его public executable доступен как `planveyor` в PATH. Runtime определяется физическим путём facade; `git` и HEAD проверяются до первого действия. Нужен подготовленный поддерживаемый Python; Planveyor не устанавливает зависимости и не переписывает shell config. Настроенный авторизованный клиент требуется для выбранных live role/Manager команд.
+From the physical Planveyor root, the direct call is `./bin/planveyor`. In a prepared environment, its public executable is available on `PATH` as `planveyor`. The physical path of the facade determines the runtime; `git` and `HEAD` are checked before the first action. You need a prepared, supported Python; Planveyor does not install dependencies and does not rewrite your shell config. Selected live role and Manager commands need a configured, authorized client.
 
-Справка `planveyor sibling --help`, `planveyor_entry_doctor` и runtime info — диагностика. Doctor и выбранный pointer не подтверждают приёмку задачи и не разрешают commit, dispatch, upgrade или публикацию. Для низкоуровневой команды другого проекта explicit `--project` стоит перед command. У группы `sibling` физический проект выводится из текущего каталога; init получает новый путь от вас, upgrade запускается из внешнего каталога с явно выбранным проектом.
+`planveyor sibling --help`, `planveyor_entry_doctor`, and `planveyor_runtime_info` are diagnostics. Doctor and the selected plan pointer do not confirm task acceptance and do not authorize a commit, dispatch, upgrade, or publication. For a low-level command on another project, an explicit `--project` goes before the command. For the `sibling` group, the physical project is derived from the current directory; `init` gets the new path from you, and `upgrade` runs from an outside directory with the project selected explicitly.
 
-## Решения владельца
+## Owner decisions
 
-Вы выбираете проект, задачу, stack, dev target, credentials и допустимый live режим. Architect задаёт вопросы; только ваши фактические ответы попадают в журнал. Код стека, проверки и локальные правила принадлежат sibling. В public corpus не записывают private configuration, secrets и пути вашей машины.
+You choose the project, the task, the stack, the dev target, credentials, and the allowed live mode. Architect asks questions; only your actual answers go into the log. Stack code, checks, and local rules belong to the sibling. Private configuration, secrets, and paths on your machine do not go into the public corpus.
 
-Перед `close --commit` просмотрите текущий точный набор. Сам флаг подтверждает этот коммит; green preparation такого разрешения не даёт. Source version, role sessions, timestamps и technical hashes определяются механизмом. Push, deployment и отправка публичного issue требуют отдельного вашего решения.
+Before `close --commit`, review the current exact set. The flag itself confirms this commit; a green preparation does not grant that permission. The mechanism determines the source version, role sessions, timestamps, and technical hashes. Push, deployment, and sending a public issue each need a separate decision from you.
 
-## Навигация
+## Navigation
 
-- [Sibling: создание, задачи, обновление и upstream предложение](docs/guides/stack-sibling.md).
-- [Запуск, сеть и режимы ролей](docs/guides/launch-and-role-modes.md).
-- [Lifecycle, закрытие и пакеты](docs/guides/lifecycle-and-packets.md).
-- [Проверки и их область](docs/tools/verify_suite.md).
-- [Роли](docs/roles/index.md) и [playbooks](docs/playbooks/README.md).
+- [Sibling: creation, tasks, upgrade, and upstream proposal](docs/guides/stack-sibling.md).
+- [Launch, network, and role modes](docs/guides/launch-and-role-modes.md).
+- [Lifecycle, closeout, and packets](docs/guides/lifecycle-and-packets.md).
+- [Checks and their scope](docs/tools/verify_suite.md).
+- [Roles](docs/roles/index.md) and [playbooks](docs/playbooks/README.md).
 
-Analysis, decomposition, queue и custom pipeline остаются самостоятельными штатными маршрутами. Manager не меняет молча выбранные plan, target, runner или authentication source; обычная работа с одним sibling plan не требует очереди.
+Analysis, decomposition, queue, and custom pipeline remain separate standard routes. Manager does not silently change the selected plan, target, runner, or authentication source; ordinary work with one sibling plan does not need a queue.

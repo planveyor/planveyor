@@ -370,6 +370,10 @@ PROTECTED_DOCS_EXACT_PATHS = {
     "docs/plans/README.md",
     "docs/process_improvements/README.md",
     "docs/tools/owner_runbook_codex.md",
+    # The Russian copy of a protected human document keeps the original's
+    # protection.  Copies are listed by exact path: `.ru.md` is not a general
+    # rule for docs/.  Copies under PROTECTED_DOCS_PREFIXES are already covered.
+    "docs/tools/owner_runbook_codex.ru.md",
 }
 PI_DERIVED_SURFACE_PATHS = {
     process_improvements_collect.INDEX_PATH.as_posix(),

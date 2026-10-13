@@ -12,7 +12,7 @@
 4. Обёртка собирает сообщение для роли и продолжает её сессию в клиенте запуска (runner), по умолчанию в Codex.
 5. Роль работает в проекте и оставляет результат в файлах задачи: в плане, черновике кода, ревью.
 
-Модель запускают только подкоманды `architect` и `run`. Остальные подкоманды целиком выполняют Python-скрипты `scripts/sibling_runbook.py` и `scripts/sibling_closeout.py`. Порядок команд для Owner описан в [руководстве по sibling](../stack-sibling.md), а весь набор показывает справка, которой не нужен проект:
+Модель запускают только подкоманды `architect` и `run`. Остальные подкоманды целиком выполняют Python-скрипты `scripts/sibling_runbook.py` и `scripts/sibling_closeout.py`. Порядок команд для Owner описан в [руководстве по sibling](../stack-sibling.ru.md), а весь набор показывает справка, которой не нужен проект:
 
 ```sh
 planveyor sibling --help
@@ -183,7 +183,7 @@ Manager — главная сессия Codex на модели из верхн�
 | `reviewer_code_risk` | Reviewer, линия рисков | `/root/reviewer_code_risk_sol_xhigh_v2` |
 | `reviewer_code_contracts` | Reviewer, линия контракта | `/root/reviewer_code_contracts_sol_xhigh_v2` |
 
-Имена агентов постоянные. Это адреса в дереве задач Codex с корнем `/root`, и части `sol`, `terra`, `xhigh`, `ultra` модель не задают. Настройка описана в разделе [«Настройка Codex»](../launch-and-role-modes.md#настройка-codex) руководства запуска.
+Имена агентов постоянные. Это адреса в дереве задач Codex с корнем `/root`, и части `sol`, `terra`, `xhigh`, `ultra` модель не задают. Настройка описана в разделе [«Настройка Codex»](../launch-and-role-modes.ru.md#настройка-codex) руководства запуска.
 
 Как Manager ведёт план:
 
@@ -210,7 +210,7 @@ ZCode — ещё один ИИ-клиент, но выбрать его чере
 
 | Где | Что там |
 | --- | --- |
-| Копия Planveyor (движок) | `bin/planveyor`, `scripts/`, общие правила и промпты; модули описаны в [scripts/planveyor/README.md](../../../scripts/planveyor/README.md) |
+| Копия Planveyor (движок) | `bin/planveyor`, `scripts/`, общие правила и промпты; модули описаны в [scripts/planveyor/README.md](../../../scripts/planveyor/README.ru.md) |
 | Проект, файлы под Git | План, черновик кода, ревью, код продукта; в sibling ещё своя копия промптов и правил ролей |
 | Проект, файлы `.planveyor.*` вне Git | Выбранный план, указатели сессий, выбор клиента, имена агентов Manager, квитанции сессий, ответ Owner для следующего хода |
 | Codex home: `PLANVEYOR_CODEX_HOME` или `~/.codex` | `config.toml` с моделью и уровнем рассуждения, пять разделов `[agents.*]` и файлы ролей, вход в Codex |

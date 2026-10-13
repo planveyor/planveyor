@@ -1,0 +1,85 @@
+{
+  "schema": "planveyor_i18n_pairs.v1",
+  "pairs": [
+    {
+      "source": "README.md",
+      "copy": "README.ru.md"
+    },
+    {
+      "source": "CONTRIBUTING.md",
+      "copy": "CONTRIBUTING.ru.md"
+    },
+    {
+      "source": "SECURITY.md",
+      "copy": "SECURITY.ru.md"
+    },
+    {
+      "source": "planveyor_owner_book.md",
+      "copy": "planveyor_owner_book.ru.md"
+    },
+    {
+      "source": "docs/tools/mcp.md",
+      "copy": "docs/tools/mcp.ru.md"
+    },
+    {
+      "source": "docs/tools/snippet.md",
+      "copy": "docs/tools/snippet.ru.md"
+    },
+    {
+      "source": "docs/tools/owner_runbook_codex.md",
+      "copy": "docs/tools/owner_runbook_codex.ru.md"
+    },
+    {
+      "source": "docs/tools/verify_suite.md",
+      "copy": "docs/tools/verify_suite.ru.md"
+    },
+    {
+      "source": "docs/tools/contract_authority_integration.md",
+      "copy": "docs/tools/contract_authority_integration.ru.md"
+    },
+    {
+      "source": "scripts/README.md",
+      "copy": "scripts/README.ru.md"
+    },
+    {
+      "source": "scripts/planveyor/README.md",
+      "copy": "scripts/planveyor/README.ru.md"
+    },
+    {
+      "source": "docs/guides/README.md",
+      "copy": "docs/guides/README.ru.md"
+    },
+    {
+      "source": "docs/guides/launch-and-role-modes.md",
+      "copy": "docs/guides/launch-and-role-modes.ru.md"
+    },
+    {
+      "source": "docs/guides/accepted-red.md",
+      "copy": "docs/guides/accepted-red.ru.md"
+    },
+    {
+      "source": "docs/guides/golden_paths.md",
+      "copy": "docs/guides/golden_paths.ru.md"
+    },
+    {
+      "source": "docs/guides/lifecycle-and-packets.md",
+      "copy": "docs/guides/lifecycle-and-packets.ru.md"
+    },
+    {
+      "source": "docs/guides/planning_contour_continuity.md",
+      "copy": "docs/guides/planning_contour_continuity.ru.md"
+    },
+    {
+      "source": "docs/guides/stack-sibling.md",
+      "copy": "docs/guides/stack-sibling.ru.md"
+    },
+    {
+      "source": "docs/guides/install.md",
+      "copy": "docs/guides/install.ru.md"
+    },
+    {
+      "source": "docs/guides/harnesses.md",
+      "copy": "docs/guides/harnesses.ru.md"
+    }
+  ]
+}

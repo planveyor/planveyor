@@ -6,7 +6,7 @@
 Обязательный старт (в этой track-сессии; один раз):
 1) Прочитай `AGENTS.md` (ограничения и стек проекта).
 2) Если нужен historical context по innovations-теме, используй stable retrieval/archive recipe:
-   - `"$PLANVEYOR_RUNTIME_ROOT/docs/tools/snippet.md"` (разделы «Поиск документации», «Post-merge и docs hygiene»);
+   - `"$PLANVEYOR_RUNTIME_ROOT/docs/tools/snippet.ru.md"` (разделы «Поиск документации», «Проверка после слияния и гигиена документов»);
    - `planveyor_docs_retrieve plans --files "<topic keywords>"`;
    - если temp docs уже удалены, используй `planveyor_docs_archive_query ...` с теми же anchor-токенами и открывай только top hits.
 

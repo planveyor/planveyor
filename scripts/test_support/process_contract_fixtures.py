@@ -16,7 +16,7 @@ from pathlib import Path
 from typing import Any
 
 
-_MAX_ZSH_FIXTURE_TIMEOUT_SECONDS = 120.0
+_MAX_ZSH_FIXTURE_TIMEOUT_SECONDS = 240.0
 
 
 def run_zsh_fixture(

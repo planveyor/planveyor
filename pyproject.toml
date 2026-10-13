@@ -27,6 +27,7 @@ files = [
   "scripts/codex_session_context.py",
   "scripts/plan_status_oracle.py",
   "scripts/doc_lint.py",
+  "scripts/i18n_pairs.py",
   "scripts/merge_tracker_oracle.py",
   "scripts/strip_trailing_ws.py",
 ]

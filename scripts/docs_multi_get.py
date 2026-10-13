@@ -9,6 +9,9 @@ Inputs:
 - glob/path args
 - `@filelist` (one entry per line)
 - `-` (stdin file list)
+
+In a target with i18n/pairs.json, glob matches skip Russian copies `*.ru.md`;
+an explicit path to a copy is still read.
 """
 
 from __future__ import annotations
@@ -24,6 +27,8 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 from docs_context_registry import contexts_for_path, format_contexts_inline
+# The same rule keeps Russian copies out of the derived index.
+from docs_index_build import translation_copy_suffixes
 
 
 REPO_ROOT = Path.cwd().resolve()
@@ -185,7 +190,11 @@ def _warn(msg: str) -> None:
 
 def _build_parser() -> _Parser:
     parser = _Parser(description="Batch-read docs files with safety caps.")
-    parser.add_argument("inputs", nargs="*", help="glob/path entries, @filelist, or '-' for stdin")
+    parser.add_argument(
+        "inputs",
+        nargs="*",
+        help="glob/path entries, @filelist, or '-' for stdin (i18n registry opts globs out of *.ru.md copies)",
+    )
     parser.add_argument("--format", choices=["md", "json"], default="md", help="Output format")
     parser.add_argument(
         "--max-bytes",
@@ -370,9 +379,11 @@ def _run(argv: list[str], *, parser: _Parser) -> int:
 
     resolved_paths: list[tuple[Path, str]] = []
     seen_rel: set[str] = set()
+    copy_suffixes = translation_copy_suffixes(REPO_ROOT)
     for entry in expanded_entries:
         candidates: list[str]
-        if _looks_like_glob(entry):
+        from_glob = _looks_like_glob(entry)
+        if from_glob:
             # Keep deterministic order.
             candidates = sorted(glob.glob(entry, recursive=True))
             if not candidates:
@@ -389,6 +400,10 @@ def _run(argv: list[str], *, parser: _Parser) -> int:
                 skipped_inputs.append({"input": detail, "reason": reason})
                 continue
             if rel_path in seen_rel:
+                continue
+            if from_glob and rel_path.endswith(copy_suffixes):
+                # A pattern must not return both versions of a document.
+                skipped_inputs.append({"input": rel_path, "reason": "translation_copy"})
                 continue
             seen_rel.add(rel_path)
             resolved_paths.append((abs_path, rel_path))

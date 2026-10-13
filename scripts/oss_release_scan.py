@@ -22,6 +22,7 @@ SEVERITY_RANK = {"warning": 1, "blocker": 2}
 MARKER_ENV = "PLANVEYOR_OSS_SCAN_MARKERS"
 MASKED_TOKEN = "<masked>"
 SANCTIONED_SECURITY_CONTACT = "security" + "@" + "planveyor.dev"
+SECURITY_CONTACT_PATHS = frozenset({"SECURITY.md", "SECURITY.ru.md"})
 
 HISTORICAL_DIRS = {
     "docs/plans",
@@ -450,7 +451,7 @@ def _allowed_version_context_ip(line: str, match: re.Match[str]) -> bool:
 
 
 def _allowed_security_contact(rel: str, line_no: int, category: str, value: str) -> bool:
-    return category == "email" and rel == "SECURITY.md" and line_no > 0 and value == SANCTIONED_SECURITY_CONTACT
+    return category == "email" and rel in SECURITY_CONTACT_PATHS and line_no > 0 and value == SANCTIONED_SECURITY_CONTACT
 
 
 def _allowed_author_identity(rule: MarkerRule, rel: str, line: str, match: re.Match[str]) -> bool:

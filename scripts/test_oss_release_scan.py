@@ -516,12 +516,14 @@ class OssReleaseScanTests(unittest.TestCase):
     def test_exact_security_contact_exception_has_no_broad_bypass(self) -> None:
         root = self.make_repo()
         self.write(root, "SECURITY.md", security_contact() + "\n")
+        self.write(root, "SECURITY.ru.md", security_contact() + "\n")
         self.write(root, "README.md", security_contact() + "\n")
+        self.write(root, "docs/SECURITY.ru.md", security_contact() + "\n")
         self.write(root, "docs/contact.md", "support" + "@" + "planveyor.dev\n")
-        self.track(root, "SECURITY.md", "README.md", "docs/contact.md")
+        self.track(root, "SECURITY.md", "SECURITY.ru.md", "README.md", "docs/SECURITY.ru.md", "docs/contact.md")
         _result, payload = self.json_scan(root, "--scope", "public-copy")
         emails = [item for item in payload["findings"] if item["category"] == "email"]
-        self.assertEqual({item["path"] for item in emails}, {"README.md", "docs/contact.md"})
+        self.assertEqual({item["path"] for item in emails}, {"README.md", "docs/SECURITY.ru.md", "docs/contact.md"})
 
     def test_path_marker_is_masked_at_api_origin(self) -> None:
         root = self.make_repo()

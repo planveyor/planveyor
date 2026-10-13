@@ -16,6 +16,7 @@ PLAN_README = ROOT / "docs" / "plans" / "README.md"
 ARCHITECT_ROLE = ROOT / "docs" / "roles" / "architect.md"
 MANAGER_ROLE = ROOT / "docs" / "roles" / "manager.md"
 OWNER_RUNBOOK = ROOT / "docs" / "tools" / "owner_runbook_codex.md"
+OWNER_RUNBOOK_RU = ROOT / "docs" / "tools" / "owner_runbook_codex.ru.md"
 PROCESS_IMPROVEMENTS_README = ROOT / "docs" / "process_improvements" / "README.md"
 PLANNER_PROMPT = ROOT / "docs" / "tools" / "prompts" / "planner_status_driven.md"
 CODER_PROMPT = ROOT / "docs" / "tools" / "prompts" / "coder_status_driven.md"
@@ -107,10 +108,17 @@ class ManagerCustomPipelinePromptContractTest(unittest.TestCase):
         runbook = OWNER_RUNBOOK.read_text(encoding="utf-8")
         for marker in (
             "child-only facade",
-            "Не подключайте implementation shell files в parent shell.",
-            "Owner выбирает operating mode и любой runner, доступный установленному runtime.",
+            "Do not source implementation shell files into a parent shell.",
+            "Owner chooses the operating mode and any runner available to the installed runtime.",
         ):
             self.assertIn(marker, runbook)
+        runbook_ru = OWNER_RUNBOOK_RU.read_text(encoding="utf-8")
+        for marker in (
+            "фасад, который выполняет команды только в дочернем процессе",
+            "Не подключайте shell-скрипты реализации к родительской оболочке через `source`.",
+            "Owner выбирает режим работы и любой агентный харнес, который доступен установленной копии Planveyor.",
+        ):
+            self.assertIn(marker, runbook_ru)
 
         custom = CUSTOM_PROMPT.read_text(encoding="utf-8")
         self.assertIn(
@@ -2852,6 +2860,7 @@ class ManagerCustomPipelinePromptContractTest(unittest.TestCase):
     def test_generic_claude_runner_preflight_is_custom_pipeline_contract(self) -> None:
         custom_text = CUSTOM_PROMPT.read_text(encoding="utf-8")
         runbook_text = OWNER_RUNBOOK.read_text(encoding="utf-8")
+        runbook_ru_text = OWNER_RUNBOOK_RU.read_text(encoding="utf-8")
         facade_text = (ROOT / "scripts" / "planveyor.zsh").read_text(encoding="utf-8")
         provider_text = (
             ROOT / "scripts" / "planveyor" / "provider_runtime.zsh"
@@ -2874,12 +2883,20 @@ class ManagerCustomPipelinePromptContractTest(unittest.TestCase):
 
         for marker in (
             "child-only facade",
-            "Не подключайте implementation shell files в parent shell.",
-            "Owner выбирает operating mode и любой runner, доступный установленному runtime.",
-            "Manager может координировать выбранные roles, но не меняет молча Owner-controlled runner, authentication source, project или plan.",
-            "Не решайте runtime или authorization blocker копированием credentials, sourcing implementation files",
+            "Do not source implementation shell files into a parent shell.",
+            "Owner chooses the operating mode and any runner available to the installed runtime.",
+            "Manager may coordinate the selected roles, but it does not silently change the Owner-controlled runner, authentication source, project, or plan.",
+            "Do not resolve a runtime or authorization blocker by copying credentials, sourcing implementation files",
         ):
             self.assertIn(marker, runbook_text)
+        for marker in (
+            "фасад, который выполняет команды только в дочернем процессе",
+            "Не подключайте shell-скрипты реализации к родительской оболочке через `source`.",
+            "Owner выбирает режим работы и любой агентный харнес, который доступен установленной копии Planveyor.",
+            "Manager может координировать выбранные роли, но не меняет молча агентный харнес, источник аутентификации, проект или план, которыми распоряжается Owner.",
+            "Если мешает блокер среды выполнения или авторизации, не копируйте учётные данные, не подключайте файлы реализации через `source`",
+        ):
+            self.assertIn(marker, runbook_ru_text)
 
         self.assertIn(
             "architect:codex|coder:codex|manager:codex|planner:codex|planner:claude|reviewer:codex|reviewer:claude",
@@ -2930,7 +2947,7 @@ class ManagerCustomPipelinePromptContractTest(unittest.TestCase):
         )
         self.assertIn("return 125", preflight_block)
 
-        for text in (custom_text, runbook_text):
+        for text in (custom_text, runbook_text, runbook_ru_text):
             for obsolete_contract in (
                 "planveyor_zsh_dotfiles_install",
                 "missing_login_shell_runner",
@@ -3195,7 +3212,7 @@ class ManagerCustomPipelinePromptContractTest(unittest.TestCase):
 
     def test_custom_pipeline_queue_mode_contract(self) -> None:
         custom_text = CUSTOM_PROMPT.read_text(encoding="utf-8")
-        runbook_text = (ROOT / "docs" / "tools" / "owner_runbook_codex.md").read_text(encoding="utf-8")
+        runbook_texts = tuple(path.read_text(encoding="utf-8") for path in (OWNER_RUNBOOK, OWNER_RUNBOOK_RU))
 
         for required in (
             "MANAGER_CMD=run Q",
@@ -3206,7 +3223,8 @@ class ManagerCustomPipelinePromptContractTest(unittest.TestCase):
 
         self.assertIn("MANAGER_CMD=run [PLAN_PATH]", custom_text)
         self.assertIn("если указан `PLAN_PATH`", custom_text)
-        self.assertIn("planveyor_plan_set docs/plans/YYYYMMDD_HHMM_topic.md", runbook_text)
+        for runbook_text in runbook_texts:
+            self.assertIn("planveyor_plan_set docs/plans/YYYYMMDD_HHMM_topic.md", runbook_text)
 
         for required in (
             "planveyor_q_next_json --manager-mode manager-custom-pipeline",
@@ -3226,7 +3244,8 @@ class ManagerCustomPipelinePromptContractTest(unittest.TestCase):
         self.assertIn("не применяет `final_docs_commit` auto-skip", custom_text)
         self.assertIn("не добавляет docs-closeout automation", custom_text)
 
-        self.assertIn("planveyor_manager_custom_pipeline_cmd run Q", runbook_text)
+        for runbook_text in runbook_texts:
+            self.assertIn("planveyor_manager_custom_pipeline_cmd run Q", runbook_text)
 
         collab_text = COLLAB_PROMPT.read_text(encoding="utf-8")
         self.assertIn("planveyor_q_next_json --manager-mode manager-collab", collab_text)

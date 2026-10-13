@@ -789,7 +789,17 @@ class RouterMergeBoundaryTests(unittest.TestCase):
         )
         return root, env, log_dir
 
-    def _run(self, root: Path, env: dict[str, str], command: str) -> subprocess.CompletedProcess[str]:
+    def _run(
+        self,
+        root: Path,
+        env: dict[str, str],
+        command: str,
+        *,
+        timeout_seconds: float = 60,
+    ) -> subprocess.CompletedProcess[str]:
+        # Runs that took fifteen seconds or more on a loaded machine pass
+        # timeout_seconds=180; the default stays 60, which
+        # test_run_timeout_is_fail_closed_with_context checks.
         shell_command = (
             f'export PATH={shlex.quote(env["PLANVEYOR_FAKE_CODEX_BIN"])}:$PATH; '
             f"source scripts/planveyor.zsh && {command}"
@@ -802,7 +812,7 @@ class RouterMergeBoundaryTests(unittest.TestCase):
                 text=True,
                 capture_output=True,
                 stdin=subprocess.DEVNULL,
-                timeout=60,
+                timeout=timeout_seconds,
                 env=env,
                 check=False,
             )
@@ -1094,7 +1104,7 @@ class RouterMergeBoundaryTests(unittest.TestCase):
                     env["PLANVEYOR_FAKE_MANAGER_EXIT"] = "17"
                 command += '; rc=$?; print -r -- "PWD_AFTER=$PWD" >&2; exit $rc'
 
-                result = self._run(root, env, command)
+                result = self._run(root, env, command, timeout_seconds=180)
 
                 self.assertEqual(result.returncode, expected_rc, result.stderr)
                 pwd_lines = [
@@ -1365,7 +1375,7 @@ class RouterMergeBoundaryTests(unittest.TestCase):
             root, env, log_dir = self._prepare_repo(tmpdir, "neutral-consumer")
             self._assert_absent_state(root)
 
-            result = self._run(root, env, "planveyor_merge_collab_cmd --range auto")
+            result = self._run(root, env, "planveyor_merge_collab_cmd --range auto", timeout_seconds=180)
 
             self.assertEqual(result.returncode, 0, result.stderr)
 
@@ -1437,6 +1447,7 @@ class RouterMergeBoundaryTests(unittest.TestCase):
                 "planveyor_plan_set docs/plans/260101_0000_custom_tui.md >/dev/null && "
                 f"planveyor_session_set manager {FAKE_SID} runner=codex >/dev/null && "
                 "planveyor_manager_custom_pipeline_tui --no-alt-screen",
+                timeout_seconds=180,
             )
 
             self.assertEqual(result.returncode, 0, result.stderr)
@@ -1587,6 +1598,7 @@ class RouterMergeBoundaryTests(unittest.TestCase):
                 env,
                 f"planveyor_session_set manager {FAKE_SID} runner=codex >/dev/null && "
                 "planveyor_manager_custom_pipeline_cmd run docs/plans/260712_1255_explicit_custom.md",
+                timeout_seconds=180,
             )
 
             self.assertEqual(result.returncode, 0, result.stderr)
@@ -1661,6 +1673,7 @@ class RouterMergeBoundaryTests(unittest.TestCase):
                 "manager-custom-pipeline --json >/dev/null && "
                 f"planveyor_session_set manager {FAKE_SID} runner=codex >/dev/null && "
                 "planveyor_manager_custom_pipeline_cmd run Q",
+                timeout_seconds=180,
             )
 
             self.assertEqual(result.returncode, 0, result.stderr)
@@ -1704,6 +1717,7 @@ class RouterMergeBoundaryTests(unittest.TestCase):
                     + " --for-manager-mode manager-custom-pipeline --json >/dev/null && "
                     f"planveyor_session_set manager {FAKE_SID} runner=codex >/dev/null && "
                     "planveyor_manager_custom_pipeline_cmd run Q",
+                    timeout_seconds=180,
                 )
 
                 self.assertEqual(result.returncode, 0, result.stderr)
@@ -1757,6 +1771,7 @@ class RouterMergeBoundaryTests(unittest.TestCase):
                 "--for-manager-mode manager-custom-pipeline --json >/dev/null && "
                 f"planveyor_session_set manager {FAKE_SID} runner=codex >/dev/null && "
                 "planveyor_manager_custom_pipeline_cmd run Q",
+                timeout_seconds=180,
             )
 
             self.assertEqual(result.returncode, 0, result.stderr)
@@ -1818,6 +1833,7 @@ class RouterMergeBoundaryTests(unittest.TestCase):
                 "--for-manager-mode manager-collab --json >/dev/null && "
                 f"planveyor_session_set manager {FAKE_SID} runner=codex >/dev/null && "
                 "planveyor_manager_custom_pipeline_cmd run Q",
+                timeout_seconds=180,
             )
 
             self.assertEqual(result.returncode, 0, result.stderr)
@@ -1917,6 +1933,7 @@ class RouterMergeBoundaryTests(unittest.TestCase):
                     ">/dev/null && "
                     f"planveyor_q_show() {{ print -r -- {shlex.quote(malformed)}; }} && "
                     "planveyor_manager_custom_pipeline_cmd run Q",
+                    timeout_seconds=180,
                 )
 
                 self.assertEqual(result.returncode, 125, result.stderr)
@@ -1961,6 +1978,7 @@ class RouterMergeBoundaryTests(unittest.TestCase):
                 f"planveyor_session_set manager {FAKE_SID} runner=codex >/dev/null && "
                 f"planveyor_q_show() {{ print -r -- {shlex.quote(inconsistent)}; }} && "
                 "planveyor_manager_custom_pipeline_cmd run Q",
+                timeout_seconds=180,
             )
 
             self.assertEqual(result.returncode, 125, result.stderr)
@@ -2191,6 +2209,7 @@ class RouterMergeBoundaryTests(unittest.TestCase):
                     env,
                     f"planveyor_session_set manager {FAKE_SID} runner=codex >/dev/null && "
                     f"planveyor_manager_custom_pipeline_cmd run {plan_rel}",
+                    timeout_seconds=180,
                 )
 
                 self.assertEqual(result.returncode, expected_rc, result.stderr)

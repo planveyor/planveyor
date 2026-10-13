@@ -15,7 +15,7 @@
    - `docs/plans/README.md` и `docs/plans/_template.md` (plan contract / handoff gates)
    - `docs/code_drafts/_template.md` (code draft contract)
 4) Если нужен historical context по решениям трека, используй stable retrieval/archive recipe:
-   - прочитай `"$PLANVEYOR_RUNTIME_ROOT/docs/tools/snippet.md"` (разделы «Поиск документации», «Post-merge и docs hygiene»);
+   - прочитай `"$PLANVEYOR_RUNTIME_ROOT/docs/tools/snippet.ru.md"` (разделы «Поиск документации», «Проверка после слияния и гигиена документов»);
    - найди relevant plans короткими anchor-запросами через `planveyor_docs_retrieve plans --files ...`, например: `"role_censor"`, `"visual evidence"`, `"artifact reuse"`, `"ui playbooks"`, `"roles prompts cleanup"`;
    - если temp docs уже удалены после cleanup, используй `planveyor_docs_archive_query ...` с теми же anchor-токенами;
    - после списка файлов открывай только релевантные top hits, а не весь архив.
@@ -25,7 +25,7 @@
 - Plan contracts: `docs/plans/README.md`, `docs/plans/_template.md`, `scripts/plan_lint.py`
 - Code drafts: `docs/code_drafts/_template.md`
 - Sibling launch guide: `docs/README.md`
-- Visual: `"$PLANVEYOR_RUNTIME_ROOT/docs/tools/mcp.md"`, `docs/testing_runbook.md`
+- Visual: `"$PLANVEYOR_RUNTIME_ROOT/docs/tools/mcp.ru.md"`, `docs/testing_runbook.md`
 
 Правила трека:
 - Весь текст в documentation/plan/chat этой track-сессии пиши на русском; код/идентификаторы/пути/команды — на английском; UI-строки — на языке, объявленном проектом.

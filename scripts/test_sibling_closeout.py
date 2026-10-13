@@ -448,10 +448,11 @@ class PublicCloseoutTests(unittest.TestCase):
     def facade(self, *args, cwd=None, input_text=None, check=True):
         # A close invocation deliberately repeats the existing cold gates;
         # its complete attested route can exceed the smaller fixture timeout.
+        # A semantic `close --commit` alone took four minutes on a loaded machine.
         public = self.transport
         completed = subprocess.run([str(public.runtime / "bin/planveyor"), *args],
             cwd=cwd or public.outside, env=public.env, text=True, input=input_text,
-            capture_output=True, timeout=600, check=False)
+            capture_output=True, timeout=1200, check=False)
         if check and completed.returncode:
             self.fail(f"{args}: {completed.returncode}\n{completed.stdout}\n{completed.stderr}")
         return completed

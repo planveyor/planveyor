@@ -104,7 +104,7 @@ Architect разбирает отчёт:
 
 Раздел `## Post-merge gate` в плане отдельной задачи эта проверка не заполняет: к её началу план уже в `Done` и не меняется (раздел разобран в главе [«Закрытие задачи»](closeout.md)). В итоговом разделе ревью задачи `GetReorderCandidates` осталась строка `audit_status: pending_post_merge_audit`: аудита после слияния в том проекте не было. Закрытию задачи это значение не мешает, линтер ревью проверяет только, что оно из допустимых.
 
-Подробные правила шагов — в руководстве [«Lifecycle и пакеты»](../lifecycle-and-packets.md#post-merge-и-closeout) и в плейбуках [ревью диапазона](../../playbooks/review_merge_range.md), [аудита](../../playbooks/post_merge_audit.md), [сбора по планам](../../playbooks/post_merge_plan_harvest.md) и [гигиены документов](../../playbooks/post_merge_docs_hygiene.md).
+Подробные правила шагов — в руководстве [«Lifecycle и пакеты»](../lifecycle-and-packets.ru.md#проверка-после-слияния-и-закрытие) и в плейбуках [ревью диапазона](../../playbooks/review_merge_range.md), [аудита](../../playbooks/post_merge_audit.md), [сбора по планам](../../playbooks/post_merge_plan_harvest.md) и [гигиены документов](../../playbooks/post_merge_docs_hygiene.md).
 
 Функции и тесты, о которых шла речь, — в [справочнике по коду](code-map.md#проверка-после-слияния).
 

@@ -5385,6 +5385,51 @@ class DocsCloseoutTests(unittest.TestCase):
             payload["process_improvement_seed"]["protected_docs_delta_paths"],
         )
 
+    def test_russian_copy_keeps_original_docs_protection(self) -> None:
+        runbook = "docs/tools/owner_runbook_codex.md"
+        runbook_copy = "docs/tools/owner_runbook_codex.ru.md"
+        pairs = (
+            (runbook, runbook_copy),
+            # Copies under protected prefixes are covered by the prefix itself.
+            ("docs/tools/prompts/README.md", "docs/tools/prompts/README.ru.md"),
+            ("docs/playbooks/analysis_wave.md", "docs/playbooks/analysis_wave.ru.md"),
+            # Unprotected human documents stay unprotected in both languages.
+            ("docs/guides/stack-sibling.md", "docs/guides/stack-sibling.ru.md"),
+            ("docs/guides/learn/README.md", "docs/guides/learn/README.ru.md"),
+            ("docs/tools/verify_suite.md", "docs/tools/verify_suite.ru.md"),
+        )
+        for original, russian_copy in pairs:
+            with self.subTest(path=russian_copy):
+                self.assertEqual(
+                    MODULE._is_protected_docs_path(russian_copy),
+                    MODULE._is_protected_docs_path(original),
+                )
+        self.assertTrue(MODULE._is_protected_docs_path(runbook_copy))
+
+        for changed_rel in (runbook, runbook_copy):
+            with self.subTest(changed=changed_rel), tempfile.TemporaryDirectory() as tmpdir:
+                root = Path(tmpdir)
+                plan_rel = "docs/plans/260418_1012_fixture.md"
+                self._write_plan(root, plan_rel, status="Done")
+                for rel_path in (runbook, runbook_copy):
+                    path = root / rel_path
+                    path.parent.mkdir(parents=True, exist_ok=True)
+                    path.write_text("before\n", encoding="utf-8")
+                self._init_git(root)
+                self._commit_all(root)
+                (root / changed_rel).write_text("after\n", encoding="utf-8")
+
+                payload = MODULE.classify_docs_closeout(
+                    plan_ref=plan_rel,
+                    bundle_payload=self._bundle_payload("already_materialized"),
+                    root=root,
+                )
+
+                self.assertEqual(payload["final_docs_commit"], "required")
+                self.assertEqual(payload["final_docs_commit_reason"], "canon_delta_requires_process_improvement")
+                self.assertEqual(payload["final_docs_diff_paths"], [changed_rel])
+                self.assertEqual(payload["protected_docs_delta_paths"], [changed_rel])
+
     def test_preterminal_exact_bundle_allows_reviewed_protected_canon_delta(self) -> None:
         with tempfile.TemporaryDirectory() as tmpdir:
             root = Path(tmpdir)

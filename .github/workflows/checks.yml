@@ -13,7 +13,29 @@ permissions:
   contents: read
 
 jobs:
+  shard-matrix:
+    runs-on: macos-latest
+    timeout-minutes: 105
+    outputs:
+      matrix: ${{ steps.matrix.outputs.matrix }}
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+        with:
+          fetch-depth: 0
+          path: My Planveyor
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1
+        with:
+          python-version: "3.12"
+      - name: Generate test matrix from manifest
+        id: matrix
+        working-directory: My Planveyor
+        shell: bash
+        run: |
+          set -euo pipefail
+          planveyor_test_matrix="$(python -B scripts/run_test_shard.py --matrix)"
+          echo "matrix=$planveyor_test_matrix" >> "$GITHUB_OUTPUT"
   verify:
+    needs: shard-matrix
     runs-on: macos-latest
     timeout-minutes: 105
     defaults:
@@ -21,68 +43,7 @@ jobs:
         working-directory: My Planveyor
     strategy:
       fail-fast: false
-      matrix:
-        include:
-          - python-version: "3.10"
-            test-pattern: "test_[a-e]*.py"
-            meta: false
-          - python-version: "3.10"
-            test-pattern: "test_[f-j]*.py"
-            meta: false
-          - python-version: "3.10"
-            test-pattern: "test_[k-o]*.py"
-            meta: false
-          - python-version: "3.10"
-            test-pattern: "test_p[!l]*.py"
-            meta: false
-          - python-version: "3.10"
-            test-pattern: "test_plan[!v]*.py"
-            meta: false
-          - python-version: "3.10"
-            test-pattern: "test_planveyor_[!ir]*.py"
-            meta: false
-          - python-version: "3.10"
-            test-pattern: "test_planveyor_router_merge_boundary.py"
-            meta: false
-          - python-version: "3.10"
-            test-pattern: "test_planveyor_[ir][!o]*.py"
-            meta: false
-          - python-version: "3.10"
-            test-pattern: "test_[q-t]*.py"
-            meta: false
-          - python-version: "3.10"
-            test-pattern: "test_[u-z]*.py"
-            meta: false
-          - python-version: "3.12"
-            test-pattern: "test_[a-e]*.py"
-            meta: true
-          - python-version: "3.12"
-            test-pattern: "test_[f-j]*.py"
-            meta: false
-          - python-version: "3.12"
-            test-pattern: "test_[k-o]*.py"
-            meta: false
-          - python-version: "3.12"
-            test-pattern: "test_p[!l]*.py"
-            meta: false
-          - python-version: "3.12"
-            test-pattern: "test_plan[!v]*.py"
-            meta: false
-          - python-version: "3.12"
-            test-pattern: "test_planveyor_[!ir]*.py"
-            meta: false
-          - python-version: "3.12"
-            test-pattern: "test_planveyor_router_merge_boundary.py"
-            meta: false
-          - python-version: "3.12"
-            test-pattern: "test_planveyor_[ir][!o]*.py"
-            meta: false
-          - python-version: "3.12"
-            test-pattern: "test_[q-t]*.py"
-            meta: false
-          - python-version: "3.12"
-            test-pattern: "test_[u-z]*.py"
-            meta: false
+      matrix: ${{ fromJSON(needs.shard-matrix.outputs.matrix) }}
     steps:
       - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
         with:
@@ -104,40 +65,12 @@ jobs:
       - name: Install development dependencies
         run: make bootstrap-python
       - name: Check test shard partition
-        if: matrix.test-pattern == 'test_[a-e]*.py'
         env:
           PYTHONDONTWRITEBYTECODE: "1"
-        run: |
-          "$PYBIN" - <<'PY'
-          from fnmatch import fnmatch
-          from pathlib import Path
-
-          patterns = (
-              "test_[a-e]*.py",
-              "test_[f-j]*.py",
-              "test_[k-o]*.py",
-              "test_p[!l]*.py",
-              "test_plan[!v]*.py",
-              "test_planveyor_[!ir]*.py",
-              "test_planveyor_router_merge_boundary.py",
-              "test_planveyor_[ir][!o]*.py",
-              "test_[q-t]*.py",
-              "test_[u-z]*.py",
-          )
-          expected_count = 125
-          files = sorted(path.name for path in Path("scripts").glob("test_*.py"))
-          if len(files) != expected_count:
-              raise SystemExit(f"unexpected canonical top-level test count: {len(files)}")
-          if "test_contract_authority_support.py" not in files:
-              raise SystemExit("missing canonical test_contract_authority_support.py")
-          for name in files:
-              matches = [pattern for pattern in patterns if fnmatch(name, pattern)]
-              if not len(matches) == 1:
-                  raise SystemExit(f"shard partition mismatch for {name}: {matches}")
-          PY
-      - name: Lint documentation
+        run: '"$PYBIN" -B scripts/run_test_shard.py --matrix > "$RUNNER_TEMP/shard-matrix-readback.json"'
+      - name: Lint documentation and translation pairs
         if: matrix.meta
-        run: make doc-lint
+        run: bash scripts/run_doc_lint.sh --i18n-strict
       - name: Lint changed plans
         if: matrix.meta
         env:
@@ -165,4 +98,4 @@ jobs:
       - name: Test workflow shard
         env:
           PYTHONDONTWRITEBYTECODE: "1"
-        run: '"$PYBIN" -m unittest discover -s scripts -p "${{ matrix.test-pattern }}" -v'
+        run: '"$PYBIN" -B scripts/run_test_shard.py --shard "${{ matrix.shard }}" --report "$RUNNER_TEMP/test-shard.json"'

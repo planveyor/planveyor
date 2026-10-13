@@ -1,5 +1,7 @@
 # Security policy
 
+**English** · [Русский](SECURITY.ru.md)
+
 ## Reporting a vulnerability
 
 Report suspected security vulnerabilities for the current Planveyor product to security@planveyor.dev. Maintainers handle reports on a best-effort basis.

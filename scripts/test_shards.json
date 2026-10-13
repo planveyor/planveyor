@@ -1,0 +1,715 @@
+{
+  "version": 1,
+  "baseline_head": "ded862d817b91282b2a8f36196b0b31c12d56f23",
+  "zero_test_modules": [
+    "test_contract_authority_support"
+  ],
+  "local_profiles": {
+    "3": [
+      {
+        "id": "local-1",
+        "shards": [
+          "s01",
+          "s02",
+          "s07",
+          "s12",
+          "s13"
+        ]
+      },
+      {
+        "id": "local-2",
+        "shards": [
+          "s03",
+          "s05",
+          "s06",
+          "s11",
+          "s14"
+        ]
+      },
+      {
+        "id": "local-3",
+        "shards": [
+          "s04",
+          "s08",
+          "s09",
+          "s10"
+        ]
+      }
+    ],
+    "4": [
+      {
+        "id": "local-1",
+        "shards": [
+          "s02",
+          "s12",
+          "s13"
+        ]
+      },
+      {
+        "id": "local-2",
+        "shards": [
+          "s03",
+          "s05",
+          "s06",
+          "s11"
+        ]
+      },
+      {
+        "id": "local-3",
+        "shards": [
+          "s01",
+          "s04",
+          "s10"
+        ]
+      },
+      {
+        "id": "local-4",
+        "shards": [
+          "s07",
+          "s08",
+          "s09",
+          "s14"
+        ]
+      }
+    ]
+  },
+  "$schema": "./test_shards.schema.json",
+  "weighting": {
+    "status": "observed-placement-model-unverified-in-CI",
+    "observed_revision": "ded862d817b91282b2a8f36196b0b31c12d56f23",
+    "terminal_module_observations": 125,
+    "strict_PASS_modules": 121,
+    "observed_case_outcomes": {
+      "ok": 3389,
+      "failure": 3,
+      "error": 2
+    },
+    "unknown_successful_method_costs": 5,
+    "unknown_allocation_reserve_seconds": 240,
+    "reserve_is_measured_successful_cost": false,
+    "reserve_is_upper_bound": false,
+    "selected_model": "parts-14-runbook-native-two-groups-reserve-240",
+    "split_existing_whole_method_groups": {
+      "InitCapture": 3,
+      "Shell": 2,
+      "Closeout": 2,
+      "NativeSibling": 2
+    },
+    "PublicSibling": "whole-class",
+    "model_sigma": 1,
+    "CI_sigma": null,
+    "CI_extra_seconds": null,
+    "predicted_successful_CI_seconds": null,
+    "target_test_part_minutes": [
+      20,
+      25
+    ],
+    "target_verified": false,
+    "provenance_sha256": {
+      "frozen_inputs": "01f1f44246f97c4e6ae29680346ea502e5e9cf8a3aa00561167538c0526f3630",
+      "module_map": "ce413777881f5dc822b7d16c9759d3605050dbb7d80894e1b6af8b858a160108",
+      "case_outcomes": "e17f254f5cf0d72eed5f1fe3036ca83fce9d6966f7f6b0f5b7f820052a5af326",
+      "reserve_sensitivity": "1aaa604d398f22fe012a67ce8bf36164b424bc73cee23701acec9d529c92af88"
+    }
+  },
+  "shards": [
+    {
+      "id": "s01",
+      "selectors": [
+        {
+          "module": "test_contract_authority_shell",
+          "ids": [
+            "test_contract_authority_shell.ContractAuthorityShellIntegrationTests.test_api_guard_rejects_unsupported_api_for_pinned_and_unattested_sources",
+            "test_contract_authority_shell.ContractAuthorityShellIntegrationTests.test_api_one_range_rejects_pinned_and_unattested_sources",
+            "test_contract_authority_shell.ContractAuthorityShellIntegrationTests.test_clean_first_source_pins_and_same_source_is_idempotent",
+            "test_contract_authority_shell.ContractAuthorityShellIntegrationTests.test_dirty_or_non_git_initial_source_stays_unattested_after_runtime_becomes_clean",
+            "test_contract_authority_shell.ContractAuthorityShellIntegrationTests.test_fake_and_exported_readonly_source_assertions_are_rejected",
+            "test_contract_authority_shell.ContractAuthorityShellIntegrationTests.test_initially_unattested_legacy_shell_remains_usable_and_unpinned_after_clean_commit",
+            "test_contract_authority_shell.ContractAuthorityShellIntegrationTests.test_public_pi_checkpointed_replay_pairs_semantic_reason_before_stdin",
+            "test_contract_authority_shell.ContractAuthorityShellIntegrationTests.test_public_pi_composition_materialized_duplicate",
+            "test_contract_authority_shell.ContractAuthorityShellIntegrationTests.test_public_pi_differing_input_replay_pairs_semantic_error",
+            "test_contract_authority_shell.ContractAuthorityShellIntegrationTests.test_public_pi_facade_runs_all_general_roles_and_v2_replay",
+            "test_contract_authority_shell.ContractAuthorityShellIntegrationTests.test_public_pi_missing_cycle_pairs_semantic_reason_and_preserves_fixture",
+            "test_contract_authority_shell.ContractAuthorityShellIntegrationTests.test_public_pi_phase_drift_after_stdin_blocks_all_collector_effects",
+            "test_contract_authority_shell.ContractAuthorityShellIntegrationTests.test_public_pi_pre_admission_negative_matrix_keeps_stdin_and_pi_map_unread",
+            "test_contract_authority_shell.ContractAuthorityShellIntegrationTests.test_public_pi_rebuild_derived_flag_pairs_semantic_private_rejection",
+            "test_contract_authority_shell.ContractAuthorityShellIntegrationTests.test_source_state_requires_exact_global_readonly_scalar_variables",
+            "test_contract_authority_shell.ContractAuthorityShellIntegrationTests.test_stale_timestamp_valid_context_bytecode_cannot_change_direct_plan_lint_import",
+            "test_contract_authority_shell.ContractAuthorityShellIntegrationTests.test_stale_timestamp_valid_context_bytecode_cannot_change_shell_effect_context",
+            "test_contract_authority_shell.ContractAuthorityShellIntegrationTests.test_target_mutation_after_declared_read_reaches_effect_with_current_content"
+          ]
+        },
+        {
+          "module": "test_sibling_runbook",
+          "class": "OwnerAnswerTests"
+        },
+        {
+          "module": "test_contract_authority_runtime"
+        },
+        {
+          "module": "test_contract_authority_snapshot"
+        },
+        {
+          "module": "test_followups_reconcile"
+        },
+        {
+          "module": "test_ledger_lint"
+        },
+        {
+          "module": "test_plan_handoff_digest"
+        },
+        {
+          "module": "test_planveyor_admission_integration"
+        },
+        {
+          "module": "test_planveyor_ai_gate_wrapper"
+        },
+        {
+          "module": "test_planveyor_delivery_metrics"
+        },
+        {
+          "module": "test_planveyor_shared_corpus_contract"
+        },
+        {
+          "module": "test_portability_substitution"
+        },
+        {
+          "module": "test_post_merge_receipt_skeleton"
+        },
+        {
+          "module": "test_process_improvements"
+        }
+      ]
+    },
+    {
+      "id": "s02",
+      "selectors": [
+        {
+          "module": "test_contract_authority_shell",
+          "ids": [
+            "test_contract_authority_shell.ContractAuthorityShellIntegrationTests.test_bridge_ignores_target_modules_and_rejects_preloaded_foreign_authority_aliases",
+            "test_contract_authority_shell.ContractAuthorityShellIntegrationTests.test_cached_interpreter_reuses_absolute_binary_after_path_change",
+            "test_contract_authority_shell.ContractAuthorityShellIntegrationTests.test_context_capture_uses_one_bootstrap_runtime_verify",
+            "test_contract_authority_shell.ContractAuthorityShellIntegrationTests.test_different_root_and_changed_revision_fail_before_existing_function_overwrite",
+            "test_contract_authority_shell.ContractAuthorityShellIntegrationTests.test_direct_authority_consumers_install_bytecode_policy_before_runtime_imports",
+            "test_contract_authority_shell.ContractAuthorityShellIntegrationTests.test_engaged_context_rejects_an_unexported_foreign_runtime_root_before_effect",
+            "test_contract_authority_shell.ContractAuthorityShellIntegrationTests.test_engaged_prompt_and_template_read_current_target_content",
+            "test_contract_authority_shell.ContractAuthorityShellIntegrationTests.test_first_source_under_nounset_keeps_module_loading_and_source_state",
+            "test_contract_authority_shell.ContractAuthorityShellIntegrationTests.test_parent_context_requires_exact_caller_local_readonly_scalars",
+            "test_contract_authority_shell.ContractAuthorityShellIntegrationTests.test_preseeded_or_missing_interpreter_cache_rejects_before_bridge",
+            "test_contract_authority_shell.ContractAuthorityShellIntegrationTests.test_public_continuation_checkpoint_revalidates_fresh_bundle_and_replays_without_write",
+            "test_contract_authority_shell.ContractAuthorityShellIntegrationTests.test_public_pi_blocked_recovery_requires_recorded_after_map_and_repairs_derived",
+            "test_contract_authority_shell.ContractAuthorityShellIntegrationTests.test_public_pi_composition_clean_noop",
+            "test_contract_authority_shell.ContractAuthorityShellIntegrationTests.test_public_pi_partial_recovery_replaces_one_blocked_carrier_truthfully",
+            "test_contract_authority_shell.ContractAuthorityShellIntegrationTests.test_public_pi_post_admission_body_validation_pairs_semantic_error",
+            "test_contract_authority_shell.ContractAuthorityShellIntegrationTests.test_public_pi_semantic_failure_after_backlog_recovers_exact_blocked_state",
+            "test_contract_authority_shell.ContractAuthorityShellIntegrationTests.test_public_pi_unobservable_postmap_skips_fabricated_blocked_receipt",
+            "test_contract_authority_shell.ContractAuthorityShellIntegrationTests.test_runtime_closure_and_runner_policy_drift_fail_before_effect_sentinel"
+          ]
+        },
+        {
+          "module": "test_authority_closeout_context"
+        },
+        {
+          "module": "test_contract_authority_loaded_code"
+        },
+        {
+          "module": "test_contract_authority_readers"
+        },
+        {
+          "module": "test_contract_authority_writers"
+        },
+        {
+          "module": "test_doc_lint"
+        },
+        {
+          "module": "test_docs_archive_restore"
+        },
+        {
+          "module": "test_docs_archive_snapshot"
+        },
+        {
+          "module": "test_docs_retrieve_outcome"
+        },
+        {
+          "module": "test_followups_promote"
+        },
+        {
+          "module": "test_merge_tracker_oracle"
+        },
+        {
+          "module": "test_oss_evidence_prepare"
+        },
+        {
+          "module": "test_post_merge_receipt_preflight"
+        },
+        {
+          "module": "test_range_review_risk_packet"
+        }
+      ]
+    },
+    {
+      "id": "s03",
+      "selectors": [
+        {
+          "module": "test_authority_child_context"
+        },
+        {
+          "module": "test_build_role_bundles"
+        },
+        {
+          "module": "test_codex_session_context"
+        },
+        {
+          "module": "test_contract_authority_loader_stream"
+        },
+        {
+          "module": "test_contract_authority_surfaces"
+        },
+        {
+          "module": "test_doc_lint_policy"
+        },
+        {
+          "module": "test_docs_retrieve"
+        },
+        {
+          "module": "test_followups_index_rebuild"
+        },
+        {
+          "module": "test_followups_triage"
+        },
+        {
+          "module": "test_planveyor_plan_bundle"
+        },
+        {
+          "module": "test_rollout_packet"
+        },
+        {
+          "module": "test_semantic_cycle_checkpoint"
+        },
+        {
+          "module": "test_upstream_request"
+        }
+      ]
+    },
+    {
+      "id": "s04",
+      "selectors": [
+        {
+          "module": "test_sibling_runbook",
+          "class": "PublicSiblingTests"
+        },
+        {
+          "module": "test_authority_verify_child"
+        },
+        {
+          "module": "test_authority_vocabulary_prompt_contract"
+        },
+        {
+          "module": "test_contract_authority_admission"
+        },
+        {
+          "module": "test_contract_authority_lifecycle"
+        },
+        {
+          "module": "test_contract_authority_passive"
+        },
+        {
+          "module": "test_followups_lint"
+        },
+        {
+          "module": "test_followups_query"
+        },
+        {
+          "module": "test_planveyor_trace_extractor"
+        },
+        {
+          "module": "test_post_merge_content_profile_boundary"
+        },
+        {
+          "module": "test_post_merge_operational_receipt"
+        },
+        {
+          "module": "test_post_merge_ready_to_push_closeout"
+        },
+        {
+          "module": "test_zcode_bootstrap_lifecycle"
+        }
+      ]
+    },
+    {
+      "id": "s05",
+      "selectors": [
+        {
+          "module": "test_sibling_runbook",
+          "ids": [
+            "test_sibling_runbook.NativeSiblingCommitPolicyTests.test_ambient_selector_does_not_supply_direct_manager_bootstrap_authority",
+            "test_sibling_runbook.NativeSiblingCommitPolicyTests.test_direct_manager_resume_after_human_run_uses_fresh_native_policy",
+            "test_sibling_runbook.NativeSiblingCommitPolicyTests.test_missing_mutable_and_invalid_sibling_selectors_refuse_before_child_or_answers",
+            "test_sibling_runbook.NativeSiblingCommitPolicyTests.test_role_prompt_body_invalid_sibling_frame_returns_3_before_prompt_file_and_header"
+          ]
+        },
+        {
+          "module": "test_analysis_source_ownership"
+        },
+        {
+          "module": "test_contract_authority_matrix_check"
+        },
+        {
+          "module": "test_contract_authority_receipt_provenance"
+        },
+        {
+          "module": "test_docs_archive_normalize"
+        },
+        {
+          "module": "test_docs_retrieve_metrics"
+        },
+        {
+          "module": "test_manager_custom_pipeline_prompt_contract"
+        },
+        {
+          "module": "test_merge_bundle_report"
+        },
+        {
+          "module": "test_merge_gate_policy"
+        },
+        {
+          "module": "test_plan_lint_changed"
+        },
+        {
+          "module": "test_planveyor_profile_extraction"
+        },
+        {
+          "module": "test_post_merge_audit_lint"
+        },
+        {
+          "module": "test_sibling_contract_docs"
+        }
+      ]
+    },
+    {
+      "id": "s06",
+      "selectors": [
+        {
+          "module": "test_sibling_runbook",
+          "ids": [
+            "test_sibling_runbook.NativeSiblingCommitPolicyTests.test_actual_architect_cold_init_and_reused_resume_get_current_human_policy",
+            "test_sibling_runbook.NativeSiblingCommitPolicyTests.test_actual_manager_bootstrap_resume_and_explicit_cycle_keep_current_policy",
+            "test_sibling_runbook.NativeSiblingCommitPolicyTests.test_direct_native_after_human_call_ignores_ambient_selector_and_history"
+          ]
+        },
+        {
+          "module": "test_ai_gate"
+        },
+        {
+          "module": "test_censor_receipts_harvest"
+        },
+        {
+          "module": "test_codex_session_stats"
+        },
+        {
+          "module": "test_contract_authority_buffer_loader"
+        },
+        {
+          "module": "test_contract_authority_sessions"
+        },
+        {
+          "module": "test_plan_harvest_lint"
+        },
+        {
+          "module": "test_plan_status_oracle"
+        },
+        {
+          "module": "test_planveyor_failure_attribution"
+        },
+        {
+          "module": "test_review_range_runtime_ui_visual_evidence_flow"
+        },
+        {
+          "module": "test_review_target_snapshot"
+        },
+        {
+          "module": "test_review_visual_lane_contract"
+        },
+        {
+          "module": "test_role_outcome_receipt"
+        },
+        {
+          "module": "test_satd_scan"
+        },
+        {
+          "module": "test_verify_suite"
+        }
+      ]
+    },
+    {
+      "id": "s07",
+      "selectors": [
+        {
+          "module": "test_check_planveyor_profile_contract"
+        },
+        {
+          "module": "test_contract_authority_children"
+        },
+        {
+          "module": "test_contract_authority_provenance"
+        },
+        {
+          "module": "test_contract_authority_shell_children"
+        },
+        {
+          "module": "test_contract_authority_shell_corrections"
+        },
+        {
+          "module": "test_contract_authority_support"
+        },
+        {
+          "module": "test_fs_object_identity"
+        },
+        {
+          "module": "test_plan_queue"
+        },
+        {
+          "module": "test_planveyor_codex_agent_roles"
+        },
+        {
+          "module": "test_planveyor_plan_list"
+        },
+        {
+          "module": "test_pybin"
+        },
+        {
+          "module": "test_runtime_portability"
+        },
+        {
+          "module": "test_shared_docs_mirror_drift"
+        }
+      ]
+    },
+    {
+      "id": "s08",
+      "selectors": [
+        {
+          "module": "test_censor_prompt_contract"
+        },
+        {
+          "module": "test_contract_authority_private_family"
+        },
+        {
+          "module": "test_contract_authority_triage"
+        },
+        {
+          "module": "test_docs_context_check"
+        },
+        {
+          "module": "test_oss_release_scan"
+        },
+        {
+          "module": "test_planning_wave_readback"
+        },
+        {
+          "module": "test_planveyor_router_merge_boundary"
+        },
+        {
+          "module": "test_private_policy_domains"
+        },
+        {
+          "module": "test_process_improvements_lint"
+        },
+        {
+          "module": "test_queue_finalizer_report"
+        },
+        {
+          "module": "test_review_artifact_lint"
+        },
+        {
+          "module": "test_wave_telemetry_report"
+        },
+        {
+          "module": "test_zcode_bootstrap_lifecycle_prompt_contract"
+        }
+      ]
+    },
+    {
+      "id": "s09",
+      "selectors": [
+        {
+          "module": "test_planveyor_init_capture",
+          "ids": [
+            "test_planveyor_init_capture.InitCaptureTests.test_censor_variants_have_exact_preflight_help_and_readiness_mappings",
+            "test_planveyor_init_capture.InitCaptureTests.test_custom_reviewer_risk_runtime_uses_lane_session_key",
+            "test_planveyor_init_capture.InitCaptureTests.test_custom_role_step_fail_closed_prechild_and_semantic_pointer_matrix",
+            "test_planveyor_init_capture.InitCaptureTests.test_custom_role_step_uses_explicit_plan_without_mutating_cached_pointer",
+            "test_planveyor_init_capture.InitCaptureTests.test_direct_claude_planner_init_forwards_explicit_options_and_saves_neutral_session",
+            "test_planveyor_init_capture.InitCaptureTests.test_role_run_atomic_failure_transport_preserves_primary_authority",
+            "test_planveyor_init_capture.InitCaptureTests.test_role_run_finalizes_machine_owned_outcome_without_execution_schema_widening",
+            "test_planveyor_init_capture.InitCaptureTests.test_role_run_outcome_preflight_blocks_stale_draft_before_child_start",
+            "test_planveyor_init_capture.InitCaptureTests.test_role_run_probe_clean_signal_stops_worker_before_interrupted_transition",
+            "test_planveyor_init_capture.InitCaptureTests.test_role_run_probe_malformed_identity_and_symlink_fail_closed",
+            "test_planveyor_init_capture.InitCaptureTests.test_role_run_probe_setup_failure_is_terminal_and_recoverable",
+            "test_planveyor_init_capture.InitCaptureTests.test_role_run_projects_non_codex_runner_only_from_current_proof",
+            "test_planveyor_init_capture.InitCaptureTests.test_role_run_rejects_stale_and_wrong_schema_receipts",
+            "test_planveyor_init_capture.InitCaptureTests.test_role_run_reports_invalid_outcome_helper_transport_without_starting_child",
+            "test_planveyor_init_capture.InitCaptureTests.test_role_run_reports_semantic_diagnostic_without_recovery_mutation",
+            "test_planveyor_init_capture.InitCaptureTests.test_role_run_writes_fresh_success_receipt_and_compat_readback",
+            "test_planveyor_init_capture.InitCaptureTests.test_runner_matrix_readback_and_unknown_runner_fail_closed",
+            "test_planveyor_init_capture.InitCaptureTests.test_runner_selection_init_precedes_artifacts_and_consumes_captured_bytes_once"
+          ]
+        },
+        {
+          "module": "test_consumer_contract"
+        }
+      ]
+    },
+    {
+      "id": "s10",
+      "selectors": [
+        {
+          "module": "test_planveyor_init_capture",
+          "ids": [
+            "test_planveyor_init_capture.InitCaptureTests.test_censor_wrapper_accepts_valid_skip_hint_for_current_handoff",
+            "test_planveyor_init_capture.InitCaptureTests.test_failed_init_without_sid_stays_under_pending",
+            "test_planveyor_init_capture.InitCaptureTests.test_in_scope_init_wrappers_promote_run_artifacts_by_sid",
+            "test_planveyor_init_capture.InitCaptureTests.test_manager_invocation_receipt_checkpoint_and_terminal_exact_readback",
+            "test_planveyor_init_capture.InitCaptureTests.test_manager_public_native_collab_resume_tui_and_custom_status_surfaces",
+            "test_planveyor_init_capture.InitCaptureTests.test_role_run_carrier_is_isolated_from_manager_architect_paths",
+            "test_planveyor_init_capture.InitCaptureTests.test_role_run_lock_contention_is_fail_fast_and_preserves_winner_latest",
+            "test_planveyor_init_capture.InitCaptureTests.test_role_run_missing_wrapper_and_spawn_error_are_not_started",
+            "test_planveyor_init_capture.InitCaptureTests.test_role_run_nonzero_and_timeout_are_non_green_receipts",
+            "test_planveyor_init_capture.InitCaptureTests.test_role_run_probe_isolated_manifest_allowlist_and_exact_recovery",
+            "test_planveyor_init_capture.InitCaptureTests.test_role_run_probe_lease_survives_supervisor_crash_and_gates_recovery",
+            "test_planveyor_init_capture.InitCaptureTests.test_role_run_probe_recovery_rejects_path_replacement_before_mutation",
+            "test_planveyor_init_capture.InitCaptureTests.test_role_run_records_post_wrapper_sid_when_session_is_replaced",
+            "test_planveyor_init_capture.InitCaptureTests.test_role_run_recovery_tuple_is_one_shot_and_exactly_once",
+            "test_planveyor_init_capture.InitCaptureTests.test_role_run_rejects_bad_or_changed_preflight_identity_before_child",
+            "test_planveyor_init_capture.InitCaptureTests.test_role_run_rejects_symlinked_managed_root_and_restores_caller_umask",
+            "test_planveyor_init_capture.InitCaptureTests.test_role_run_supervisor_closes_inherited_stdin",
+            "test_planveyor_init_capture.InitCaptureTests.test_role_run_supports_planner_and_coder_censor_variants_without_schema_expansion",
+            "test_planveyor_init_capture.InitCaptureTests.test_strict_runner_selection_matrix_policy_and_consumer_fail_closed"
+          ]
+        },
+        {
+          "module": "test_followups_capture"
+        }
+      ]
+    },
+    {
+      "id": "s11",
+      "selectors": [
+        {
+          "module": "test_planveyor_init_capture",
+          "ids": [
+            "test_planveyor_init_capture.InitCaptureTests.test_censor_wrapper_fails_when_current_handoff_receipt_is_missing",
+            "test_planveyor_init_capture.InitCaptureTests.test_custom_reviewer_lane_init_uses_distinct_session_keys_and_runner_matrix",
+            "test_planveyor_init_capture.InitCaptureTests.test_custom_role_step_projects_complete_outcome_groups_at_public_boundary",
+            "test_planveyor_init_capture.InitCaptureTests.test_manager_invocation_receipt_rejects_foreign_partial_and_repeated_mutations",
+            "test_planveyor_init_capture.InitCaptureTests.test_preflight_codex_capture_uses_only_required_success_identity",
+            "test_planveyor_init_capture.InitCaptureTests.test_public_owner_runbook_documents_neutral_init_run_artifact_lookup",
+            "test_planveyor_init_capture.InitCaptureTests.test_role_run_architect_variant_missing_session_fails_before_wrapper",
+            "test_planveyor_init_capture.InitCaptureTests.test_role_run_binds_post_match_carrier_swap_to_proof_runner",
+            "test_planveyor_init_capture.InitCaptureTests.test_role_run_control_markers_are_nofollow_bounded_and_interrupt_safe",
+            "test_planveyor_init_capture.InitCaptureTests.test_role_run_exposes_current_run_carrier_to_role_process",
+            "test_planveyor_init_capture.InitCaptureTests.test_role_run_ignores_ambient_preflight_marker_and_uses_fresh_proof",
+            "test_planveyor_init_capture.InitCaptureTests.test_role_run_keeps_non_green_child_and_green_outcome_independent",
+            "test_planveyor_init_capture.InitCaptureTests.test_role_run_probe_concurrent_starts_receive_unique_owned_ids",
+            "test_planveyor_init_capture.InitCaptureTests.test_role_run_probe_prepared_hard_kill_has_exact_terminalization_and_recovery",
+            "test_planveyor_init_capture.InitCaptureTests.test_role_run_probe_rejects_symlink_namespace_without_touching_target",
+            "test_planveyor_init_capture.InitCaptureTests.test_role_run_provider_error_classifier_is_bounded_and_fail_closed",
+            "test_planveyor_init_capture.InitCaptureTests.test_role_run_retention_is_deterministic_paired_and_fail_closed",
+            "test_planveyor_init_capture.InitCaptureTests.test_role_run_retention_outer_mapping_uses_only_authoritative_prune_fields",
+            "test_planveyor_init_capture.InitCaptureTests.test_role_run_retention_pair_faults_roll_back_and_report_affected_run",
+            "test_planveyor_init_capture.InitCaptureTests.test_role_run_supports_architect_variants_with_shared_session_key",
+            "test_planveyor_init_capture.InitCaptureTests.test_run_timeout_is_fail_closed_with_context"
+          ]
+        },
+        {
+          "module": "test_merge_policy_effect_boundaries"
+        }
+      ]
+    },
+    {
+      "id": "s12",
+      "selectors": [
+        {
+          "module": "test_sibling_closeout",
+          "ids": [
+            "test_sibling_closeout.PublicCloseoutTests.test_attested_facade_preview_and_semantic_commit_use_real_gates"
+          ]
+        },
+        {
+          "module": "test_planveyor_review_range_init"
+        }
+      ]
+    },
+    {
+      "id": "s13",
+      "selectors": [
+        {
+          "module": "test_sibling_closeout",
+          "ids": [
+            "test_sibling_closeout.PublicCloseoutTests.test_attested_canonical_verdict_preview_and_fresh_done_admission",
+            "test_sibling_closeout.PublicCloseoutTests.test_attested_docs_closeout_and_ready_use_actual_facade"
+          ]
+        },
+        {
+          "module": "test_sibling_closeout",
+          "class": "ExistingCaptureIntegrationTests"
+        },
+        {
+          "module": "test_sibling_closeout",
+          "class": "SiblingCloseoutTests"
+        },
+        {
+          "module": "test_docs_closeout"
+        }
+      ]
+    },
+    {
+      "id": "s14",
+      "selectors": [
+        {
+          "module": "test_contract_authority_context"
+        },
+        {
+          "module": "test_contract_authority_shell_buffer"
+        },
+        {
+          "module": "test_custom_pipeline_dirty_state"
+        },
+        {
+          "module": "test_followups_apply"
+        },
+        {
+          "module": "test_followups_code_reviews_harvest"
+        },
+        {
+          "module": "test_merge_range_verdict_digest"
+        },
+        {
+          "module": "test_merge_tracker_checklist_capture"
+        },
+        {
+          "module": "test_plan_lint"
+        },
+        {
+          "module": "test_planqueue_metrics"
+        },
+        {
+          "module": "test_planveyor_bare_entrypoints"
+        },
+        {
+          "module": "test_process_improvements_promote"
+        },
+        {
+          "module": "test_review_header_metadata"
+        },
+        {
+          "module": "test_semantic_review_observation"
+        },
+        {
+          "module": "test_strip_trailing_ws"
+        }
+      ]
+    }
+  ]
+}

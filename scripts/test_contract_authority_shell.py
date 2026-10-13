@@ -858,7 +858,10 @@ class ContractAuthorityShellIntegrationTests(unittest.TestCase):
                     process.stdin.close()
                 except BrokenPipeError:
                     pass
-            returncode = process.wait(timeout=15)
+            # A collector that reads the open stdin never exits on its own, so
+            # any finite limit detects it; a rejecting facade can take ten
+            # seconds on a loaded machine.
+            returncode = process.wait(timeout=60)
             assert process.stdout is not None
             assert process.stderr is not None
             stdout = process.stdout.read()

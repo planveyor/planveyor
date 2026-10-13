@@ -1,64 +1,66 @@
-# MCP и target-local проверки
+# MCP and target-local checks
 
-MCP и browser/native tools дополняют declared verification contract выбранного
-проекта. Они не создают универсальный UI, framework или credentials policy.
+**English** · [Русский](mcp.ru.md)
 
-## Выбор инструмента
+MCP and browser or native tools supplement the declared verification contract
+of the selected project. They do not create a universal UI, framework, or
+credentials policy.
 
-1. Прочитай PLAN_PATH и target-local canon.
-2. Выбери только tool/harness, который там объявлен для текущего scope.
-3. Если UI/runtime lane не объявлен, запиши N/A (why=not declared); не
-   подставляй browser, native helper, database или framework command.
-4. Запускай Planveyor functions через public facade:
+## Choosing a tool
+
+1. Read `PLAN_PATH` and the target-local canon.
+2. Choose only a tool or harness that is declared there for the current scope.
+3. If a UI or runtime lane is not declared, record `N/A (why=not declared)`; do
+   not substitute a browser, native helper, database, or framework command.
+4. Run Planveyor functions through the public facade:
 
 ~~~bash
 ./bin/planveyor planveyor_verify [--format json] [--full | --module …]
 ~~~
 
-Без флагов это быстрый integrity route. `--full` добавляет одну canonical unittest discovery и взаимоисключён с `--module`; facade передаёт argv без собственной ветки.
+Without flags, this is the fast integrity route. `--full` adds one canonical unittest discovery and cannot be combined with `--module`; the facade passes `argv` through without a branch of its own.
 
-Facade проверяет собственный runtime. Target application command, credential и
-test fixture принадлежат target project.
+The facade checks its own runtime. The target application command, credentials,
+and test fixtures belong to the target project.
 
 ## UI evidence
 
-Для declared UI lane зафиксируй:
+For a declared UI lane, record:
 
-- exact scenario и preconditions;
-- chosen browser/native helper;
-- command/result или readable receipt;
-- complete visual artifact set;
-- human verdict и finding disposition.
+- the exact scenario and preconditions;
+- the chosen browser or native helper;
+- the command and its result, or a readable receipt;
+- the complete set of visual artifacts;
+- the human verdict and the disposition of findings.
 
-Automation result и human inspection независимы. Один screenshot не доказывает
-полный UI contract, а успешный command не закрывает visual lane без declared
-verdict.
+The automation result and the human inspection are independent. One screenshot
+does not prove the full UI contract, and a successful command does not close the
+visual lane without a declared verdict.
 
-## Ограничения среды
+## Environment limits
 
-Если selected harness требует browser, network, device, local service или
-elevated execution, сначала получи truthful runtime result. Недоступный
-environment — blocker или diagnostic по target contract; не заменяй его
-другим стеком и не invent credentials.
+If the selected harness needs a browser, network, device, local service, or
+elevated execution, first get a truthful result from an actual run. An
+unavailable environment is a blocker or a diagnostic under the target contract;
+do not replace it with another stack and do not invent credentials.
 
-Не сохраняй credentials, cookies, authorization headers, session identifiers,
-tokens или personal paths в plan, receipt, review artifact или screenshot
-metadata. Используй <REDACTED>.
+Do not store credentials, cookies, authorization headers, session identifiers,
+tokens, or personal paths in a plan, receipt, review artifact, or screenshot
+metadata. Use `<REDACTED>`.
 
 ## MCP boundaries
 
-MCP tool output — supporting evidence, пока plan/review не указывает его
-роль в решении. Не принимай tool availability, chat prose или historical log
-как proof current behavior. Сохраняй только необходимые public facts:
-selected tool, declared target scope, result and stable artifact reference.
+MCP tool output is supporting evidence until the plan or review states its role
+in the decision. Do not take tool availability, chat prose, or a historical log
+as proof of current behavior. Keep only the necessary public facts: the selected
+tool, the declared target scope, the result, and a stable artifact reference.
 
 ## Closeout
 
-После UI/MCP lane:
+After a UI or MCP lane:
 
-1. Добавь result к role-owned review или plan evidence.
-2. Перепроверь declared gate для exact changed bundle.
-3. Если shared process docs изменились, обработай packetization отдельно.
-4. Остановись на missing evidence; не выполняй target mutation, queue write,
-   commit или push только ради завершения proof lane.
-
+1. Add the result to the role-owned review or to the plan evidence.
+2. Re-check the declared gate for the exact changed bundle.
+3. If shared process docs changed, handle packetization separately.
+4. Stop on missing evidence; do not perform a target mutation, a queue write, a
+   commit, or a push only to finish the proof lane.

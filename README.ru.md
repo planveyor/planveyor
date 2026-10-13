@@ -1,12 +1,17 @@
+<!-- i18n: pair=README.md pair-sha256=97b26951f84442468edb0296f81240f8c835f77c5501b1d025f758569c82b9f1 self-sha256=5c15b748dc78557b1c18f74989f45e62646bbff71e759fe213d1116ad527f176 -->
 # Planveyor
 
-Planveyor — самостоятельный repo-backed набор инструментов для plan-driven работы ролей Architect, Planner, Coder, Reviewer и Manager. Планы, ревью, follow-ups, packet records и process guidance остаются проверяемыми файлами репозитория.
+[English](README.md) · **Русский**
 
-## Старт
+Planveyor — самостоятельный набор инструментов для работы по плану с ролями Architect, Planner, Coder, Reviewer и Manager. Его данные хранятся в репозитории: планы, ревью, отложенные задачи, записи пакетов и описание процесса лежат там файлами, которые можно открыть и проверить.
 
-Проект под свой стек создаётся и ведётся по постоянному [runbook sibling](docs/guides/stack-sibling.md): создать проект, завести план, ответить Architect, провести Manager, просмотреть и явно закоммитить каждый точный набор. Команды для человека объединены в `planveyor sibling`; выбранный facade и контекст проекта определяют технические параметры сами.
+## С чего начать
 
-Запускайте команды из корня Planveyor через child-only facade:
+Сначала установите Planveyor по руководству [«Установка Planveyor»](docs/guides/install.ru.md): требования, пример окружения и проверки. Какой агентный харнес использует каждый маршрут, описано на странице [«Агентные харнесы»](docs/guides/harnesses.ru.md).
+
+Для проекта под свой стек следуйте постоянному [руководству по sibling](docs/guides/stack-sibling.ru.md): создайте sibling, напишите черновик плана, ответьте Architect, запустите Manager, просмотрите и явно закоммитьте каждый точный набор файлов. Команды для человека собраны в одну группу, `planveyor sibling`, и сами определяют проект, выбранный план и версию исходников по выбранному фасаду и контексту проекта.
+
+Запускайте команды из корня Planveyor через фасад, который выполняет их только в дочернем процессе:
 
 ```zsh
 ./bin/planveyor planveyor_entry_doctor
@@ -14,33 +19,68 @@ Planveyor — самостоятельный repo-backed набор инстру
 ./bin/planveyor planveyor_help
 ```
 
-Facade сам определяет корень по `bin/planveyor` и не ожидает фиксированный путь в домашней директории. До первого public command проверьте доступный `git`, physical Planveyor Git checkout и `HEAD`, разрешающийся в commit: этот preflight выполняется до `--project` и до doctor. Поддерживаемый Python нужен для загрузки source identity facade. Настроенный клиент и его обычная внешняя аутентификация нужны только live-команде, вызывающей этот клиент; Codex и Codex-аутентификация относятся только к Codex-путям. Doctor, runtime info и help их не проверяют. `PLANVEYOR_CODEX_HOME` задавайте только явно и только для внешнего каталога.
+Фасад сам находит свой корень по `bin/planveyor`. Копия репозитория не обязана лежать по фиксированному пути в домашнем каталоге. Перед любой публичной командой проверьте, что `git` установлен и запускается, Planveyor лежит в физической копии Git-репозитория и `HEAD` указывает на коммит. Эта предварительная проверка выполняется до `--project` и до doctor. Поддерживаемый Python нужен, чтобы загрузить идентичность исходников фасада (source identity). Настроенный агентный харнес и его обычная внешняя аутентификация нужны только командам живого запуска роли или Manager, которые вызывают этот харнес. Codex и аутентификация Codex относятся только к путям через Codex. `planveyor_entry_doctor`, `planveyor_runtime_info` и `planveyor_help` их не проверяют. `PLANVEYOR_CODEX_HOME` задавайте, только если вам явно нужен внешний каталог Codex home.
 
-Не подключайте implementation shell files через `source`: публичный контракт запуска — команда выше.
+Не подключайте shell-скрипты реализации к родительской оболочке через `source`. Публичный контракт команд задаёт фасад, описанный выше.
 
-`planveyor_entry_doctor` и `planveyor_runtime_info` дают только local readback, а не proof consumer contract, admissibility plan, SID, authentication, provider availability или role dispatch. Последовательность supported Python, exact-plan oracle, pointer, Manager SID, live TUI и отдельной queue описана в [launch-and-role-modes](docs/guides/launch-and-role-modes.md). Manager collab требует ещё пяти ролей `[agents.*]` в конфиге Codex: см. [настройку Codex](docs/guides/launch-and-role-modes.md#настройка-codex).
+`planveyor_entry_doctor` и `planveyor_runtime_info` только читают локальное состояние. Они не доказывают ни контракт sibling, ни допуск плана, ни ID сессии, ни аутентификацию, ни доступность провайдера, ни вызов роли. Поддерживаемый интерпретатор, Oracle для явно выбранного плана, указатель плана, SID Manager, интерактивный TUI и отдельная последовательность для очереди планов описаны в руководстве [«Запуск и режимы ролей»](docs/guides/launch-and-role-modes.ru.md). Режиму Manager collab нужны ещё пять ролей агентов в конфигурации Codex, см. раздел [«Настройка Codex»](docs/guides/launch-and-role-modes.ru.md#настройка-codex).
 
-## Поддерживаемая среда верификации
+## Поддерживаемая среда проверки
 
-Первая версия поддерживает одну среду: macOS и активированное Python-окружение с Python 3.12, Copier 9.18.2 и PyYAML по `requirements-dev.lock`; в `PATH` также нужны Git, zsh и ripgrep. Подготовьте окружение сами (например, conda-окружение `planveyor`, внутри которого выполнен `make bootstrap-python`) и активируйте его до вызова `bin/planveyor` или `make`: Planveyor берёт `python3` из `PATH`. Planveyor не устанавливает и не чинит зависимости; при отсутствующей предпосылке команда завершается с сообщением, что именно нужно. Загрузчик source identity технически принимает Python 3.10–3.12, но поддерживаемый путь — среда выше. Настроенный CI workflow не является результатом hosted run; hosted CI и другие версии Python — после выпуска.
+Первый выпуск поддерживает одну среду: macOS с активированным окружением Python 3.12, где стоят Copier 9.18.2 и PyYAML в версиях из `requirements-dev.lock`. В `PATH` также нужны Git, zsh, ripgrep и `make`. Подготовьте это окружение сами (например, conda-окружение с именем `planveyor`, внутри которого выполнен `make bootstrap-python`) и активируйте его до вызова `bin/planveyor` или `make`: Planveyor берёт тот `python3`, который находит в `PATH`. Planveyor никогда не устанавливает и не чинит зависимости. Если предпосылки нет, команда останавливается с ошибкой, в которой она названа. Загрузчик идентичности исходников технически принимает Python 3.10–3.12, но поддерживаемый путь — это среда, описанная выше. Настроенный сценарий CI не означает, что прогон в hosted CI уже был. Hosted CI и другие версии Python будут после выпуска.
 
-Для локальной проверки `make verify` — быстрый default route. `make test-scripts` запускает direct canonical full discovery, а `make verify-full` — альтернативный aggregate full route; для одного full claim выбирайте один из этих маршрутов, а не оба. Native validation для Windows и Linux не завершена и этим текстом не заявляется.
+Для локальной проверки по умолчанию служит быстрый маршрут `make verify`. `make test-scripts` напрямую запускает каноническое полное обнаружение тестов, а `make verify-full` даёт альтернативный сводный полный маршрут. Для одного заявления о полной проверке используйте один из этих полных маршрутов, не оба. Нативная проверка на Windows и Linux не завершена, и этот раздел их поддержку не заявляет.
 
-## Состав
+## Что входит
 
-- shared role docs, prompts и playbooks;
-- templates для plan, code draft, review, follow-up и process improvement;
-- локальные validation/lifecycle gates;
-- rollout и upstream packets для передачи работы между репозиториями;
-- agent skills для создания и маршрутизации Planveyor artifacts;
-- пошаговая инструкция: создать sibling под свой стек, настроить его и работать в нём.
+- Документы ролей, промпты и плейбуки для жизненного цикла, который начинается с плана.
+- Шаблоны плана, черновика кода, ревью, отложенной задачи и предложения по процессу.
+- Инструменты локальной проверки и контрольные точки жизненного цикла.
+- Записи адресных пакетов и запросов в Planveyor для работы, которая выходит за границы одного репозитория.
+- Скиллы, которые помогают агенту для программирования создавать артефакты Planveyor и выбирать для них маршрут.
+- Пошаговое руководство: как создать sibling-репозиторий под свой стек, настроить его и работать в нём.
 
-Init доставляет skills в sibling как `.agents/skills/`, где их находят Codex и ZCode. Для работы в другом репозитории скопируйте `skills/<name>/` в `$HOME/.agents/skills/`, без symlink.
+## Жизненный цикл работы
 
-Sibling под свой стек создаётся и настраивается по [пошаговой инструкции](docs/guides/stack-sibling.md). Основные маршруты описаны в [launch-and-role-modes](docs/guides/launch-and-role-modes.md), [lifecycle-and-packets](docs/guides/lifecycle-and-packets.md), [golden paths](docs/guides/golden_paths.md), [кратком Owner guide](planveyor_owner_book.md), [verification suite](docs/tools/verify_suite.md), [roles](docs/roles/index.md) и [playbooks](docs/playbooks/). Открытые пункты первого выпуска сохранены в [release backlog](docs/release_backlog.md).
+1. Создайте или явно выберите план.
+2. Перед выполнением проверьте его статус и прогоните линтер плана.
+3. Запустите назначенную роль или режим Manager с чёткими границами задачи и актуальными доказательствами.
+4. Проведите ревью точного диапазона ревизий и решите обязательные отложенные задачи.
+5. Запишите свежие доказательства проверки после слияния. Если изменение меняет общий контракт или поведение движка, добавьте извещение, чтобы sibling-репозитории приняли его через обновление.
+
+Публичные руководства по отдельным темам:
+
+- [Установка Planveyor](docs/guides/install.ru.md)
+- [Sibling под свой стек: создание, настройка, работа](docs/guides/stack-sibling.ru.md)
+- [Запуск и режимы ролей](docs/guides/launch-and-role-modes.ru.md)
+- [Агентные харнесы](docs/guides/harnesses.ru.md)
+- [Жизненный цикл и пакеты](docs/guides/lifecycle-and-packets.ru.md)
+- [Реестр повторяемых потоков](docs/guides/golden_paths.ru.md)
+- [Краткое руководство Owner](planveyor_owner_book.ru.md)
+- [Маршруты проверки](docs/tools/verify_suite.ru.md)
+- [Обязательства первого выпуска](docs/release_backlog.md)
+- [Документы ролей](docs/roles/index.md)
+- [Плейбуки](docs/playbooks/)
+
+## Структура репозитория
+
+- `bin/` — публичный фасад команд Planveyor.
+- `docs/roles/` — обязанности ролей и границы передачи работы.
+- `docs/tools/prompts/` — общие промпты ролей и Manager.
+- `docs/playbooks/` — подробное описание процесса.
+- `docs/plans/`, `docs/code_drafts/`, `docs/reviews/` — шаблоны и записи жизненного цикла.
+- `docs/followups/`, `docs/process_improvements/` — долговечные записи о незавершённой работе и предложениях по процессу.
+- `docs/rollout_packets/`, `docs/upstream_packets/` — шаблоны для передачи работы между репозиториями.
+- `skills/` — инструкции по рабочему процессу для агентов. Команда `init` доставляет их в sibling, в каталог `.agents/skills/`, где их находят Codex и ZCode. Чтобы пользоваться ими в другом репозитории, скопируйте `skills/<name>/` в `$HOME/.agents/skills/`. Символические ссылки не создавайте.
 
 ## Граница target-local
 
-Root corpus описывает публичный процесс. Consumer repository владеет своим стеком, тестами, credentials, integration settings, UI modes и `target-local` profile. Если target-local contract отсутствует, Planveyor останавливается с blocker и не создаёт локальную замену.
+Корневой корпус документов содержит публичное описание процесса. Проект, который пользуется Planveyor, сам владеет своим стеком приложения, тестами, учётными данными, настройками интеграций, режимами UI и любым профилем `target-local`. Если контракта `target-local` нет, Planveyor останавливается на этой границе. Он не создаёт профиль на замену и не копирует закрытую конфигурацию в этот репозиторий.
 
-Для изменений читайте [CONTRIBUTING.md](CONTRIBUTING.md), для security report — [SECURITY.md](SECURITY.md). Лицензия: [Apache-2.0](LICENSE).
+## Участие и безопасность
+
+Изменения делайте небольшими, безопасными для публикации и подкреплёнными подходящими проверками. Прочитайте [CONTRIBUTING.ru.md](CONTRIBUTING.ru.md), прежде чем предлагать изменение, и [SECURITY.ru.md](SECURITY.ru.md), прежде чем сообщать о проблеме безопасности.
+
+## Лицензия
+
+Planveyor распространяется по лицензии Apache License, Version 2.0. Её текст лежит в файле [LICENSE](LICENSE) (англ.).
