@@ -25,6 +25,97 @@ PLAN_QUEUE = ROOT / "scripts" / "plan_queue.py"
 
 
 class ManagerCustomPipelinePromptContractTest(unittest.TestCase):
+    def _assert_general_collector_contract(self, text: str) -> str:
+        start = text.index("После каждого `general` output (`Architect|Coder|Planner|Reviewer`)")
+        end = text.index("После returned green receipt четвёртого", start)
+        branch = text[start:end]
+        steps = (
+            "1. Terminal tool result:",
+            "2. Single-object framing:",
+            "3. Guarded JSON.parse:",
+            "4. Existing fields:",
+            "5. Canonical receipt/readback:",
+        )
+        positions = [branch.index(step) for step in steps]
+        self.assertEqual(positions, sorted(positions))
+        terminal, framing, parse, fields, proof = (
+            branch[positions[index]:positions[index + 1] if index + 1 < len(positions) else len(branch)]
+            for index in range(len(positions))
+        )
+        self.assertIn("`exit_code=0` до разбора stdout", terminal)
+        self.assertIn("дочитай тот же `session_id`", terminal)
+        self.assertIn("не запускай collector повторно", terminal)
+        for marker in ("один JSON object", "внешним JSON whitespace", "empty/plain-text/fences",
+                       "array/null/scalar", "prefix/suffix", "second JSON value",
+                       "не извлекай JSON substring", "не отбрасывай error tail"):
+            self.assertIn(marker, framing)
+        for marker in ("полный stdout", "try/catch", "syntax error", "non-null object, не array"):
+            self.assertIn(marker, parse)
+        for field in ("process_improvement_capture_state", "process_improvement_capture_reason",
+                      "process_improvement_receipt_path", "followups_capture_cycle_id"):
+            self.assertIn(f"`{field}`", fields)
+        for marker in ("непустые strings", "Missing/non-string/empty field", "blocked/unknown state",
+                       "wrong cycle", "clean_noop|materialized|already_tracked", "exact retained current",
+                       "остальные keys не запрещаются", "replay stdout может его не содержать",
+                       "optional stdout field, не новый required field"):
+            self.assertIn(marker, fields)
+        for marker in ("stdout и pathname не являются authority", "existing collector admission",
+                       "helper-selected current `process_improvement_capture.v2`", "plan/source, exact role",
+                       "retained cycle и raw-byte input digest", "Не разбирай receipt вручную",
+                       "planveyor_docs_closeout <plan_ref> --followups-capture-cycle-id <capture_cycle_id> --json",
+                       "schema=docs_closeout_payload.v1", "schema_state=ok", "schema_errors=[]",
+                       "не является whole-family green", "current invalid/blocked побеждает pending",
+                       "полный source/role/cycle/input/object chain", "existing checkpoint",
+                       "исходные rc/stdout/error", "automatic retry/redispatch", "no-op substitution"):
+            self.assertIn(marker, proof)
+        return branch
+
+    def test_collab_general_collector_result_guard_is_branch_local_and_ordered(self) -> None:
+        text = COLLAB_PROMPT.read_text(encoding="utf-8")
+        branch = self._assert_general_collector_contract(text)
+        for mutation in (
+            text.replace("1. Terminal tool result:", "1. Missing terminal guard:", 1),
+            text.replace("2. Single-object framing:", "3. Guarded JSON.parse:", 1),
+            text.replace(branch, "collector output accepted\n", 1) + "\n" + branch,
+            text.replace("existing collector admission", "stdout-only admission", 1),
+        ):
+            with self.subTest(mutation=mutation[-80:]):
+                with self.assertRaises((AssertionError, ValueError)):
+                    self._assert_general_collector_contract(mutation)
+
+    def test_collab_general_collector_failure_matrix_preserves_receipt_authority(self) -> None:
+        branch = self._assert_general_collector_contract(COLLAB_PROMPT.read_text(encoding="utf-8"))
+        cases = {
+            "fresh_and_replay_success": ("Fresh stdout", "replay stdout", "optional stdout field"),
+            "nonzero_plain_text_and_json": ("Nonzero/plain-text и nonzero/JSON всегда STOP до parse",),
+            "empty_fences_nonobject": ("empty/plain-text/fences", "array/null/scalar"),
+            "prefix_suffix_second_value": ("prefix/suffix", "second JSON value"),
+            "syntax_error": ("syntax error", "bounded STOP с исходной причиной"),
+            "missing_nonstring_empty_field": ("Missing/non-string/empty field", "означают STOP"),
+            "blocked_unknown_state_wrong_cycle": ("blocked/unknown state или wrong cycle",),
+            "missing_red_stale_mismatched_receipt": ("Missing/red/stale/current-mismatch receipt/admission",),
+            "invalid_raw_input_digest": ("invalid input digest остаются STOP даже при green-looking stdout",),
+            "unknown_error": ("Любой отказ, включая unknown error", "исходные rc/stdout/error"),
+        }
+        for case, markers in cases.items():
+            with self.subTest(case=case):
+                for marker in markers:
+                    self.assertIn(marker, branch)
+        self.assertIn("Не записывай PI row руками из Manager", COLLAB_PROMPT.read_text(encoding="utf-8"))
+
+    def test_general_pi_roles_delegate_durable_writes_only_to_manager_collector(self) -> None:
+        for prefix in ("docs/tools/prompts", "copier_template/docs/tools/prompts"):
+            for role in ("architect", "planner", "coder", "reviewer"):
+                path = ROOT / prefix / f"{role}_docs_finalize_general.md"
+                with self.subTest(path=path.relative_to(ROOT).as_posix()):
+                    text = path.read_text(encoding="utf-8")
+                    self.assertIn("Единственный durable writer raw PI", text)
+                    self.assertIn("Роль не пишет durable PI ни вручную, ни через helper", text)
+                    self.assertIn("верни полный canonical block в `Process improvements` для collector Manager", text)
+                    self.assertIn("весь body проверяется строгим parser, без удаления хвоста", text)
+                    self.assertNotIn("обнови `docs/process_improvements/*` как durable carrier", text)
+                    self.assertNotIn("Collector может tolerate", text)
+
     def test_explicit_continuation_routes_to_existing_followups_phase_without_restarting_family(self) -> None:
         prompt = COLLAB_PROMPT.read_text()
         start = prompt.index("2b0) Explicit pre-first-followups continuation")

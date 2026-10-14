@@ -6,6 +6,7 @@ import hashlib
 import io
 import json
 import os
+import re
 import stat
 import subprocess
 import sys
@@ -39,6 +40,107 @@ LEGACY_DERIVED_BANNER_LINE = (
 
 
 class ProcessImprovementsTests(unittest.TestCase):
+    def _general_prompt_lower_samples(self, text: str) -> tuple[str, str]:
+        output = text.rsplit("Выход (в чат):", 1)[1]
+        section = re.search(
+            r"^## (?:\d+\) )?Process improvements\s*\n(?P<body>.*?)(?=^## |\Z)",
+            output,
+            re.MULTILINE | re.DOTALL,
+        )
+        self.assertIsNotNone(section)
+        assert section is not None
+        # Match the complete sample carrier: unknown prose cannot disappear
+        # between the two explicitly delimited output alternatives.
+        variants = re.fullmatch(
+            r"\s*```md\n(?P<structured>.*?)\n```\s*```md\n(?P<noop>.*?)\n```\s*",
+            section.group("body"),
+            re.DOTALL,
+        )
+        self.assertIsNotNone(variants, "lower PI output must contain exactly two complete examples")
+        assert variants is not None
+        replacements = {
+            "<N>": "1",
+            "<что болит / где loop проявился>": "проверка полного нижнего примера",
+            "<какой process/helper/prompt gap surfaced>": "пример расходится со строгим parser",
+            "<bounded fix / guardrail>": "проверять весь intended output настоящим parser",
+            "<Architect|Planner|Coder|Reviewer|Manager|Owner>": "Architect",
+            "<canon_update|prompt_change|helper_change|routing_change|followup_plan>": "prompt_change",
+            "<review/blocker/plan/queue ref|unknown>": "docs/code_reviews/fixture.md#B1",
+            "<manager-fed plan_ref|unknown>": "docs/plans/fixture.md",
+            "<reason_code>": "clean_run",
+        }
+        samples = []
+        for name in ("structured", "noop"):
+            sample = variants.group(name)
+            for placeholder, value in replacements.items():
+                sample = sample.replace(placeholder, value)
+            self.assertNotRegex(sample, r"<[^>\n]+>")
+            samples.append("## Process improvements\n" + sample + "\n")
+        return samples[0], samples[1]
+
+    def test_general_prompt_lower_samples_parse_canonical_and_noop(self) -> None:
+        root = Path(__file__).resolve().parents[1]
+        for prefix in ("docs/tools/prompts", "copier_template/docs/tools/prompts"):
+            for role in ("Architect", "Planner", "Coder", "Reviewer"):
+                path = root / prefix / f"{role.lower()}_docs_finalize_general.md"
+                with self.subTest(path=path.relative_to(root).as_posix()):
+                    structured, noop = self._general_prompt_lower_samples(path.read_text(encoding="utf-8"))
+                    parsed = COLLECT.parse_process_improvements_section(
+                        structured, role=role, default_source_ref="docs/plans/fixture.md",
+                    )
+                    self.assertEqual(parsed["state"], "suggestions")
+                    self.assertEqual(len(parsed["suggestions"]), 1)
+                    self.assertEqual(parsed["suggestions"][0].source_ref, "docs/plans/fixture.md")
+                    self.assertEqual(parsed["suggestions"][0].role, role)
+                    parsed_noop = COLLECT.parse_process_improvements_section(
+                        noop, role=role, default_source_ref="docs/plans/fixture.md",
+                    )
+                    self.assertEqual(parsed_noop["state"], "no_process_improvements")
+                    self.assertEqual(parsed_noop["suggestions"], [])
+                    self.assertEqual(parsed_noop["reason_code"], "clean_run")
+
+    def test_general_lower_sample_extraction_never_filters_prose(self) -> None:
+        root = Path(__file__).resolve().parents[1]
+        text = (root / "docs/tools/prompts/reviewer_docs_finalize_general.md").read_text(encoding="utf-8")
+        output_start = text.rindex("Выход (в чат):")
+        before, output = text[:output_start], text[output_start:]
+        with self.assertRaises(AssertionError):
+            self._general_prompt_lower_samples(before + output.replace("```\n\n```md", "```\nextra prose\n```md", 1))
+        injected = before + output.replace("- source_ref: <manager-fed plan_ref|unknown>",
+                                          "- source_ref: <manager-fed plan_ref|unknown>\nextra prose", 1)
+        structured, _ = self._general_prompt_lower_samples(injected)
+        with self.assertRaisesRegex(ValueError, "Unsupported line inside `Process improvements`"):
+            COLLECT.parse_process_improvements_section(
+                structured, role="Reviewer", default_source_ref="docs/plans/fixture.md",
+            )
+
+    def test_general_prompt_incident_tail_blocks_without_durable_effect(self) -> None:
+        root = self._root()
+        source_ref = "docs/plans/fixture.md"
+        cycle_id = "2e9f1138-692c-45e7-a24b-4ec2ca1046f1"
+        prompt = Path(__file__).resolve().parents[1] / "docs/tools/prompts/coder_docs_finalize_general.md"
+        structured, _ = self._general_prompt_lower_samples(prompt.read_text(encoding="utf-8"))
+        tail = "Structured suggestion передана для штатного Manager collector; durable PI carrier этой ролью не записан."
+        raw_input = (structured + tail + "\n").encode("utf-8")
+        self.assertEqual(len(COLLECT.parse_process_improvements_section(
+            structured, role="Coder", default_source_ref=source_ref,
+        )["suggestions"]), 1)
+        with self.assertRaisesRegex(ValueError, "Unsupported line inside `Process improvements`"):
+            COLLECT.collect_process_improvements(
+                project_root=root, role="Coder", source_ref=source_ref,
+                text=raw_input, followups_capture_cycle_id=cycle_id,
+            )
+        receipt = self._read_receipt(root, source_ref, "Coder", cycle_id)
+        self.assertEqual(receipt["receipt_schema"], COLLECT.CAPTURE_RECEIPT_V2_SCHEMA)
+        self.assertEqual(receipt["capture_state"], "blocked")
+        self.assertEqual(receipt["reason_code"], "collector_error")
+        self.assertIn(tail, receipt["error"])
+        self.assertEqual(receipt["input_sha256"], hashlib.sha256(raw_input).hexdigest())
+        self.assertEqual(receipt["before_process_improvement_files"], {})
+        self.assertEqual(receipt["after_process_improvement_files"], {})
+        self.assertEqual(receipt["process_improvement_path_results"], [])
+        self.assertFalse((root / "docs/process_improvements").exists())
+
     def _root(self) -> Path:
         tmpdir = tempfile.TemporaryDirectory()
         self.addCleanup(tmpdir.cleanup)
@@ -377,7 +479,7 @@ class ProcessImprovementsTests(unittest.TestCase):
             - source_ref: {source_ref}
             """
         )
-        COLLECT.collect_process_improvements(
+        fresh = COLLECT.collect_process_improvements(
             project_root=root,
             role="Architect",
             source_ref=source_ref,
@@ -386,6 +488,7 @@ class ProcessImprovementsTests(unittest.TestCase):
         )
         architect_path = root / COLLECT.capture_receipt_rel_path(source_ref, "Architect", cycle_id)
         leaf_bytes = architect_path.read_bytes()
+        self.assertEqual(fresh["input_sha256"], hashlib.sha256(noop.encode("utf-8")).hexdigest())
         with mock.patch.object(COLLECT, "_collect_process_improvements_impl", side_effect=AssertionError("must not collect")):
             leaf = COLLECT.collect_process_improvements(
                 project_root=root,
@@ -395,6 +498,10 @@ class ProcessImprovementsTests(unittest.TestCase):
                 followups_capture_cycle_id=cycle_id,
             )
         self.assertEqual(leaf["process_improvement_capture_replay"], "exact_leaf")
+        self.assertNotIn("input_sha256", leaf)
+        for field in ("process_improvement_capture_state", "process_improvement_capture_reason",
+                      "process_improvement_receipt_path", "followups_capture_cycle_id"):
+            self.assertEqual(leaf[field], fresh[field])
         self.assertEqual(architect_path.read_bytes(), leaf_bytes)
 
         COLLECT.collect_process_improvements(

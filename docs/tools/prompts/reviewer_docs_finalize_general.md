@@ -20,8 +20,8 @@ Manager-fed docs-closeout context (`plan_ref`, `semantic_status`, `docs_closeout
   - `- promotion_class: <canon_update|prompt_change|helper_change|routing_change|followup_plan>`
   - `- trigger_ref: <review/blocker/plan/queue ref|unknown>`
   - `- source_ref: <manager-fed plan_ref|unknown>`
-- Collector может tolerate bounded legacy/docs-closeout input variants, но role output contract не меняется: structured suggestions emit'им только canonical `- key: value`, без numbering/prose/unknown fields.
-- raw process suggestions materialize-ятся только в dedicated family `docs/process_improvements/*`; обычный `Follow-ups` lane не должен shadow/double-write тот же raw row.
+- Роль выдаёт только canonical `- key: value` structured suggestions либо exact standalone no-op. Compatibility collector не разрешает numbering, prose или unknown fields в role output; весь body проверяется строгим parser, без удаления хвоста и без замены реального предложения на no-op.
+- Единственный durable writer raw PI в `docs/process_improvements/*` — existing collector, который вызывает Manager. Роль не пишет durable PI ни вручную, ни через helper; обычный `Follow-ups` lane не должен shadow/double-write тот же raw row.
 - После role output Manager обязан передать эту секцию в `"$PLANVEYOR_RUNTIME_ROOT/bin/planveyor" --project "$PWD" planveyor_runtime_py process_improvements_collect.py --role Reviewer --source-ref <plan_ref> --followups-capture-cycle-id <capture_cycle_id> --input - --json`; helper-backed receipt (`clean_noop|materialized|already_tracked|blocked`) является proof path, а chat-only prose не считается proof.
 - Граница прямой мутации active canon: после semantic `Done|Superseded` historical `code_draft_meta.targets` и promoted `docs/process_improvements/*` pointer остаются только provenance и не разрешают memory-finalize менять terminal plan, linked code draft, live review, `docs/tools/prompts/**`, `docs/playbooks/**`, active reviewer README/templates или другие protected paths. Новое предложение идёт в raw PI carrier и затем в отдельный live non-terminal execution carrier; reviewed exact bytes materialize-ятся только прежним pre-terminal exact-bundle closeout.
 
@@ -66,10 +66,11 @@ Manager-fed docs-closeout context (`plan_ref`, `semantic_status`, `docs_closeout
    - `promotion_class` выбирай только из exact enum выше: prompt surfaces -> `prompt_change`, helper/wrapper/script surfaces -> `helper_change`, routing/queue surfaces -> `routing_change`, follow-up plan creation -> `followup_plan`, active canon/templates/runbooks/playbooks/review templates -> `canon_update`;
    - не используй несуществующие классы вроде `template_change`, `template_update`, `runbook_change` или `gate_change`; если кажется, что нужен новый class, пиши supported class + bounded `process_gap` вместо расширения enum в role output;
    - если улучшение уже честнее оформить backlog-item'ом, оставь его в `Follow-ups`, а в `Process improvements` не дублируй;
-   - если structured suggestion surfaced, обнови `docs/process_improvements/*` как durable carrier (напрямую или через helper), а не оставляй её только в chat output;
+   - если structured suggestion surfaced, верни полный canonical block в `Process improvements` для collector Manager; не записывай durable PI этой ролью. Пояснение о передаче, если нужно, размести в другой секции ответа, вне `Process improvements`;
    - если таких улучшений нет, используй exact no-op literal из shared family contract.
 
 Выход (в чат):
+В `Process improvements` выбери ровно один из двух нижних образцов: первый — structured suggestion, второй — no-op. В ответ копируй только содержимое выбранного `md`-блока, без fences и без поясняющих строк; подставь конкретные значения вместо placeholders.
 ## 1) Общая документация — предложения
 - `<file>`: <что меняем> — <почему> [UNCONFIRMED?]
 
@@ -77,10 +78,7 @@ Manager-fed docs-closeout context (`plan_ref`, `semantic_status`, `docs_closeout
 - `<file>`: <кратко что сделал>
 
 ## 3) Process improvements
-Либо standalone literal line:
-NO PROCESS IMPROVEMENTS — why: <reason_code>
-
-Либо exact machine-readable block:
+```md
 ### Suggestion <N>
 - symptom: <что болит / где loop проявился>
 - process_gap: <какой process/helper/prompt gap surfaced>
@@ -89,6 +87,11 @@ NO PROCESS IMPROVEMENTS — why: <reason_code>
 - promotion_class: <canon_update|prompt_change|helper_change|routing_change|followup_plan>
 - trigger_ref: <review/blocker/plan/queue ref|unknown>
 - source_ref: <manager-fed plan_ref|unknown>
+```
+
+```md
+NO PROCESS IMPROVEMENTS — why: <reason_code>
+```
 
 ## 4) Follow-ups (если нужно)
 - P? `<topic>` — to=<Planner|Architect|Coder|Reviewer|Owner> — why: <1 строка>

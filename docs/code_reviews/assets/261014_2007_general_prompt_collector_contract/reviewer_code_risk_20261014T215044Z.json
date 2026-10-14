@@ -1,0 +1,295 @@
+{
+  "run_id": "reviewer_code_risk_20261014T215044Z",
+  "lane_id": "reviewer_code_risk",
+  "runner_id": "N/A (why=private operator mapping is retained outside public artifacts)",
+  "session_key": "N/A (why=private operator mapping is retained outside public artifacts)",
+  "sid": "N/A (why=private operator mapping is retained outside public artifacts)",
+  "profile": "N/A (why=private operator mapping is retained outside public artifacts)",
+  "model": "N/A (why=private operator mapping is retained outside public artifacts)",
+  "reasoning_effort": "N/A (why=private operator mapping is retained outside public artifacts)",
+  "prompt_file": "docs/tools/prompts/reviewer_status_driven.md",
+  "target_ref": "BUNDLE=current",
+  "coverage_domains": [
+    "correctness",
+    "tests quality",
+    "security/privacy",
+    "subprocess/timeouts",
+    "failure semantics",
+    "observability",
+    "integrations"
+  ],
+  "findings": [],
+  "lane_status": "no_findings",
+  "no_findings_reason": "В exact diff 13 targets риск-регрессий не найдено. Проверены полные lower samples обеих surfaces, exact-tail отказ без durable delta, branch-local guard и existing receipt/readback; независимые объявленные suites и Make gates прошли.",
+  "limits": [
+    "Проверены candidate source bytes; применение И3а текущим frozen Manager и terminal docs-closeout этим проходом не доказаны.",
+    "Новая data/migrations, runtime atomicity, performance и supply-chain реализация отсутствует в diff.",
+    "Идентификационные настройки роли сохраняются в приватном операторском evidence.",
+    "Роль сохраняет top-level статус и не создаёт финальный review artifact; aggregate verdict принадлежит contracts lane."
+  ],
+  "source_refs": [
+    "copier_template/docs/tools/prompts/architect_docs_finalize_general.md",
+    "copier_template/docs/tools/prompts/coder_docs_finalize_general.md",
+    "copier_template/docs/tools/prompts/manager_collab_pipeline.md",
+    "copier_template/docs/tools/prompts/planner_docs_finalize_general.md",
+    "copier_template/docs/tools/prompts/reviewer_docs_finalize_general.md",
+    "docs/process_improvements/README.md",
+    "docs/tools/prompts/architect_docs_finalize_general.md",
+    "docs/tools/prompts/coder_docs_finalize_general.md",
+    "docs/tools/prompts/manager_collab_pipeline.md",
+    "docs/tools/prompts/planner_docs_finalize_general.md",
+    "docs/tools/prompts/reviewer_docs_finalize_general.md",
+    "scripts/test_manager_custom_pipeline_prompt_contract.py",
+    "scripts/test_process_improvements.py",
+    "scripts/process_improvements_collect.py:parse_process_improvements_section",
+    "scripts/process_improvements_collect.py:_validate_v2_capture_receipt",
+    "scripts/process_improvements_collect.py:_v2_replay_response",
+    "scripts/docs_closeout.py:classify_process_improvement_capture",
+    "scripts/followups_capture.py:admit_active_general_pi_collection"
+  ],
+  "delta": "Исправлены нижние general samples и ownership PI writer; actual collab consumer требует terminal rc, framing, guarded parse, existing fields и canonical current proof.",
+  "outcome": "Risk lane завершена без findings; последующая contracts lane должна независимо выбрать этот receipt и проверить тот же snapshot.",
+  "commands_run": [
+    {
+      "command": "\"$PLANVEYOR_RUNTIME_ROOT/bin/planveyor\" --project \"$PWD\" planveyor_plan_lint docs/plans/261014_2007_general_prompt_collector_contract.md",
+      "exit_code": 0
+    },
+    {
+      "command": "\"$PLANVEYOR_RUNTIME_ROOT/bin/planveyor\" --project \"$PWD\" planveyor_plan_bundle --check docs/plans/261014_2007_general_prompt_collector_contract.md",
+      "exit_code": 1,
+      "disposition": "Ожидаемое отсутствие PLANNED first-pass review; остальные 15 paths OK. --preflight подтвердил 16 paths / 0 issues."
+    },
+    {
+      "command": "\"$PLANVEYOR_RUNTIME_ROOT/bin/planveyor\" --project \"$PWD\" planveyor_plan_bundle --preflight docs/plans/261014_2007_general_prompt_collector_contract.md",
+      "exit_code": 0
+    },
+    {
+      "command": "PYTHONDONTWRITEBYTECODE=1 \"$PYBIN\" -B -m unittest discover -s scripts -p 'test_process_improvements.py' -v",
+      "exit_code": 0,
+      "tests": 56
+    },
+    {
+      "command": "PYTHONDONTWRITEBYTECODE=1 \"$PYBIN\" -B -m unittest discover -s scripts -p 'test_manager_custom_pipeline_prompt_contract.py' -v",
+      "exit_code": 0,
+      "tests": 68
+    },
+    {
+      "command": "PYTHONDONTWRITEBYTECODE=1 \"$PYBIN\" -B -m unittest discover -s scripts -p 'test_sibling_contract_docs.py' -v",
+      "exit_code": 0,
+      "tests": 22
+    },
+    {
+      "command": "make verify",
+      "exit_code": 0,
+      "result": "GREEN; 5 portability checks, без proof для omitted plan/archive inputs"
+    },
+    {
+      "command": "make doc-lint",
+      "exit_code": 0,
+      "result": "OK"
+    },
+    {
+      "command": "make typecheck",
+      "exit_code": 0,
+      "result": "No issues in 12 source files"
+    },
+    {
+      "command": "make oss-release-scan",
+      "exit_code": 0,
+      "result": "blockers=0; warnings=0"
+    }
+  ],
+  "current": true,
+  "written_at": "2026-10-14T21:50:44Z",
+  "target_snapshot": {
+  "bundle_sha256": "683ef31450c3369bd89391f315642dbf86eb347b775d78ddd5fb47389783cf8e",
+  "code_draft": "docs/code_drafts/261014_2007_general_prompt_collector_contract__code_draft.md",
+  "files": [
+    {
+      "git_mode": "100644",
+      "path": "copier_template/docs/tools/prompts/architect_docs_finalize_general.md",
+      "sha256": "ffc486e2d435713d7559b4cd33f2b1a63ba28fb2bdb4b8554434b5a857412c28",
+      "size_bytes": 15465
+    },
+    {
+      "git_mode": "100644",
+      "path": "copier_template/docs/tools/prompts/coder_docs_finalize_general.md",
+      "sha256": "d686e04d40bf6b7c1a2b1e4d2240d6379b1db4d273f80c4d546907a37941dbdd",
+      "size_bytes": 10686
+    },
+    {
+      "git_mode": "100644",
+      "path": "copier_template/docs/tools/prompts/manager_collab_pipeline.md",
+      "sha256": "8aba8e84819f61dd7b29f3cbe081a51d6813dc4771db940f9c98848a21fe3d3d",
+      "size_bytes": 161239
+    },
+    {
+      "git_mode": "100644",
+      "path": "copier_template/docs/tools/prompts/planner_docs_finalize_general.md",
+      "sha256": "01316ef3739e7314d4e6feed783f1dec93a6ed52f810a3fd841ece003a47d9b9",
+      "size_bytes": 10464
+    },
+    {
+      "git_mode": "100644",
+      "path": "copier_template/docs/tools/prompts/reviewer_docs_finalize_general.md",
+      "sha256": "17555c2f6a19d9e8c1e454ccb2251a41d719d3e343ab23f5587f0b34a68f1982",
+      "size_bytes": 12128
+    },
+    {
+      "git_mode": "100644",
+      "path": "docs/process_improvements/README.md",
+      "sha256": "7ea2962081794d04faa9391d47953d1a609a5030a7bde978a8ee06eca77e149d",
+      "size_bytes": 31601
+    },
+    {
+      "git_mode": "100644",
+      "path": "docs/tools/prompts/architect_docs_finalize_general.md",
+      "sha256": "ffc486e2d435713d7559b4cd33f2b1a63ba28fb2bdb4b8554434b5a857412c28",
+      "size_bytes": 15465
+    },
+    {
+      "git_mode": "100644",
+      "path": "docs/tools/prompts/coder_docs_finalize_general.md",
+      "sha256": "d686e04d40bf6b7c1a2b1e4d2240d6379b1db4d273f80c4d546907a37941dbdd",
+      "size_bytes": 10686
+    },
+    {
+      "git_mode": "100644",
+      "path": "docs/tools/prompts/manager_collab_pipeline.md",
+      "sha256": "8aba8e84819f61dd7b29f3cbe081a51d6813dc4771db940f9c98848a21fe3d3d",
+      "size_bytes": 161239
+    },
+    {
+      "git_mode": "100644",
+      "path": "docs/tools/prompts/planner_docs_finalize_general.md",
+      "sha256": "01316ef3739e7314d4e6feed783f1dec93a6ed52f810a3fd841ece003a47d9b9",
+      "size_bytes": 10464
+    },
+    {
+      "git_mode": "100644",
+      "path": "docs/tools/prompts/reviewer_docs_finalize_general.md",
+      "sha256": "17555c2f6a19d9e8c1e454ccb2251a41d719d3e343ab23f5587f0b34a68f1982",
+      "size_bytes": 12128
+    },
+    {
+      "git_mode": "100644",
+      "path": "scripts/test_manager_custom_pipeline_prompt_contract.py",
+      "sha256": "ab8e3b136f69fad951bcd55e4cb3c6b842b1dc7f9a24d4d43a084ad4c96297f5",
+      "size_bytes": 186681
+    },
+    {
+      "git_mode": "100644",
+      "path": "scripts/test_process_improvements.py",
+      "sha256": "49816a92834096a8764c678df65233271f789e3dfabc9a269524eab7141077fb",
+      "size_bytes": 109014
+    }
+  ],
+  "hash_basis": "sha256 over canonical JSON (ensure_ascii=False, sort_keys=True, separators=(',', ':')) of hash_basis_payload; targets come from the primary code_draft_meta.targets, are normalized to repo-relative POSIX paths, sorted by path, and each file authenticates its bytes plus normalized git_mode (100755 iff the owner-execute bit is set, otherwise 100644)",
+  "hash_basis_payload": {
+    "algorithm": "sha256",
+    "files": [
+      {
+        "git_mode": "100644",
+        "path": "copier_template/docs/tools/prompts/architect_docs_finalize_general.md",
+        "sha256": "ffc486e2d435713d7559b4cd33f2b1a63ba28fb2bdb4b8554434b5a857412c28",
+        "size_bytes": 15465
+      },
+      {
+        "git_mode": "100644",
+        "path": "copier_template/docs/tools/prompts/coder_docs_finalize_general.md",
+        "sha256": "d686e04d40bf6b7c1a2b1e4d2240d6379b1db4d273f80c4d546907a37941dbdd",
+        "size_bytes": 10686
+      },
+      {
+        "git_mode": "100644",
+        "path": "copier_template/docs/tools/prompts/manager_collab_pipeline.md",
+        "sha256": "8aba8e84819f61dd7b29f3cbe081a51d6813dc4771db940f9c98848a21fe3d3d",
+        "size_bytes": 161239
+      },
+      {
+        "git_mode": "100644",
+        "path": "copier_template/docs/tools/prompts/planner_docs_finalize_general.md",
+        "sha256": "01316ef3739e7314d4e6feed783f1dec93a6ed52f810a3fd841ece003a47d9b9",
+        "size_bytes": 10464
+      },
+      {
+        "git_mode": "100644",
+        "path": "copier_template/docs/tools/prompts/reviewer_docs_finalize_general.md",
+        "sha256": "17555c2f6a19d9e8c1e454ccb2251a41d719d3e343ab23f5587f0b34a68f1982",
+        "size_bytes": 12128
+      },
+      {
+        "git_mode": "100644",
+        "path": "docs/process_improvements/README.md",
+        "sha256": "7ea2962081794d04faa9391d47953d1a609a5030a7bde978a8ee06eca77e149d",
+        "size_bytes": 31601
+      },
+      {
+        "git_mode": "100644",
+        "path": "docs/tools/prompts/architect_docs_finalize_general.md",
+        "sha256": "ffc486e2d435713d7559b4cd33f2b1a63ba28fb2bdb4b8554434b5a857412c28",
+        "size_bytes": 15465
+      },
+      {
+        "git_mode": "100644",
+        "path": "docs/tools/prompts/coder_docs_finalize_general.md",
+        "sha256": "d686e04d40bf6b7c1a2b1e4d2240d6379b1db4d273f80c4d546907a37941dbdd",
+        "size_bytes": 10686
+      },
+      {
+        "git_mode": "100644",
+        "path": "docs/tools/prompts/manager_collab_pipeline.md",
+        "sha256": "8aba8e84819f61dd7b29f3cbe081a51d6813dc4771db940f9c98848a21fe3d3d",
+        "size_bytes": 161239
+      },
+      {
+        "git_mode": "100644",
+        "path": "docs/tools/prompts/planner_docs_finalize_general.md",
+        "sha256": "01316ef3739e7314d4e6feed783f1dec93a6ed52f810a3fd841ece003a47d9b9",
+        "size_bytes": 10464
+      },
+      {
+        "git_mode": "100644",
+        "path": "docs/tools/prompts/reviewer_docs_finalize_general.md",
+        "sha256": "17555c2f6a19d9e8c1e454ccb2251a41d719d3e343ab23f5587f0b34a68f1982",
+        "size_bytes": 12128
+      },
+      {
+        "git_mode": "100644",
+        "path": "scripts/test_manager_custom_pipeline_prompt_contract.py",
+        "sha256": "ab8e3b136f69fad951bcd55e4cb3c6b842b1dc7f9a24d4d43a084ad4c96297f5",
+        "size_bytes": 186681
+      },
+      {
+        "git_mode": "100644",
+        "path": "scripts/test_process_improvements.py",
+        "sha256": "49816a92834096a8764c678df65233271f789e3dfabc9a269524eab7141077fb",
+        "size_bytes": 109014
+      }
+    ],
+    "schema_version": "review_target_snapshot.hash_basis.v2"
+  },
+  "plan": "docs/plans/261014_2007_general_prompt_collector_contract.md",
+  "schema_version": "review_target_snapshot.v2",
+  "target": "BUNDLE=current bundle_sha256=683ef31450c3369bd89391f315642dbf86eb347b775d78ddd5fb47389783cf8e",
+  "target_paths": [
+    "copier_template/docs/tools/prompts/architect_docs_finalize_general.md",
+    "copier_template/docs/tools/prompts/coder_docs_finalize_general.md",
+    "copier_template/docs/tools/prompts/manager_collab_pipeline.md",
+    "copier_template/docs/tools/prompts/planner_docs_finalize_general.md",
+    "copier_template/docs/tools/prompts/reviewer_docs_finalize_general.md",
+    "docs/process_improvements/README.md",
+    "docs/tools/prompts/architect_docs_finalize_general.md",
+    "docs/tools/prompts/coder_docs_finalize_general.md",
+    "docs/tools/prompts/manager_collab_pipeline.md",
+    "docs/tools/prompts/planner_docs_finalize_general.md",
+    "docs/tools/prompts/reviewer_docs_finalize_general.md",
+    "scripts/test_manager_custom_pipeline_prompt_contract.py",
+    "scripts/test_process_improvements.py"
+  ],
+  "target_snapshot": {
+    "bundle_sha256": "683ef31450c3369bd89391f315642dbf86eb347b775d78ddd5fb47389783cf8e",
+    "target": "BUNDLE=current"
+  }
+}
+}
