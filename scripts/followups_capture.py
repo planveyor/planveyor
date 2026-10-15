@@ -57,6 +57,9 @@ PI_DERIVED_SURFACE_PATHS = {
     process_improvements_collect.PROMOTION_PATH.as_posix(),
 }
 PI_CAPTURE_CONTINUATION_STATES = {"clean_noop", "materialized", "already_tracked"}
+PI_FORMAT_CORRECTIONS_KEY = "general_pi_format_corrections"
+PI_FORMAT_CORRECTION_SCHEMA = "general_pi_format_correction.v1"
+PI_FORMAT_ADMISSION_SCHEMA = "general_pi_format_correction_admission.v1"
 PI_OWNERSHIP_STATES = {"active", "finalized", "checkpointed_failure", "blocked"}
 PI_ADOPTABLE_OWNERSHIP_STATES = {"finalized", "checkpointed_failure"}
 GENERAL_PI_CHECKPOINT_FIELDS = {
@@ -3565,6 +3568,10 @@ def _validate_receipt_object(receipt: dict[str, Any], raw: bytes, *, cycle_id: s
     if not isinstance(baseline_dirty, list) or any(not isinstance(path, str) for path in baseline_dirty):
         raise CaptureError("followup_capture_receipt_corrupt", "receipt omitted process-improvement dirty baseline")
     _receipt_pi_lineage(receipt)
+    try:
+        _validate_general_pi_format_corrections(receipt)
+    except (ValueError, TypeError, KeyError) as exc:
+        raise CaptureError("pi_format_correction_carrier_invalid", "malformed correction reservation") from exc
     recovery_binding = receipt.get(BLOCKED_PREDECESSOR_RECOVERY_BINDING_KEY)
     if recovery_binding is not None:
         _validate_blocked_predecessor_recovery_binding(
@@ -4141,10 +4148,12 @@ def _publish_mutation(
         _set_receipt_digest(next_receipt)
         data = persisted_receipt_bytes(next_receipt)
         _write_all(fd, data)
+        os.fsync(fd)
     finally:
         os.close(fd)
     try:
         os.replace(temp_name, RECEIPT_NAME, src_dir_fd=cycle_fd, dst_dir_fd=cycle_fd)
+        os.fsync(cycle_fd)
     except OSError as exc:
         with contextlib.suppress(OSError):
             os.unlink(temp_name, dir_fd=cycle_fd)
@@ -4574,6 +4583,7 @@ def begin_cycle(
                     "pi_final_objects": {},
                     "pi_failure_checkpoint": None,
                     "general_pi_checkpoint": None,
+                    PI_FORMAT_CORRECTIONS_KEY: {},
                     "role_results": {},
                 }
                 if recovery_binding is not None:
@@ -4693,6 +4703,282 @@ def admit_active_general_pi_collection(
             }
         finally:
             os.close(cycle_fd)
+
+
+def _validate_general_pi_format_corrections(receipt: dict[str, Any]) -> dict[str, Any] | None:
+    """Absent historical carriers remain readable, but never acquire a permit."""
+    if PI_FORMAT_CORRECTIONS_KEY not in receipt:
+        return None
+    records = receipt[PI_FORMAT_CORRECTIONS_KEY]
+    if not isinstance(records, dict) or set(records).difference(REQUIRED_ROLES):
+        raise CaptureError("pi_format_correction_carrier_invalid", "invalid correction role map")
+    keys = {"schema", "project_root", "source_identity", "plan_ref", "capture_cycle_id", "role",
+            "reservation_id", "attempts_reserved", "reserved_revision", "original_receipt_path",
+            "original_receipt_object", "original_receipt_identity", "original_receipt_utf8",
+            "original_receipt_sha256"}
+    for role, record in records.items():
+        if (not isinstance(record, dict) or set(record) != keys
+                or record.get("schema") != PI_FORMAT_CORRECTION_SCHEMA
+                or record.get("role") != role or record.get("plan_ref") != receipt["plan_ref"]
+                or record.get("capture_cycle_id") != receipt["capture_cycle_id"]
+                or type(record.get("attempts_reserved")) is not int or record["attempts_reserved"] != 1
+                or type(record.get("reserved_revision")) is not int or record["reserved_revision"] < 2
+                or record["reserved_revision"] > receipt["receipt_revision"]
+                or record.get("project_root") != receipt["transaction_host_identity"]["project_root"]):
+            raise CaptureError("pi_format_correction_carrier_invalid", "invalid correction reservation")
+        _validate_uuid4(record["reservation_id"])
+        raw_text = record.get("original_receipt_utf8")
+        if not isinstance(raw_text, str):
+            raise CaptureError("pi_format_correction_carrier_invalid", "original receipt bytes are missing")
+        raw = raw_text.encode("utf-8")
+        original = _load_json_bytes(raw, "pi_format_correction_carrier_invalid")
+        before, after = process_improvements_collect._validate_v2_capture_receipt(
+            original, source_ref=receipt["plan_ref"], role=role,
+            followups_capture_cycle_id=receipt["capture_cycle_id"])
+        path = process_improvements_collect.capture_receipt_rel_path(
+            receipt["plan_ref"], role, receipt["capture_cycle_id"]).as_posix()
+        identity = record.get("original_receipt_identity")
+        source = record.get("source_identity")
+        if (original.get("error_type") != "pi_format_error" or original.get("capture_state") != "blocked"
+                or before != after or original.get("process_improvement_path_results") != []
+                or record.get("original_receipt_path") != path
+                or record.get("original_receipt_sha256") != _sha256(raw)
+                or record.get("original_receipt_object") != {"sha256": _sha256(raw), "file_type": "regular", "st_size": len(raw)}
+                or not isinstance(identity, list) or len(identity) != 6
+                or any(type(value) is not int for value in identity)
+                or not isinstance(source, dict) or set(source) != {"plan_ref", "source_terminal_commit_oid", "source_plan_blob_oid", "source_plan_sha256"}
+                or source.get("plan_ref") != receipt["plan_ref"] or source.get("source_plan_sha256") != receipt["plan_sha256"]
+                or any(not OID_RE.fullmatch(str(source.get(key) or "")) for key in ("source_terminal_commit_oid", "source_plan_blob_oid"))):
+            raise CaptureError("pi_format_correction_carrier_invalid", "correction original/source binding is invalid")
+    if (len({record["reservation_id"] for record in records.values()}) != len(records)
+            or sorted(record["reserved_revision"] for record in records.values()) != list(range(2, len(records) + 2))):
+        raise CaptureError("pi_format_correction_carrier_invalid", "duplicate or noncontiguous correction reservations")
+    return records
+
+
+def _general_pi_correction_leaf_chain(project_root: Path, receipt: dict[str, Any]) -> dict[str, Any] | None:
+    """Prove an ordered green prefix, one typed no-effect leaf and absent suffix."""
+    plan_ref, cycle_id = receipt["plan_ref"], receipt["capture_cycle_id"]
+    directory = process_improvements_collect.capture_receipt_dir_rel_path(plan_ref, cycle_id)
+    with process_improvements_collect._collector_directory(project_root, directory.parts, create=False, context=None) as anchor:
+        entries = set(os.listdir(anchor[0])) if anchor is not None else set()
+    expected_names = {process_improvements_collect.capture_receipt_rel_path(plan_ref, role, cycle_id).name for role in REQUIRED_ROLES}
+    if entries.difference(expected_names):
+        raise CaptureError("pi_format_correction_extra_leaf", "unexpected general collector leaf or duplicate carrier")
+    cursor = _validate_pi_object_map(receipt["baseline_process_improvement_files"], plan_ref, field="baseline_process_improvement_files")
+    inputs: list[dict[str, Any]] = []
+    blocked: dict[str, Any] | None = None
+    missing = False
+    for role in REQUIRED_ROLES:
+        path = process_improvements_collect.capture_receipt_rel_path(plan_ref, role, cycle_id)
+        loaded = process_improvements_collect._safe_pi_read_capture_receipt_regular(project_root, path)
+        if loaded is None:
+            missing = True
+            continue
+        if missing or blocked is not None:
+            raise CaptureError("pi_format_correction_prefix_suffix_invalid", "general chain has a gap or a suffix after refusal")
+        leaf, raw, observed = loaded
+        before, after = process_improvements_collect._validate_v2_capture_receipt(
+            leaf, source_ref=plan_ref, role=role, followups_capture_cycle_id=cycle_id)
+        if before != cursor or set(before).difference(after):
+            raise CaptureError("pi_format_correction_chain_invalid", "general PI prefix is not contiguous")
+        state = leaf["capture_state"]
+        if state == "blocked":
+            if leaf.get("error_type") != "pi_format_error" or before != after or leaf["process_improvement_path_results"] != []:
+                raise CaptureError("pi_format_correction_not_typed_no_effect", "refusal is not an exact typed no-effect format error")
+            blocked = {"role": role, "path": path.as_posix(), "object": _followup_object(observed, raw),
+                       "object_identity": list(_stat_identity(observed)), "sha256": _sha256(raw)}
+        elif (state not in PI_CAPTURE_CONTINUATION_STATES
+              or (state == "materialized") != bool(_changed_paths(before, after))):
+            raise CaptureError("pi_format_correction_prefix_invalid", "general PI prefix is not green")
+        inputs.append({"role": role, "path": path.as_posix(), "object": _followup_object(observed, raw),
+                       "object_identity": list(_stat_identity(observed)), "sha256": _sha256(raw)})
+        cursor = after
+    if blocked is None:
+        return None
+    live = snapshot_process_improvement_data_files(project_root, plan_ref)
+    if cursor != live:
+        raise CaptureError("pi_format_correction_live_map_drift", "current PI objects differ from the proven chain")
+    if live and process_improvements_collect.check_derived_surfaces(project_root).get("ok") is not True:
+        raise CaptureError("pi_format_correction_derived_drift", "current derived PI surfaces are stale")
+    return {"blocked": blocked, "input_receipts": inputs, "before": receipt["baseline_process_improvement_files"], "after": live}
+
+
+def general_pi_format_correction_admission(
+    project_root: Path, plan_ref: str, cycle_id: str | None, *,
+    bundle_payload: dict[str, Any], context: Any = None, _ingest_reservation_id: str | None = None,
+) -> dict[str, Any]:
+    """Read-only bounded permission; retryable authorizes a reservation request only."""
+    result: dict[str, Any] = {"schema": PI_FORMAT_ADMISSION_SCHEMA,
+        "state": "blocked" if cycle_id else "not_applicable", "reason": "correction_selector_absent",
+        "plan_ref": plan_ref, "capture_cycle_id": cycle_id, "role": None,
+        "attempts_reserved": 0, "max_extra_attempts": 1, "next_dispatch": None, "proof": None}
+    if not cycle_id:
+        return result
+    try:
+        import docs_closeout
+        plan_ref = normalize_plan_ref(plan_ref)
+        _validate_uuid4(cycle_id)
+        context = docs_closeout._reader_context(project_root, context)
+        docs_closeout.validate_before_effect(context)
+        oracle = docs_closeout.plan_status_oracle.oracle_result(project_root / plan_ref, context=context)
+        review = docs_closeout.plan_lint.preflight_current_review_proof(project_root / plan_ref, project_root=project_root)
+        mode = docs_closeout.plan_status_oracle.manager_mode_admission(
+            docs_closeout.plan_status_oracle.parse_plan_meta_admission_carrier(oracle.captured_plan_text), "manager-collab")
+        if (oracle.status_norm not in docs_closeout.TERMINAL_STATUSES or oracle.route_guard_triggered
+                or not oracle.queue_closeout_ready or oracle.owner_qna_readback_state != "clean"
+                or review.state == "blocked" or mode["manager_mode_admitted"] is not True
+                or bundle_payload.get("plan") != plan_ref or bundle_payload.get("bundle_ok") is not True
+                or bundle_payload.get("errors") != [] or bundle_payload.get("closeout_kind") != "already_materialized"):
+            raise CaptureError("pi_format_correction_terminal_admission_blocked", "current terminal source/review/bundle is not admitted")
+        if os.path.lexists(v2_frozen_manifest_path(project_root, plan_ref)):
+            raise CaptureError("pi_format_correction_phase_closed", "ordinary V2 manifest already exists")
+        with CaptureHost(project_root, plan_ref, create=False) as host:
+            active = []
+            for entry in os.listdir(host.family_fd):
+                if not UUID4_RE.fullmatch(entry):
+                    continue
+                fd, identity = _open_cycle(host, entry)
+                try:
+                    candidate, _, _ = _read_receipt(fd, plan_ref, entry)
+                    if candidate["cycle_directory_identity"] != identity or candidate["transaction_host_identity"] != host.transaction_host_identity():
+                        raise CaptureError("pi_format_correction_host_drift", "capture host identity changed")
+                    if candidate["state"] == "started":
+                        active.append(entry)
+                finally:
+                    os.close(fd)
+            if active != [cycle_id]:
+                raise CaptureError("pi_format_correction_active_cycle_ambiguous", "one exact current cycle is required")
+            fd, cycle_identity = _open_cycle(host, cycle_id)
+            try:
+                receipt, raw, receipt_identity = _read_receipt(fd, plan_ref, cycle_id)
+                _current_plan_identity(project_root, receipt)
+                records = _validate_general_pi_format_corrections(receipt)
+                if records is None:
+                    raise CaptureError("pi_format_correction_legacy_carrier", "correction map is absent; no backfill")
+                if (receipt.get("state") != "started" or receipt.get("finalized_at") is not None
+                        or receipt.get("completed_roles") != [] or receipt.get("blocked_roles") != []
+                        or receipt.get("role_results") != {} or receipt.get("general_pi_checkpoint", "missing") is not None
+                        or ORDINARY_V2_BINDING_KEY in receipt or receipt["receipt_revision"] != 1 + len(records)):
+                    raise CaptureError("pi_format_correction_phase_closed", "general correction phase is closed")
+                for directory in (ORDINARY_V2_BOUND_DIRECTORY, ORDINARY_V2_SUBMISSION_DIRECTORY, ORDINARY_V2_INPUT_DIRECTORY):
+                    try:
+                        os.stat(directory, dir_fd=fd, follow_symlinks=False)
+                    except FileNotFoundError:
+                        continue
+                    raise CaptureError("pi_format_correction_phase_closed", "followups progress already exists")
+                lineage = _receipt_pi_lineage(receipt)
+                if (lineage["ownership_state"] != "active" or lineage["final_objects"] or lineage["failure_checkpoint"] is not None
+                        or lineage["current_objects"] != receipt["baseline_process_improvement_files"]
+                        or receipt["baseline_dirty_process_improvement_paths"] != []):
+                    raise CaptureError("pi_format_correction_lineage_invalid", "PI ownership/baseline is not active and clean")
+                source = _ordinary_v2_current_source_identity(project_root, plan_ref, receipt)
+                if any(record["source_identity"] != source for record in records.values()):
+                    raise CaptureError("pi_format_correction_source_drift", "correction slots belong to another terminal source")
+                identity = _identity_payload(plan_ref=plan_ref, plan_sha256=source["source_plan_sha256"],
+                    terminal_status_line=receipt["terminal_status_line"], semantic_status=oracle.status_value,
+                    semantic_status_norm=oracle.status_norm, semantic_closeout_kind="already_materialized", required_roles=list(REQUIRED_ROLES))
+                if identity != receipt["identity_payload"]:
+                    raise CaptureError("pi_format_correction_source_drift", "current semantic identity differs")
+                followups, _ = snapshot_followups(project_root)
+                if followups != receipt["baseline_followup_files"] or followups != receipt["current_followup_files"]:
+                    raise CaptureError("pi_format_correction_followups_drift", "followups changed before correction")
+                chain = _general_pi_correction_leaf_chain(project_root, receipt)
+                if chain is None:
+                    result.update(state="not_applicable", reason="no_typed_blocked_leaf")
+                    return result
+                role = chain["blocked"]["role"]
+                result["role"] = role
+                result["attempts_reserved"] = int(role in records)
+                docs_snapshot = docs_closeout._git_status_docs_paths(project_root)
+                protected, delta_ok = docs_closeout._terminal_protected_docs_delta_paths(
+                    root=project_root, plan_ref=plan_ref, status_norm=oracle.status_norm, docs_status_snapshot=docs_snapshot)
+                owned = _changed_paths(chain["before"], chain["after"])
+                _require_no_post_checkpoint_foreign_backlogs(project_root, plan_ref)
+                if not docs_snapshot[1] or not delta_ok or protected or set(docs_snapshot[0]).difference(owned):
+                    raise CaptureError("pi_format_correction_docs_delta_blocked", "protected, foreign or unknown docs delta")
+                if role in records:
+                    record = records[role]
+                    if (_ingest_reservation_id is None or record["reservation_id"] != _ingest_reservation_id
+                            or record["reserved_revision"] != receipt["receipt_revision"]
+                            or record["source_identity"] != source or record["project_root"] != str(project_root.absolute())
+                            or record["original_receipt_sha256"] != chain["blocked"]["sha256"]
+                            or record["original_receipt_identity"] != chain["blocked"]["object_identity"]):
+                        raise CaptureError("pi_format_correction_reservation_consumed", "one EXTRA correction reservation is already spent")
+                elif _ingest_reservation_id is not None:
+                    raise CaptureError("pi_format_correction_reservation_missing", "corrected ingest requires its stored reservation")
+                _, now_raw, now_identity = _read_receipt(fd, plan_ref, cycle_id)
+                if now_raw != raw or now_identity != receipt_identity:
+                    raise CaptureError("pi_format_correction_receipt_drift", "aggregate changed during proof")
+                result.update(state="retryable", reason="typed_no_effect_format_error", next_dispatch=f"{role}:general-format-correction",
+                    proof={"project_root": str(project_root.absolute()), "source_identity": source,
+                        "semantic_closeout_identity": receipt["semantic_closeout_identity"], "receipt_revision": receipt["receipt_revision"],
+                        "receipt_sha256": _sha256(raw), "receipt_content_sha256": receipt["receipt_content_sha256"],
+                        "receipt_object_identity": receipt_identity, "cycle_directory_identity": cycle_identity,
+                        "transaction_host_identity": host.transaction_host_identity(), "collector_proof": chain,
+                        "followup_files": followups, "docs_delta": {"paths": docs_snapshot[0], "protected_paths": protected, "owned_pi_paths": owned}})
+                return result
+            finally:
+                os.close(fd)
+    except (CaptureError, process_improvements_collect.authority_context.ContractAuthorityError, OSError, ValueError, KeyError, TypeError) as exc:
+        result.update(state="blocked", reason=getattr(exc, "reason_code", "pi_format_correction_proof_unavailable"), next_dispatch=None, proof=None)
+        return result
+
+
+def reserve_general_pi_correction(project_root: Path, plan_ref: str, cycle_id: str, role: str, payload: dict[str, Any]) -> dict[str, Any]:
+    """Publish one spent slot before dispatch; replay never returns reserved."""
+    import docs_closeout
+    supplied = payload.get("general_pi_format_correction_admission")
+    if (payload.get("schema") != "docs_closeout_payload.v1" or payload.get("schema_state") != "ok"
+            or payload.get("schema_errors") != [] or payload.get("plan_ref") != plan_ref
+            or payload.get("followups_capture_cycle_id") != cycle_id
+            or docs_closeout.validate_docs_closeout_payload(dict(payload)).get("schema_state") != "ok"):
+        raise CaptureError("pi_format_correction_retained_payload_invalid", "one full schema-green retained payload is required")
+    fresh = general_pi_format_correction_admission(project_root, plan_ref, cycle_id,
+        bundle_payload=_fresh_continuation_bundle_payload(project_root, plan_ref))
+    if fresh.get("state") != "retryable" or fresh.get("role") != role or supplied != fresh:
+        raise CaptureError("pi_format_correction_admission_stale", "retained correction proof is stale, blocked or spent")
+    with CaptureHost(project_root, plan_ref, create=False) as host:
+        fd, cycle_identity = _open_cycle(host, cycle_id)
+        try:
+            receipt, raw, identity = _read_receipt(fd, plan_ref, cycle_id)
+            if (fresh["proof"]["receipt_sha256"] != _sha256(raw)
+                    or fresh["proof"]["receipt_object_identity"] != identity
+                    or fresh["proof"]["cycle_directory_identity"] != cycle_identity):
+                raise CaptureError("pi_format_correction_admission_stale", "aggregate CAS witness changed")
+            leaf = fresh["proof"]["collector_proof"]["blocked"]
+            loaded = process_improvements_collect._safe_pi_read_capture_receipt_regular(project_root, Path(leaf["path"]))
+            if loaded is None or _sha256(loaded[1]) != leaf["sha256"] or list(_stat_identity(loaded[2])) != leaf["object_identity"]:
+                raise CaptureError("pi_format_correction_original_drift", "original blocked receipt changed")
+            next_receipt = _next_receipt(receipt)
+            reservation_id = str(uuid.uuid4())
+            next_receipt[PI_FORMAT_CORRECTIONS_KEY][role] = {"schema": PI_FORMAT_CORRECTION_SCHEMA,
+                "project_root": str(project_root.absolute()), "source_identity": fresh["proof"]["source_identity"],
+                "plan_ref": plan_ref, "capture_cycle_id": cycle_id, "role": role, "reservation_id": reservation_id,
+                "attempts_reserved": 1, "reserved_revision": next_receipt["receipt_revision"],
+                "original_receipt_path": leaf["path"], "original_receipt_object": leaf["object"],
+                "original_receipt_identity": leaf["object_identity"], "original_receipt_utf8": loaded[1].decode("utf-8"),
+                "original_receipt_sha256": leaf["sha256"]}
+            # Repeat every witness immediately before the existing atomic CAS.
+            current = general_pi_format_correction_admission(project_root, plan_ref, cycle_id,
+                bundle_payload=_fresh_continuation_bundle_payload(project_root, plan_ref))
+            if current != fresh:
+                raise CaptureError("pi_format_correction_admission_stale", "effect context changed before reservation")
+            docs_closeout.validate_before_effect(docs_closeout._reader_context(project_root, None))
+            published = _publish_mutation(host, fd, cycle_id, raw, next_receipt)
+            return {**_response(published, state="reserved", reason_code="pi_format_correction_reserved"),
+                    "role": role, "reservation_id": reservation_id, "attempts_reserved": 1, "max_extra_attempts": 1}
+        finally:
+            os.close(fd)
+
+
+def validate_reserved_general_pi_ingest(project_root: Path, plan_ref: str, cycle_id: str, role: str, reservation_id: str) -> dict[str, Any]:
+    """A stored reservation admits its one original leaf, never another send."""
+    admission = general_pi_format_correction_admission(project_root, plan_ref, cycle_id,
+        bundle_payload=_fresh_continuation_bundle_payload(project_root, plan_ref), _ingest_reservation_id=reservation_id)
+    if admission.get("state") != "retryable" or admission.get("role") != role or admission.get("attempts_reserved") != 1:
+        raise CaptureError("pi_format_correction_ingest_blocked", str(admission.get("reason")))
+    return admission
 
 
 def _expected_role(receipt: dict[str, Any]) -> str | None:
@@ -7425,6 +7711,13 @@ def _parser() -> argparse.ArgumentParser:
     checkpoint.add_argument("--capture-cycle-id", required=True)
     checkpoint.add_argument("--docs-closeout-json", help="Retained fresh explicit-continuation docs-closeout JSON; revalidated before publication.")
 
+    correction = sub.add_parser("reserve-general-pi-correction")
+    correction.add_argument("--project-root", default=".")
+    correction.add_argument("--plan-ref", required=True)
+    correction.add_argument("--capture-cycle-id", required=True)
+    correction.add_argument("--role", required=True, choices=REQUIRED_ROLES)
+    correction.add_argument("--docs-closeout-json", default="-")
+
     for name in ("prepare-role", "finalize-role"):
         command = sub.add_parser(name)
         command.add_argument("--project-root", default=".")
@@ -7510,6 +7803,9 @@ def main(argv: list[str] | None = None) -> int:
                 _read_json_input(args.docs_closeout_json),
                 retry_of_capture_cycle_id=args.retry_of_capture_cycle_id,
             )
+        elif args.command == "reserve-general-pi-correction":
+            payload = reserve_general_pi_correction(root, args.plan_ref, args.capture_cycle_id,
+                args.role, _read_json_input(args.docs_closeout_json))
         elif args.command == "checkpoint-general-pi":
             payload = checkpoint_general_pi(
                 root, args.plan_ref, args.capture_cycle_id,

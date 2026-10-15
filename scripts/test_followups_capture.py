@@ -108,6 +108,294 @@ class FollowupsContinuationCheckpointTests(unittest.TestCase):
         self.assertNotIn("TUI", " ".join(argv))
 
 
+class GeneralPIFormatCorrectionTests(unittest.TestCase):
+    clean = "## Process improvements\nNO PROCESS IMPROVEMENTS — why: clean_run\n"
+    malformed = "## Process improvements\nunsupported prose\n"
+
+    def fixture(self, root: Path, role: str = "Coder", *, materialized: bool = False):
+        try:
+            from scripts.test_docs_closeout import DocsCloseoutContinuationAdmissionTests, MODULE
+        except ModuleNotFoundError:
+            from test_docs_closeout import DocsCloseoutContinuationAdmissionTests, MODULE
+        fixture = DocsCloseoutContinuationAdmissionTests()
+        cap = MODULE.followups_capture
+
+        def collect(target, cycle, **_kwargs):
+            for position, current in enumerate(cap.REQUIRED_ROLES):
+                body = self.malformed if current == role else self.clean
+                if materialized and position == 0 and current != role:
+                    body = ("## Process improvements\n### Suggestion 1\n- symptom: correction prefix\n"
+                            "- process_gap: exact prefix proof\n- suggested_fix: preserve prefix\n"
+                            "- owner: Architect\n- promotion_class: helper_change\n- trigger_ref: unknown\n"
+                            f"- source_ref: {fixture.plan_ref}\n")
+                try:
+                    cap.process_improvements_collect.collect_process_improvements(project_root=target,
+                        role=current, source_ref=fixture.plan_ref, text=body, followups_capture_cycle_id=cycle)
+                except cap.process_improvements_collect.PIFormatError:
+                    break
+        with mock.patch.object(fixture, "_collect", side_effect=collect):
+            cycle = fixture._fixture(root)
+        leaf = root / cap.process_improvements_collect.capture_receipt_rel_path(fixture.plan_ref, role, cycle)
+        # Exact preservation includes arbitrary valid JSON whitespace/newlines.
+        leaf.write_text(json.dumps(json.loads(leaf.read_bytes()), ensure_ascii=False, indent=3) + "\n\n")
+        return fixture, MODULE, cap, cycle, leaf
+
+    def payload(self, root, fixture, module, cycle):
+        return module.classify_docs_closeout(root=root, plan_ref=fixture.plan_ref,
+            bundle_payload=fixture._bundle(), followups_capture_cycle_id=cycle)
+
+    def reserve(self, root, fixture, module, cap, cycle, role):
+        payload = self.payload(root, fixture, module, cycle)
+        self.assertEqual(payload["schema_state"], "ok", payload.get("schema_errors"))
+        self.assertEqual(payload["state"], "blocked")
+        self.assertEqual(payload["general_pi_format_correction_admission"]["state"], "retryable", payload["general_pi_format_correction_admission"])
+        with mock.patch.object(cap, "_fresh_continuation_bundle_payload", return_value=fixture._bundle()):
+            result = cap.reserve_general_pi_correction(root, fixture.plan_ref, cycle, role, payload)
+        self.assertEqual(result["state"], "reserved")
+        return result, payload
+
+    def corrected(self, root, fixture, cap, cycle, role, reservation_id, body):
+        collector = cap.process_improvements_collect
+        with mock.patch.object(collector, "_load_capture_admission_module", return_value=cap), mock.patch.object(
+                cap, "_fresh_continuation_bundle_payload", return_value=fixture._bundle()):
+            context, bounded, admission = collector._general_collection_writer_context(root, role=role,
+                source_ref=fixture.plan_ref, followups_capture_cycle_id=cycle, context=None,
+                format_correction_reservation_id=reservation_id)
+            self.assertTrue(bounded)  # Explicit correction is safe even in a legacy/self fixture.
+            return collector._collect_process_improvements(project_root=root, role=role,
+                source_ref=fixture.plan_ref, text=body, followups_capture_cycle_id=cycle,
+                context=context, engaged_public=bounded, active_admission=admission)
+
+    def restarted_admission(self, root, fixture, cycle):
+        program = ("import json,sys; from pathlib import Path; sys.path.insert(0,sys.argv[1]); "
+                   "import followups_capture as c; print(json.dumps(c.general_pi_format_correction_admission("
+                   "Path(sys.argv[2]),sys.argv[3],sys.argv[4],bundle_payload=json.loads(sys.argv[5]))))")
+        process = subprocess.run([sys.executable, "-B", "-c", program, str(Path(__file__).parent), str(root),
+            fixture.plan_ref, cycle, json.dumps(fixture._bundle())], capture_output=True, text=True, check=True)
+        return json.loads(process.stdout)
+
+    def test_all_role_positions_original_bytes_and_bounded_second_refusal(self):
+        for role in capture.REQUIRED_ROLES:
+            for second_malformed in (False, True):
+                with self.subTest(role=role, second_malformed=second_malformed), tempfile.TemporaryDirectory() as directory:
+                    root = Path(directory).resolve()
+                    fixture, module, cap, cycle, leaf = self.fixture(root, role, materialized=True)
+                    original = leaf.read_bytes()
+                    aggregate_path = fixture._receipt_path(root, cycle)
+                    self.assertEqual(json.loads(aggregate_path.read_bytes())[cap.PI_FORMAT_CORRECTIONS_KEY], {})
+                    result, retained = self.reserve(root, fixture, module, cap, cycle, role)
+                    reserved_bytes = aggregate_path.read_bytes()
+                    record = json.loads(reserved_bytes)[cap.PI_FORMAT_CORRECTIONS_KEY][role]
+                    self.assertEqual(record["original_receipt_utf8"].encode(), original)
+                    self.assertEqual(record["original_receipt_sha256"], hashlib.sha256(original).hexdigest())
+                    self.assertEqual(json.loads(reserved_bytes)["state"], "started")
+                    spent = self.payload(root, fixture, module, cycle)["general_pi_format_correction_admission"]
+                    self.assertEqual((spent["state"], spent["attempts_reserved"]), ("blocked", 1))
+                    with mock.patch.object(cap, "_fresh_continuation_bundle_payload", return_value=fixture._bundle()):
+                        with self.assertRaises(cap.CaptureError):
+                            cap.reserve_general_pi_correction(root, fixture.plan_ref, cycle, role, retained)
+                        admitted = cap.validate_reserved_general_pi_ingest(root, fixture.plan_ref, cycle, role, result["reservation_id"])
+                    self.assertEqual(admitted["attempts_reserved"], 1)
+                    self.assertEqual(aggregate_path.read_bytes(), reserved_bytes)
+                    body = self.malformed + "again\n" if second_malformed else self.clean
+                    if second_malformed:
+                        with self.assertRaises(cap.process_improvements_collect.PIFormatError):
+                            self.corrected(root, fixture, cap, cycle, role, result["reservation_id"], body)
+                        with mock.patch.object(cap, "_fresh_continuation_bundle_payload", return_value=fixture._bundle()):
+                            with self.assertRaises(cap.CaptureError):
+                                cap.validate_reserved_general_pi_ingest(root, fixture.plan_ref, cycle, role, result["reservation_id"])
+                        restarted = self.restarted_admission(root, fixture, cycle)
+                        self.assertEqual((restarted["state"], restarted["attempts_reserved"]), ("blocked", 1))
+                        self.assertIsNone(restarted["next_dispatch"])
+                        before = fixture._objects(root)
+                        with self.assertRaises(cap.CaptureError):
+                            self.corrected(root, fixture, cap, cycle, role, result["reservation_id"], self.clean)
+                        self.assertEqual(before, fixture._objects(root))
+                    else:
+                        self.corrected(root, fixture, cap, cycle, role, result["reservation_id"], body)
+                        before = fixture._objects(root)
+                        with self.assertRaises(cap.CaptureError):
+                            self.corrected(root, fixture, cap, cycle, role, result["reservation_id"], body)
+                        self.assertEqual(before, fixture._objects(root))
+                        # The existing exact replay remains no-write and spends no slot.
+                        cap.process_improvements_collect.collect_process_improvements(project_root=root,
+                            role=role, source_ref=fixture.plan_ref, text=body, followups_capture_cycle_id=cycle)
+                        self.assertEqual(before, fixture._objects(root))
+                        for successor in cap.REQUIRED_ROLES[cap.REQUIRED_ROLES.index(role) + 1:]:
+                            cap.process_improvements_collect.collect_process_improvements(project_root=root,
+                                role=successor, source_ref=fixture.plan_ref, text=self.clean, followups_capture_cycle_id=cycle)
+                        cap.checkpoint_general_pi(root, fixture.plan_ref, cycle)
+                    after = json.loads(aggregate_path.read_bytes())[cap.PI_FORMAT_CORRECTIONS_KEY][role]
+                    self.assertEqual(after, record)
+                    original_json = json.loads(after["original_receipt_utf8"])
+                    self.assertEqual(original_json["input_sha256"], hashlib.sha256(self.malformed.encode()).hexdigest())
+                    self.assertEqual(original_json["capture_state"], "blocked")
+
+    def test_negative_predicates_and_retained_proof_are_zero_mutation(self):
+        variants = ("untyped", "suffix", "extra_leaf", "missing_prefix", "red_prefix", "effect", "role", "cycle", "source",
+                    "missing_carrier", "unknown_carrier", "checkpoint", "followups", "live", "derived", "foreign", "protected", "plan", "stale_proof",
+                    "project", "host", "source_commit")
+        for variant in variants:
+            with self.subTest(variant=variant), tempfile.TemporaryDirectory() as directory:
+                root = Path(directory).resolve()
+                fixture, module, cap, cycle, leaf = self.fixture(root, "Coder", materialized=variant == "derived")
+                retained = self.payload(root, fixture, module, cycle)
+                value = json.loads(leaf.read_bytes())
+                if variant in {"untyped", "effect", "role", "cycle", "source"}:
+                    if variant == "untyped": value.pop("error_type")
+                    elif variant == "effect": value["after_process_improvement_files"] = {}; value["before_process_improvement_files"] = {"bad": {}}
+                    elif variant == "role": value["role"] = "Reviewer"
+                    elif variant == "cycle": value["followups_capture_cycle_id"] = "00000000-0000-4000-8000-000000000000"
+                    else: value["source_ref"] = "docs/plans/foreign.md"
+                    leaf.write_text(json.dumps(value))
+                elif variant == "missing_prefix":
+                    (root / cap.process_improvements_collect.capture_receipt_rel_path(fixture.plan_ref, "Architect", cycle)).unlink()
+                elif variant == "red_prefix":
+                    target = root / cap.process_improvements_collect.capture_receipt_rel_path(fixture.plan_ref, "Architect", cycle)
+                    bad = json.loads(target.read_bytes()); bad.update(capture_state="blocked", reason_code="collector_error", error="unknown")
+                    target.write_text(json.dumps(bad))
+                elif variant == "suffix":
+                    cap.process_improvements_collect.collect_process_improvements(project_root=root, role="Reviewer",
+                        source_ref=fixture.plan_ref, text=self.clean, followups_capture_cycle_id=cycle)
+                elif variant == "extra_leaf":
+                    (leaf.parent / "unknown.json").write_text("{}\n")
+                elif variant in {"missing_carrier", "unknown_carrier", "checkpoint", "followups"}:
+                    def edit(receipt):
+                        if variant == "missing_carrier": receipt.pop(cap.PI_FORMAT_CORRECTIONS_KEY)
+                        elif variant == "unknown_carrier": receipt[cap.PI_FORMAT_CORRECTIONS_KEY]["Unknown"] = {}
+                        elif variant == "checkpoint": receipt["general_pi_checkpoint"] = {}
+                        else: receipt["completed_roles"] = ["Architect"]
+                    fixture._edit_receipt(root, cycle, edit)
+                elif variant == "stale_proof":
+                    retained["general_pi_format_correction_admission"]["proof"]["receipt_sha256"] = "0" * 64
+                elif variant in {"project", "host"}:
+                    def edit_host(receipt):
+                        if variant == "project": receipt["transaction_host_identity"]["project_root"] = "/fixture/foreign"
+                        else: receipt["cycle_directory_identity"]["path"] = ".tmp/foreign"
+                    fixture._edit_receipt(root, cycle, edit_host)
+                elif variant == "source_commit":
+                    subprocess.run(["git", "-C", str(root), "-c", "user.name=Fixture", "-c",
+                        "user.email=fixture@example.invalid", "commit", "--allow-empty", "-qm", "source changed"], check=True, capture_output=True)
+                else:
+                    target = root / {"live": cap.process_improvements_collect.backlog_rel_path_for_source_ref(fixture.plan_ref),
+                        "derived": "docs/process_improvements/index.md", "foreign": "docs/foreign.md",
+                        "protected": "docs/roles/manager.md", "plan": fixture.plan_ref}[variant]
+                    target.parent.mkdir(parents=True, exist_ok=True); target.write_text("changed\n")
+                before = fixture._objects(root)
+                head = subprocess.check_output(["git", "-C", str(root), "rev-parse", "HEAD"])
+                index = subprocess.check_output(["git", "-C", str(root), "diff", "--cached", "--binary"])
+                with mock.patch.object(cap, "_fresh_continuation_bundle_payload", return_value=fixture._bundle()), mock.patch.object(cap, "_publish_mutation") as publish:
+                    with self.assertRaises(cap.CaptureError):
+                        cap.reserve_general_pi_correction(root, fixture.plan_ref, cycle, "Coder", retained)
+                    publish.assert_not_called()
+                self.assertEqual(before, fixture._objects(root))
+                self.assertEqual(head, subprocess.check_output(["git", "-C", str(root), "rev-parse", "HEAD"]))
+                self.assertEqual(index, subprocess.check_output(["git", "-C", str(root), "diff", "--cached", "--binary"]))
+
+    def test_reserved_crash_lost_result_and_reentry_never_replenish(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory).resolve(); fixture, module, cap, cycle, leaf = self.fixture(root)
+            result, retained = self.reserve(root, fixture, module, cap, cycle, "Coder")
+            original = leaf.read_bytes(); aggregate = fixture._receipt_path(root, cycle).read_bytes()
+            # Independent processes model restart after reservation before send,
+            # lost terminal result, and another subsequent invocation.
+            for _ in range(3):
+                readback = self.restarted_admission(root, fixture, cycle)
+                self.assertEqual((readback["state"], readback["attempts_reserved"]), ("blocked", 1))
+                self.assertEqual(readback["reason"], "pi_format_correction_reservation_consumed")
+                self.assertIsNone(readback["next_dispatch"])
+            self.assertEqual(leaf.read_bytes(), original)
+            self.assertEqual(fixture._receipt_path(root, cycle).read_bytes(), aggregate)
+
+    def test_each_role_retains_its_independent_spent_slot_in_one_cycle(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory).resolve(); fixture, module, cap, cycle, _ = self.fixture(root, "Architect")
+            for position, role in enumerate(cap.REQUIRED_ROLES):
+                if position:
+                    with self.assertRaises(cap.process_improvements_collect.PIFormatError):
+                        cap.process_improvements_collect.collect_process_improvements(project_root=root, role=role,
+                            source_ref=fixture.plan_ref, text=self.malformed, followups_capture_cycle_id=cycle)
+                result, _ = self.reserve(root, fixture, module, cap, cycle, role)
+                self.corrected(root, fixture, cap, cycle, role, result["reservation_id"], self.clean)
+                records = json.loads(fixture._receipt_path(root, cycle).read_bytes())[cap.PI_FORMAT_CORRECTIONS_KEY]
+                self.assertEqual(list(records), sorted(cap.REQUIRED_ROLES[:position + 1]))
+                self.assertEqual({entry["attempts_reserved"] for entry in records.values()}, {1})
+            self.assertEqual(len(records), 4)
+            self.assertEqual(sorted(record["reserved_revision"] for record in records.values()), [2, 3, 4, 5])
+            original = fixture._receipt_path(root, cycle).read_bytes()
+            for variant in ("duplicate_id", "duplicate_revision"):
+                def corrupt(receipt):
+                    field = "reservation_id" if variant == "duplicate_id" else "reserved_revision"
+                    receipt[cap.PI_FORMAT_CORRECTIONS_KEY]["Coder"][field] = receipt[cap.PI_FORMAT_CORRECTIONS_KEY]["Architect"][field]
+                fixture._edit_receipt(root, cycle, corrupt)
+                before = fixture._objects(root)
+                refused = cap.general_pi_format_correction_admission(root, fixture.plan_ref, cycle, bundle_payload=fixture._bundle())
+                self.assertEqual(refused["state"], "blocked")
+                self.assertEqual(before, fixture._objects(root))
+                fixture._receipt_path(root, cycle).write_bytes(original)
+            cap.checkpoint_general_pi(root, fixture.plan_ref, cycle)
+
+    def test_corrected_ingest_revalidates_after_stdin_and_before_effect(self):
+        for phase in ("stdin", "effect"):
+            for variant in ("bytes", "inode", "aggregate", "source"):
+                with self.subTest(phase=phase, variant=variant), tempfile.TemporaryDirectory() as directory:
+                    root = Path(directory).resolve(); fixture, module, cap, cycle, leaf = self.fixture(root)
+                    reserved, _ = self.reserve(root, fixture, module, cap, cycle, "Coder")
+                    collector = cap.process_improvements_collect
+                    changed = {}
+                    def mutate():
+                        if variant == "bytes": leaf.write_bytes(leaf.read_bytes() + b"\n")
+                        elif variant == "inode":
+                            other = leaf.with_suffix(".replacement"); other.write_bytes(leaf.read_bytes()); other.replace(leaf)
+                        elif variant == "aggregate":
+                            fixture._edit_receipt(root, cycle, lambda receipt: receipt.update(started_at="2026-01-01T00:00:00Z"))
+                        else:
+                            subprocess.run(["git", "-C", str(root), "-c", "user.name=Fixture", "-c",
+                                "user.email=fixture@example.invalid", "commit", "--allow-empty", "-qm", "source drift"], check=True, capture_output=True)
+                        changed["objects"] = fixture._objects(root)
+                    with mock.patch.object(collector, "_load_capture_admission_module", return_value=cap), mock.patch.object(
+                            cap, "_fresh_continuation_bundle_payload", return_value=fixture._bundle()):
+                        context, bounded, admission = collector._general_collection_writer_context(root, role="Coder",
+                            source_ref=fixture.plan_ref, followups_capture_cycle_id=cycle, context=None,
+                            format_correction_reservation_id=reserved["reservation_id"])
+                        original_parser = collector.parse_process_improvements_section
+                        def parse(*args, **kwargs):
+                            mutate()
+                            return original_parser(*args, **kwargs)
+                        if phase == "stdin": mutate()
+                        with mock.patch.object(collector, "parse_process_improvements_section",
+                                side_effect=parse if phase == "effect" else original_parser):
+                            with self.assertRaises(cap.CaptureError):
+                                collector._collect_process_improvements(project_root=root, role="Coder", source_ref=fixture.plan_ref,
+                                    text=self.clean, followups_capture_cycle_id=cycle, context=context,
+                                    engaged_public=bounded, active_admission=admission)
+                    self.assertEqual(changed["objects"], fixture._objects(root))
+
+    def test_stale_reservation_writer_cannot_overwrite_another_durable_slot(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory).resolve(); fixture, module, cap, cycle, _ = self.fixture(root)
+            retained = self.payload(root, fixture, module, cycle)
+            publish = cap._publish_mutation
+            competitor_bytes = []
+            competitor_id = "6ab5b5ce-513b-4ef0-8e0d-3f5c72f8575b"
+            def competing(host, fd, exact_cycle, raw, next_receipt):
+                competitor = json.loads(json.dumps(next_receipt))
+                competitor[cap.PI_FORMAT_CORRECTIONS_KEY]["Coder"]["reservation_id"] = competitor_id
+                publish(host, fd, exact_cycle, raw, competitor)
+                competitor_bytes.append(fixture._receipt_path(root, cycle).read_bytes())
+                return publish(host, fd, exact_cycle, raw, next_receipt)
+            with mock.patch.object(cap, "_fresh_continuation_bundle_payload", return_value=fixture._bundle()), mock.patch.object(
+                    cap, "_publish_mutation", side_effect=competing):
+                with self.assertRaises(cap.CaptureError):
+                    cap.reserve_general_pi_correction(root, fixture.plan_ref, cycle, "Coder", retained)
+            self.assertEqual(fixture._receipt_path(root, cycle).read_bytes(), competitor_bytes[0])
+            records = json.loads(competitor_bytes[0])[cap.PI_FORMAT_CORRECTIONS_KEY]
+            self.assertEqual(set(records), {"Coder"})
+            self.assertEqual(records["Coder"]["reservation_id"], competitor_id)
+            restarted = self.restarted_admission(root, fixture, cycle)
+            self.assertEqual((restarted["state"], restarted["attempts_reserved"]), ("blocked", 1))
+
+
 class FollowupsCaptureTests(unittest.TestCase):
     def _root(self, tmpdir: str) -> Path:
         root = Path(tmpdir).resolve()

@@ -25,6 +25,42 @@ PLAN_QUEUE = ROOT / "scripts" / "plan_queue.py"
 
 
 class ManagerCustomPipelinePromptContractTest(unittest.TestCase):
+    def _assert_format_correction_contract(self, text: str) -> str:
+        general = self._assert_general_collector_contract(text)
+        start = general.index("Bounded general PI format correction")
+        correction = general[start:]
+        stages = ("1. Fresh admission:", "2. Durable reservation BEFORE send:", "3. Same persistent handle/full prompt:",
+                  "4. Distinct stored-reservation ingest:", "5. Fresh closure or bounded stop:")
+        positions = [correction.index(stage) for stage in stages]
+        self.assertEqual(positions, sorted(positions))
+        for marker in ("general_pi_format_correction_admission.v1", "attempts_reserved=0", "max_extra_attempts=1",
+                       "reserve-general-pi-correction", "--docs-closeout-json -", "state=reserved", "reservation_id",
+                       "invocation-local single-send permission", "Initial dispatch free", "crash до/после send",
+                       "spent readback → Owner stop", "ПОЛНЫЙ original general PROMPT_FILE", "тот же existing role handle",
+                       "ROLE, PLAN_PATH, PRE_STATUS_LINE", "capture_cycle_id", "original refusal reason",
+                       "запрети любые повторные правки файлов", "## Process improvements", "Consume single-send permission",
+                       "ПОЛНЫЕ verbatim corrected bytes", "--format-correction-reservation-id", "stored reservation/original binding",
+                       "не требует повторного retryable", "без третьего dispatch/checkpoint/followups/stage/commit",
+                       "fresh same-cycle readback", "capture-aware terminal completed/no_op|landed"):
+            self.assertIn(marker, correction)
+        entry = text[text.index("2b0) Explicit pre-first-followups continuation"):text.index("2b) Generic ordinary-terminal V2 bootstrap")]
+        self.assertLess(entry.index("general_pi_format_correction_admission"), entry.index("Потребуй `schema=docs_closeout_payload.v1`"))
+        for marker in ("Existing persistent handle", "без init/begin/rebinding/general prefix replay", "green prefix не redispatch-ится"):
+            self.assertIn(marker, entry)
+        return correction
+
+    def test_general_pi_format_correction_is_bounded_branch_local_and_mutation_sensitive(self):
+        text = COLLAB_PROMPT.read_text(encoding="utf-8")
+        correction = self._assert_format_correction_contract(text)
+        for mutation in (text.replace("2. Durable reservation BEFORE send:", "2. Send first:", 1),
+                         text.replace("--format-correction-reservation-id", "--untyped-retry", 1),
+                         text.replace(correction, "missing correction\n", 1) + "\n" + correction,
+                         text.replace("ПОЛНЫЙ original general PROMPT_FILE", "prompt summary", 1),
+                         text.replace("запрети любые повторные правки файлов", "повтори правки файлов", 1),
+                         text.replace("без третьего dispatch/checkpoint/followups/stage/commit", "retry again", 1)):
+            with self.subTest(mutation=mutation[-60:]), self.assertRaises((AssertionError, ValueError)):
+                self._assert_format_correction_contract(mutation)
+
     def _assert_general_collector_contract(self, text: str) -> str:
         start = text.index("После каждого `general` output (`Architect|Coder|Planner|Reviewer`)")
         end = text.index("После returned green receipt четвёртого", start)

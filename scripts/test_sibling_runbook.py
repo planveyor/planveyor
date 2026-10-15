@@ -55,6 +55,51 @@ class AnswerContext(sibling.Context):
                            "open_owner_questions": [{"id": q.qid, "text": q.text} for q in questions]}
 
 
+class GeneralPICorrectionRunbookTests(unittest.TestCase):
+    def test_actual_console_plan_close_ready_outcomes_and_no_writes(self):
+        import sibling_closeout as closeout
+        plan = "docs/plans/261015_0939_fixture.md"
+        cycle = "6f9d8a03-19d8-43f5-8717-84cdfb3392c2"
+        for state in ("retryable", "blocked", "unknown"):
+            for action in ("plan", "close", "close_commit", "ready"):
+                with self.subTest(state=state, action=action):
+                    payload = {"schema": "docs_closeout_payload.v1", "schema_state": "ok", "schema_errors": [],
+                        "plan_ref": plan, "state": "blocked", "process_improvement_capture_state": "blocked",
+                        "followups_capture_cycle_id": cycle, "reason_code": "collector_error"}
+                    if state != "unknown":
+                        payload["general_pi_format_correction_admission"] = {"state": state, "reason": "pi_format_correction_reservation_consumed"}
+                    context = mock.Mock()
+                    context.plan.return_value = (plan, {"status_norm": "done", "route_guard_triggered": False,
+                        "queue_closeout_ready": True, "open_owner_questions": []})
+                    context.json_call.side_effect = lambda command, *args: {"state": "ok"} if command == "planveyor_consumer_doctor" else payload
+                    context.fail.side_effect = sibling.RunbookError
+                    arguments = ["--runtime-root", "/fixture/runtime", "--project-root", "/fixture/project", "close" if action == "close_commit" else action]
+                    if action == "close_commit": arguments.append("--commit")
+                    output = io.StringIO()
+                    with mock.patch.object(sibling, "Context", return_value=context), mock.patch.object(closeout, "_cycle", return_value=cycle), \
+                         mock.patch.object(closeout, "_bundle", return_value=({}, {})), mock.patch.object(closeout, "_git") as git_effect, \
+                         contextlib.redirect_stdout(output):
+                        self.assertEqual(sibling.main(arguments), 0)
+                    expected = "retryable" if state == "retryable" else "blocked"
+                    self.assertIn(f"general_pi_format_correction_state={expected}", output.getvalue())
+                    self.assertNotIn("Следующий шаг: planveyor sibling close", output.getvalue())
+                    self.assertNotIn("Следующий шаг: planveyor sibling run", output.getvalue())
+                    self.assertNotIn("Можно начать следующую задачу", output.getvalue())
+                    git_effect.assert_not_called()
+                    context.call.assert_not_called()
+
+    def test_invalid_closeout_schema_keeps_existing_nonzero(self):
+        import sibling_closeout as closeout
+        context = mock.Mock()
+        context.plan.return_value = ("docs/plans/fixture.md", {"status_norm": "done"})
+        context.json_call.return_value = {"schema_state": "blocked"}
+        context.fail.side_effect = sibling.RunbookError
+        with mock.patch.object(sibling, "Context", return_value=context), mock.patch.object(closeout, "_cycle", return_value=None), \
+             mock.patch.object(closeout, "_bundle", return_value=({}, {})), contextlib.redirect_stderr(io.StringIO()):
+            self.assertEqual(sibling.main(["--runtime-root", "/fixture/runtime", "--project-root", "/fixture/project", "close"]), 3)
+        context.call.assert_not_called()
+
+
 class OwnerAnswerTests(unittest.TestCase):
     def setUp(self):
         self.temporary = tempfile.TemporaryDirectory(dir=Path(tempfile.gettempdir()).resolve())

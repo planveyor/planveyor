@@ -386,17 +386,18 @@ def _general_collection_writer_context(
     source_ref: str,
     followups_capture_cycle_id: str | None,
     context: ContractContext | None,
+    format_correction_reservation_id: str | None = None,
 ) -> tuple[ContractContext, bool, dict[str, object] | None]:
-    """Admit the one engaged public CLI collector route before input is read."""
+    """Admit engaged collection or explicit correction before input is read."""
 
     writer_context = authority_context.context_for_reader(project_root, context)
-    if writer_context.state != "engaged":
+    if writer_context.state != "engaged" and format_correction_reservation_id is None:
         return writer_context, False, None
     normalized_cycle_id = _normalize_followups_capture_cycle_id(followups_capture_cycle_id)
     if normalized_cycle_id is None:
         raise authority_context.ContractAuthorityError(
             "engaged_private_delivery_unsupported",
-            "engaged process-improvement collection requires one exact capture cycle",
+            "bounded process-improvement collection requires one exact capture cycle",
         )
     normalized_role = _normalize_role(role, field_name="role")
     normalized_source_ref = _normalize_ref(source_ref, field_name="source_ref")
@@ -407,6 +408,24 @@ def _general_collection_writer_context(
         normalized_cycle_id,
         normalized_role,
     )
+    existing = _safe_pi_read_capture_receipt_regular(project_root,
+        capture_receipt_rel_path(normalized_source_ref, normalized_role, normalized_cycle_id))
+    if format_correction_reservation_id is not None:
+        correction = capture.validate_reserved_general_pi_ingest(project_root, normalized_source_ref,
+            normalized_cycle_id, normalized_role, format_correction_reservation_id)
+        with capture.CaptureHost(project_root, normalized_source_ref, create=False) as host:
+            fd, _ = capture._open_cycle(host, normalized_cycle_id)
+            try:
+                receipt, raw, _ = capture._read_receipt(fd, normalized_source_ref, normalized_cycle_id)
+                admission["format_correction_record"] = receipt[capture.PI_FORMAT_CORRECTIONS_KEY][normalized_role]
+                admission["format_correction_aggregate_sha256"] = hashlib.sha256(raw).hexdigest()
+            finally:
+                os.close(fd)
+        if (correction["proof"]["receipt_object_identity"] != admission["receipt_object_identity"]
+                or correction["proof"]["receipt_sha256"] != admission["format_correction_aggregate_sha256"]):
+            raise capture.CaptureError("pi_format_correction_admission_drift", "reservation changed before input read")
+    elif existing is not None and existing[0].get("capture_state") == "blocked" and existing[0].get("error_type") == "pi_format_error":
+        raise capture.CaptureError("pi_format_correction_reservation_required", "typed correction requires its freshly reserved identity")
     return writer_context, True, admission
 
 
@@ -440,6 +459,30 @@ def _validate_active_general_pi_effect(
             "followup_capture_pi_general_collection_admission_drift",
             "general PI collection admission changed before an effect",
         )
+    if "format_correction_record" in admission:
+        with capture.CaptureHost(project_root, str(admission["plan_ref"]), create=False) as host:
+            fd, _ = capture._open_cycle(host, str(admission["capture_cycle_id"]))
+            try:
+                receipt, raw, _ = capture._read_receipt(fd, str(admission["plan_ref"]), str(admission["capture_cycle_id"]))
+                record = receipt.get(capture.PI_FORMAT_CORRECTIONS_KEY, {}).get(str(admission["role"]))
+                if (record != admission["format_correction_record"]
+                        or hashlib.sha256(raw).hexdigest() != admission["format_correction_aggregate_sha256"]):
+                    raise capture.CaptureError("pi_format_correction_admission_drift", "stored correction reservation changed before effect")
+                capture._ordinary_v2_validate_terminal_source_identity(project_root, str(admission["plan_ref"]),
+                    receipt, record["source_identity"], require_current_head=True)
+                loaded = _safe_pi_read_capture_receipt_regular(project_root, Path(record["original_receipt_path"]))
+                if loaded is None:
+                    raise capture.CaptureError("pi_format_correction_original_drift", "original correction leaf is missing")
+                expected_published = admission.get("format_correction_published_receipt_sha256")
+                if expected_published is not None:
+                    valid_leaf = hashlib.sha256(loaded[1]).hexdigest() == expected_published
+                else:
+                    valid_leaf = (hashlib.sha256(loaded[1]).hexdigest() == record["original_receipt_sha256"]
+                        and list(_collector_regular_fingerprint(loaded[2])) == record["original_receipt_identity"])
+                if not valid_leaf:
+                    raise capture.CaptureError("pi_format_correction_original_drift", "original correction leaf changed before effect")
+            finally:
+                os.close(fd)
 
 
 def _validate_writer_effect(context: ContractContext | None) -> None:
@@ -1132,6 +1175,8 @@ def _safe_pi_write_v2_capture_receipt(
                     dst_dir_fd=parent_fd,
                     follow_symlinks=False,
                 )
+            if active_admission is not None and "format_correction_record" in active_admission:
+                active_admission["format_correction_published_receipt_sha256"] = hashlib.sha256(data).hexdigest()
             created = False
             with contextlib.suppress(FileNotFoundError, OSError):
                 os.unlink(temporary, dir_fd=parent_fd)
@@ -1314,6 +1359,14 @@ def _validate_v2_capture_receipt(
         raise ValueError("process-improvement receipt input_sha256 is invalid")
     if receipt.get("capture_state") not in CAPTURE_STATE_VALUES:
         raise ValueError("process-improvement receipt capture state is invalid")
+    if "error_type" in receipt and (
+        receipt["error_type"] != "pi_format_error"
+        or receipt.get("capture_state") != "blocked"
+        or receipt.get("reason_code") != "collector_error"
+        or not isinstance(receipt.get("error"), str)
+        or not receipt["error"]
+    ):
+        raise ValueError("process-improvement receipt error_type is invalid")
     before = _validate_capture_object_map(
         receipt.get("before_process_improvement_files"),
         source_ref=source_ref,
@@ -1342,6 +1395,7 @@ def _v2_receipt_payload(
     reason_code: str,
     payload: dict[str, object],
     error: str | None = None,
+    error_type: str | None = None,
 ) -> dict[str, object]:
     receipt: dict[str, object] = {
         "receipt_schema": CAPTURE_RECEIPT_V2_SCHEMA,
@@ -1361,6 +1415,8 @@ def _v2_receipt_payload(
     }
     if error:
         receipt["error"] = error
+    if error_type is not None:
+        receipt["error_type"] = error_type
     return receipt
 
 
@@ -2123,6 +2179,10 @@ def ensure_derived_surface_docs(
     _ensure_derived_surface_docs(project_root, context=writer_context, first_effect_guarded=True)
 
 
+class PIFormatError(ValueError):
+    """A strict role-output grammar failure, never an identity or I/O failure."""
+
+
 def extract_process_improvements_section(text: str) -> str:
     lines = text.splitlines()
     start_idx = None
@@ -2131,7 +2191,7 @@ def extract_process_improvements_section(text: str) -> str:
             start_idx = idx + 1
             break
     if start_idx is None:
-        raise ValueError("Missing `Process improvements` section in input text")
+        raise PIFormatError("Missing `Process improvements` section in input text")
 
     body: list[str] = []
     for line in lines[start_idx:]:
@@ -2140,7 +2200,7 @@ def extract_process_improvements_section(text: str) -> str:
         body.append(line)
     rendered = "\n".join(body).strip()
     if not rendered:
-        raise ValueError("`Process improvements` section is empty")
+        raise PIFormatError("`Process improvements` section is empty")
     return rendered
 
 
@@ -2150,13 +2210,14 @@ def parse_process_improvements_section(
     role: str,
     default_source_ref: str,
 ) -> dict[str, object]:
+    normalized_role = _normalize_role(role, field_name="role")
     body = extract_process_improvements_section(text)
     if "\n" not in body:
         match = NO_PROCESS_RE.match(body.strip())
         if match:
             reason = match.group("reason")
             if reason not in NO_PROCESS_IMPROVEMENT_REASONS:
-                raise ValueError(f"Unsupported no-op reason: {reason!r}")
+                raise PIFormatError(f"Unsupported no-op reason: {reason!r}")
             return {
                 "state": "no_process_improvements",
                 "reason_code": reason,
@@ -2171,19 +2232,27 @@ def parse_process_improvements_section(
         nonlocal current_fields
         if not current_fields:
             return
-        parsed_role = _normalize_role(current_fields.get("owner"), field_name="owner")
+        # Source/role identity errors deliberately remain ordinary ValueError.
+        parsed_source = _normalize_source_ref_for_lane(
+            current_fields.get("source_ref"), lane_source_ref=default_source_ref,
+        )
+        try:
+            parsed_role = _normalize_role(current_fields.get("owner"), field_name="owner")
+            promotion_class = _normalize_promotion_class(current_fields.get("promotion_class"))
+            symptom = _normalize_free_text(current_fields.get("symptom"), field_name="symptom")
+            process_gap = _normalize_free_text(current_fields.get("process_gap"), field_name="process_gap")
+            suggested_fix = _normalize_free_text(current_fields.get("suggested_fix"), field_name="suggested_fix")
+        except ValueError as exc:
+            raise PIFormatError(str(exc)) from exc
         suggestion = ParsedSuggestion(
-            role=_normalize_role(role, field_name="role"),
+            role=normalized_role,
             owner=parsed_role,
-            promotion_class=_normalize_promotion_class(current_fields.get("promotion_class")),
+            promotion_class=promotion_class,
             trigger_ref=_normalize_ref(current_fields.get("trigger_ref"), field_name="trigger_ref", fallback="unknown"),
-            source_ref=_normalize_source_ref_for_lane(
-                current_fields.get("source_ref"),
-                lane_source_ref=default_source_ref,
-            ),
-            symptom=_normalize_free_text(current_fields.get("symptom"), field_name="symptom"),
-            process_gap=_normalize_free_text(current_fields.get("process_gap"), field_name="process_gap"),
-            suggested_fix=_normalize_free_text(current_fields.get("suggested_fix"), field_name="suggested_fix"),
+            source_ref=parsed_source,
+            symptom=symptom,
+            process_gap=process_gap,
+            suggested_fix=suggested_fix,
         )
         suggestions.append(suggestion)
         current_fields = {}
@@ -2193,24 +2262,26 @@ def parse_process_improvements_section(
         if not line:
             continue
         if NO_PROCESS_RE.match(line):
-            raise ValueError("Literal no-op cannot be mixed with structured suggestions")
+            raise PIFormatError("Literal no-op cannot be mixed with structured suggestions")
         if H3_RE.match(line):
             saw_heading = True
             flush_current()
             continue
         match = PROCESS_FIELD_RE.match(line)
         if not match:
-            raise ValueError(f"Unsupported line inside `Process improvements`: {raw_line!r}")
+            raise PIFormatError(f"Unsupported line inside `Process improvements`: {raw_line!r}")
         field_name = match.group("key").lower()
         if field_name not in PROCESS_OUTPUT_FIELD_NAMES:
-            raise ValueError(f"Unsupported field inside `Process improvements`: {field_name!r}")
+            raise PIFormatError(f"Unsupported field inside `Process improvements`: {field_name!r}")
+        if field_name == "source_ref":
+            _normalize_source_ref_for_lane(match.group("value"), lane_source_ref=default_source_ref)
         current_fields[field_name] = match.group("value").strip()
     flush_current()
 
     if not suggestions:
-        raise ValueError("No structured process-improvement suggestions found")
+        raise PIFormatError("No structured process-improvement suggestions found")
     if saw_heading and len(suggestions) == 0:
-        raise ValueError("Process-improvement headings were present without fields")
+        raise PIFormatError("Process-improvement headings were present without fields")
     return {
         "state": "suggestions",
         "suggestions": suggestions,
@@ -2954,6 +3025,14 @@ def _collect_process_improvements(
     normalized_cycle_id = _normalize_followups_capture_cycle_id(followups_capture_cycle_id)
     raw_input = text.encode("utf-8") if isinstance(text, str) else bytes(text)
     input_sha256 = hashlib.sha256(raw_input).hexdigest()
+    if active_admission is not None and "format_correction_record" in active_admission:
+        # Input may have blocked on stdin since the CLI's initial admission.
+        # Reprove the original reservation before any PI/receipt effect; later
+        # effects retain its exact aggregate/source/original-leaf witnesses.
+        capture = _load_capture_admission_module()
+        capture.validate_reserved_general_pi_ingest(project_root, source_ref, normalized_cycle_id,
+            normalized_role, active_admission["format_correction_record"]["reservation_id"])
+        _validate_active_general_pi_effect(project_root, context=context, admission=active_admission)
     before_objects = (
         _safe_pi_object_map(project_root, source_ref)
         if engaged_public
@@ -3124,6 +3203,7 @@ def _collect_process_improvements(
                             reason_code="collector_error",
                             payload=failure_payload,
                             error=str(exc),
+                            error_type="pi_format_error" if isinstance(exc, PIFormatError) else None,
                         ),
                         replace_blocked=existing_v2_receipt is not None,
                         context=writer_context,
@@ -3512,6 +3592,7 @@ def build_parser() -> argparse.ArgumentParser:
     import_mode = parser.add_mutually_exclusive_group()
     import_mode.add_argument("--report", action="store_true", help="Preview --import-file rows without writing.")
     import_mode.add_argument("--apply", action="store_true", help="Write --import-file rows and derived surfaces.")
+    parser.add_argument("--format-correction-reservation-id", help="Fresh reservation identity for one typed correction ingest; never a dispatch permit.")
     parser.add_argument("--format", choices=("text", "json"), default="text", help="Output format.")
     parser.add_argument("--json", action="store_true", help="Emit machine-readable JSON.")
     return parser
@@ -3567,6 +3648,7 @@ def main(
             source_ref=args.source_ref,
             followups_capture_cycle_id=args.followups_capture_cycle_id,
             context=context,
+            format_correction_reservation_id=args.format_correction_reservation_id,
         )
         role = _normalize_role(args.role, field_name="role") if engaged_public else args.role
         source_ref = _normalize_ref(args.source_ref, field_name="source_ref") if engaged_public else args.source_ref

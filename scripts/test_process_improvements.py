@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import importlib.util
+import contextlib
 import hashlib
 import io
 import json
@@ -40,6 +41,31 @@ LEGACY_DERIVED_BANNER_LINE = (
 
 
 class ProcessImprovementsTests(unittest.TestCase):
+    def test_pi_format_error_is_dedicated_and_identity_utf8_unknown_are_untyped(self) -> None:
+        structured = ("## Process improvements\n### Suggestion 1\n- symptom: fixture\n"
+                      "- process_gap: fixture\n- suggested_fix: fixture\n- owner: Coder\n"
+                      "- promotion_class: helper_change\n- trigger_ref: unknown\n- source_ref: docs/plans/fixture.md\n")
+        for body in ("missing heading", "## Process improvements\n", structured + "unsupported prose\n",
+                     structured.replace("- owner: Coder\n", ""), structured + "NO PROCESS IMPROVEMENTS — why: clean_run\n"):
+            with self.subTest(body=body), self.assertRaises(COLLECT.PIFormatError):
+                COLLECT.parse_process_improvements_section(body, role="Coder", default_source_ref="docs/plans/fixture.md")
+        for body, role in ((structured.replace("docs/plans/fixture.md", "docs/plans/foreign.md"), "Coder"), (structured, "Unknown")):
+            with self.assertRaises(ValueError) as refused:
+                COLLECT.parse_process_improvements_section(body, role=role, default_source_ref="docs/plans/fixture.md")
+            self.assertNotIsInstance(refused.exception, COLLECT.PIFormatError)
+        for kind, raw in (("format", (structured + "unsupported prose\n").encode()), ("utf8", b"\xff"),
+                          ("identity", structured.replace("docs/plans/fixture.md", "docs/plans/foreign.md").encode()),
+                          ("unknown", "## Process improvements\nNO PROCESS IMPROVEMENTS — why: clean_run\n".encode())):
+            with self.subTest(kind=kind):
+                root = self._root(); cycle = "18a441b6-8732-4d42-a453-754df001f674"
+                with mock.patch.object(COLLECT, "_collect_process_improvements_impl", side_effect=RuntimeError("unknown failure")) if kind == "unknown" else contextlib.nullcontext():
+                    with self.assertRaises(Exception):
+                        COLLECT.collect_process_improvements(project_root=root, role="Coder", source_ref="docs/plans/fixture.md", text=raw, followups_capture_cycle_id=cycle)
+                receipt = self._read_receipt(root, "docs/plans/fixture.md", "Coder", cycle)
+                self.assertEqual(receipt.get("error_type"), "pi_format_error" if kind == "format" else None)
+                self.assertEqual(receipt["input_sha256"], hashlib.sha256(raw).hexdigest())
+                self.assertEqual(receipt["before_process_improvement_files"], receipt["after_process_improvement_files"])
+
     def _general_prompt_lower_samples(self, text: str) -> tuple[str, str]:
         output = text.rsplit("Выход (в чат):", 1)[1]
         section = re.search(

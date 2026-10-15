@@ -1370,6 +1370,87 @@ def _validate_terminal_docs_delta_unknown(payload: dict[str, Any], errors: list[
         )
 
 
+def _validate_general_pi_format_correction_admission(payload: dict[str, Any], errors: list[str]) -> None:
+    admission = payload.get("general_pi_format_correction_admission")
+    if admission is None and "general_pi_format_correction_admission" not in payload:
+        return  # Historical payload compatibility never grants correction.
+    path = "general_pi_format_correction_admission"
+    keys = {"schema", "state", "reason", "plan_ref", "capture_cycle_id", "role", "attempts_reserved", "max_extra_attempts", "next_dispatch", "proof"}
+    if not isinstance(admission, dict) or set(admission) != keys:
+        _schema_error(errors, path, "requires the exact format-correction field set")
+        return
+    if (admission.get("schema") != followups_capture.PI_FORMAT_ADMISSION_SCHEMA
+            or admission.get("state") not in {"not_applicable", "retryable", "blocked"}
+            or not isinstance(admission.get("reason"), str) or not admission["reason"]
+            or admission.get("plan_ref") != payload.get("plan_ref")
+            or type(admission.get("attempts_reserved")) is not int or admission["attempts_reserved"] not in {0, 1}
+            or type(admission.get("max_extra_attempts")) is not int or admission["max_extra_attempts"] != 1
+            or admission.get("role") not in (*PI_CAPTURE_ROLES, None)):
+        _schema_error(errors, path, "invalid schema/state/identity/budget")
+    if admission.get("state") == "retryable":
+        proof = admission.get("proof")
+        if (admission.get("role") not in PI_CAPTURE_ROLES or admission.get("attempts_reserved") != 0
+                or admission.get("capture_cycle_id") != payload.get("followups_capture_cycle_id")
+                or admission.get("next_dispatch") != f"{admission.get('role')}:general-format-correction"
+                or payload.get("state") != "blocked" or payload.get("process_improvement_capture_state") != "blocked"
+                or not isinstance(proof, dict)):
+            _schema_error(errors, path, "retryable requires exact blocked current capture and helper proof")
+            return
+        proof_keys = {"project_root", "source_identity", "semantic_closeout_identity", "receipt_revision", "receipt_sha256", "receipt_content_sha256", "receipt_object_identity", "cycle_directory_identity", "transaction_host_identity", "collector_proof", "followup_files", "docs_delta"}
+        if (set(proof) != proof_keys or type(proof.get("receipt_revision")) is not int or proof["receipt_revision"] < 1
+                or any(not isinstance(proof.get(key), dict) for key in ("source_identity", "receipt_object_identity", "cycle_directory_identity", "transaction_host_identity", "collector_proof", "followup_files", "docs_delta"))
+                or any(not followups_capture.HEX64_RE.fullmatch(str(proof.get(key) or "")) for key in ("semantic_closeout_identity", "receipt_sha256", "receipt_content_sha256"))):
+            _schema_error(errors, path + ".proof", "invalid helper proof fields")
+            return
+        try:
+            source = proof["source_identity"]
+            cycle = admission["capture_cycle_id"]
+            followups_capture._validate_uuid4(cycle)
+            if (set(source) != {"plan_ref", "source_terminal_commit_oid", "source_plan_blob_oid", "source_plan_sha256"}
+                    or source["plan_ref"] != payload["plan_ref"]
+                    or not followups_capture.HEX64_RE.fullmatch(str(source["source_plan_sha256"]))
+                    or any(not followups_capture.OID_RE.fullmatch(str(source[key])) for key in ("source_terminal_commit_oid", "source_plan_blob_oid"))
+                    or not isinstance(proof["project_root"], str) or not proof["project_root"]
+                    or proof["receipt_object_identity"] != {"path": followups_capture._receipt_relpath(payload["plan_ref"], cycle), "file_type": "regular"}
+                    or proof["cycle_directory_identity"] != {"path": f".tmp/followups_capture/{followups_capture.plan_stem(payload['plan_ref'])}/{cycle}", "file_type": "directory"}
+                    or proof["transaction_host_identity"] != {"project_root": proof["project_root"], "plan_family": f".tmp/followups_capture/{followups_capture.plan_stem(payload['plan_ref'])}", "execution_model": "trusted_serial_manager"}):
+                raise ValueError("source/aggregate binding shape is invalid")
+            chain = proof["collector_proof"]
+            if set(chain) != {"blocked", "input_receipts", "before", "after"}:
+                raise ValueError("collector proof shape is invalid")
+            blocked = chain["blocked"]
+            if (not isinstance(blocked, dict) or set(blocked) != {"role", "path", "object", "object_identity", "sha256"}
+                    or blocked["role"] != admission["role"]):
+                raise ValueError("blocked leaf shape is invalid")
+            inputs = chain["input_receipts"]
+            expected_roles = list(PI_CAPTURE_ROLES[:PI_CAPTURE_ROLES.index(admission["role"]) + 1])
+            if not isinstance(inputs, list) or [entry.get("role") for entry in inputs if isinstance(entry, dict)] != expected_roles:
+                raise ValueError("collector prefix shape is invalid")
+            for entry in [blocked, *inputs]:
+                if (not isinstance(entry, dict) or set(entry) != {"role", "path", "object", "object_identity", "sha256"}
+                        or entry["path"] != process_improvements_collect.capture_receipt_rel_path(payload["plan_ref"], entry["role"], cycle).as_posix()
+                        or not isinstance(entry["object_identity"], list) or len(entry["object_identity"]) != 6
+                        or any(type(item) is not int for item in entry["object_identity"])
+                        or not followups_capture.HEX64_RE.fullmatch(str(entry["sha256"]))):
+                    raise ValueError("collector object binding shape is invalid")
+                process_improvements_collect._validate_capture_object(entry["object"], field="correction.collector.object")
+                if entry["object"]["sha256"] != entry["sha256"]:
+                    raise ValueError("collector object/content hashes differ")
+            if inputs[-1] != blocked:
+                raise ValueError("blocked leaf is not the final prefix member")
+            for name in ("before", "after"):
+                followups_capture._validate_pi_object_map(chain[name], payload["plan_ref"], field="correction." + name)
+            delta = proof["docs_delta"]
+            if (set(delta) != {"paths", "protected_paths", "owned_pi_paths"} or delta["protected_paths"] != []
+                    or any(not isinstance(delta[name], list) or any(not isinstance(item, str) for item in delta[name]) for name in delta)
+                    or set(delta["paths"]).difference(delta["owned_pi_paths"])):
+                raise ValueError("docs-delta proof shape is invalid")
+        except (followups_capture.CaptureError, ValueError, TypeError, KeyError, IndexError) as exc:
+            _schema_error(errors, path + ".proof", str(exc))
+    elif admission.get("next_dispatch") is not None or admission.get("proof") is not None:
+        _schema_error(errors, path, "non-retryable admission cannot carry dispatch/proof")
+
+
 def validate_docs_closeout_payload(payload: dict[str, Any]) -> dict[str, Any]:
     """Attach and enforce the manager-facing docs-closeout payload schema."""
     errors: list[str] = []
@@ -1414,6 +1495,7 @@ def validate_docs_closeout_payload(payload: dict[str, Any]) -> dict[str, Any]:
     _validate_followups_reconciliation(payload, errors)
     _validate_followups_bootstrap_admission(payload, errors)
     _validate_followups_continuation_admission(payload, errors)
+    _validate_general_pi_format_correction_admission(payload, errors)
     _validate_followups_blocked_predecessor_recovery_admission(payload, errors)
     _validate_terminal_fast_path(payload, errors)
     if not isinstance(payload.get("runtime_context"), dict):
@@ -1514,6 +1596,9 @@ def _refresh_dispatch_context_block(payload: dict[str, Any]) -> None:
         "- docs_closeout_state=": f"- docs_closeout_state={payload.get('state', 'blocked')}",
         "- docs_closeout_reason=": f"- docs_closeout_reason={payload.get('reason_code', DOCS_CLOSEOUT_SCHEMA_INVALID_REASON)}",
     }
+    correction = payload.get("general_pi_format_correction_admission")
+    if isinstance(correction, dict):
+        replacements["- general_pi_format_correction_state="] = f"- general_pi_format_correction_state={correction.get('state', 'blocked')}"
     lines: list[str] = []
     inserted_schema = False
     for line in raw_block.splitlines():
@@ -3140,7 +3225,7 @@ def classify_followups_continuation_admission(
                     return refuse("continuation_followups_drift")
                 marker = receipt.get("general_pi_checkpoint")
                 if marker is None:
-                    if receipt["receipt_revision"] != 1:
+                    if receipt["receipt_revision"] != 1 + len(receipt.get(followups_capture.PI_FORMAT_CORRECTIONS_KEY, {})):
                         return refuse("continuation_receipt_revision_invalid")
                     collectors = followups_capture._general_pi_capture_receipts_proof(
                         root, plan_ref, capture_cycle_id, expected_before=lineage["current_objects"])
@@ -4485,6 +4570,12 @@ def classify_docs_closeout(
     followups_bootstrap_admission = classify_followups_bootstrap_admission(root, plan_ref)
     followups_continuation_admission = classify_followups_continuation_admission(
         root, plan_ref, followups_capture_cycle_id, bundle_payload=bundle_payload, context=context)
+    general_pi_format_correction_admission = followups_capture.general_pi_format_correction_admission(
+        root, plan_ref, followups_capture_cycle_id if pi_capture_state == "blocked" else None,
+        bundle_payload=bundle_payload, context=context)
+    if pi_capture_state != "blocked":
+        general_pi_format_correction_admission.update(capture_cycle_id=followups_capture_cycle_id,
+            reason="no_current_blocked_pi_capture")
     terminal_fast_path = classify_terminal_closeout_fast_path(
         plan_ref=plan_ref,
         state=state,
@@ -4500,6 +4591,7 @@ def classify_docs_closeout(
     )
     dispatch_context_lines = [
         "Docs closeout context (repo-backed):",
+        f"- general_pi_format_correction_state={general_pi_format_correction_admission['state']}",
         f"- plan_ref={runtime_context['plan_ref']}",
         f"- semantic_status={runtime_context['semantic_status']}",
         f"- closeout_runtime_class={runtime_context['closeout_runtime_class']}",
@@ -4644,6 +4736,7 @@ def classify_docs_closeout(
         "followups_blocked_predecessor_recovery_admission": followups_blocked_predecessor_recovery_admission,
         "followups_bootstrap_admission": followups_bootstrap_admission,
         "followups_continuation_admission": followups_continuation_admission,
+        "general_pi_format_correction_admission": general_pi_format_correction_admission,
         "terminal_closeout_fast_path": terminal_fast_path,
         "runtime_context": runtime_context,
         "dispatch_context_block": "\n".join(dispatch_context_lines),
@@ -4800,6 +4893,7 @@ def render_text(payload: dict[str, Any]) -> str:
             f" schema={payload['schema']}",
             f" schema_state={payload['schema_state']}",
             f" schema_errors={_format_schema_errors(payload)}",
+            f" general_pi_format_correction_state={payload.get('general_pi_format_correction_admission', {}).get('state', 'unknown')}",
             f" semantic_status={payload['semantic_status']}",
             f" closeout_runtime_class={runtime_context['closeout_runtime_class']}",
             f" queue_closeout_kind={runtime_context['queue_closeout_kind']}",

@@ -1,0 +1,381 @@
+{
+  "run_id": "reviewer_code_risk_20261015T143126Z",
+  "lane_id": "reviewer_code_risk",
+  "runner_id": "N/A (why=private operator mapping is retained outside public artifacts)",
+  "session_key": "N/A (why=private operator mapping is retained outside public artifacts)",
+  "sid": "N/A (why=private operator mapping is retained outside public artifacts)",
+  "profile": "N/A (why=private operator mapping is retained outside public artifacts)",
+  "model": "N/A (why=private operator mapping is retained outside public artifacts)",
+  "reasoning_effort": "N/A (why=private operator mapping is retained outside public artifacts)",
+  "prompt_file": "docs/tools/prompts/reviewer_status_driven.md",
+  "target_ref": "BUNDLE=current",
+  "coverage_domains": [
+    "correctness",
+    "tests quality",
+    "security/privacy",
+    "subprocess/timeouts",
+    "races/locks/atomicity",
+    "observability",
+    "integrations",
+    "failure semantics"
+  ],
+  "findings": [],
+  "lane_status": "no_findings",
+  "no_findings_reason": "В exact current diff 14 targets существенных risk-регрессий не найдено. Проверены типизация, полная admission/reservation, original-byte retention, distinct ingest/effect fences, spent/reentry и blocked consumers; текущие обязательные candidate результаты проверены по retained logs и dependency identity.",
+  "source_refs": [
+    "scripts/process_improvements_collect.py",
+    "scripts/followups_capture.py",
+    "scripts/docs_closeout.py",
+    "scripts/sibling_closeout.py",
+    "scripts/sibling_runbook.py",
+    "scripts/test_process_improvements.py",
+    "scripts/test_followups_capture.py",
+    "scripts/test_docs_closeout.py",
+    "scripts/test_contract_authority_shell.py",
+    "scripts/test_sibling_runbook.py",
+    "scripts/test_manager_custom_pipeline_prompt_contract.py",
+    "scripts/test_sibling_contract_docs.py",
+    "docs/tools/prompts/manager_collab_pipeline.md",
+    "copier_template/docs/tools/prompts/manager_collab_pipeline.md",
+    "docs/process_improvements/README.md"
+  ],
+  "delta": "Dedicated PIFormatError, helper-owned durable single-use reservation в existing aggregate и typed stored-reservation ingest; source/copy Manager contract и truthful sibling outcomes.",
+  "outcome": "Risk lane завершена без findings; contracts lane самостоятельно выбирает этот immutable support/compact pair и проверяет тот же canonical snapshot. Top-level status и final review не менялись.",
+  "limits": [
+    "Original Q3 timeout cause UNKNOWN: retained original RED и отсутствовавший terminal native outcome не реконструированы. Current full shell GREEN не объясняет timeout и не является production timeout fix.",
+    "Новая timeout-observability branch не trigger-илась в full shell pass; отдельно проверены только два mocked TimeoutExpired cases без child process.",
+    "Single-Manager serial/reentry и stale-CAS proof не является true simultaneous multiwriter concurrency proof.",
+    "Frozen runtime использован только для native lifecycle gates/snapshot. Candidate proof не означает live А2 adoption, живую репетицию, terminal SID continuity или post-commit docs-closeout.",
+    "Data/SQL/migrations и новый supply-chain contour отсутствуют в diff; runtime/profile/auth/config не менялись."
+  ],
+  "observations": [
+    {
+      "code": "historical_timeout_unknown",
+      "disposition": "non_blocking",
+      "source_ref": "docs/plans/261015_0939_general_pi_format_correction.md",
+      "detail": "Owning Q3 criterion закрыт текущим full suite; независимое чтение code/test diff и retained logs не установило воспроизводимого product defect. Unknown cause сохранена явно."
+    }
+  ],
+  "commands_run": [
+    {
+      "command": "\"$PLANVEYOR_RUNTIME_ROOT/bin/planveyor\" --project \"$PWD\" planveyor_runtime_py plan_lint.py docs/plans/261015_0939_general_pi_format_correction.md",
+      "exit_code": 0
+    },
+    {
+      "command": "\"$PLANVEYOR_RUNTIME_ROOT/bin/planveyor\" --project \"$PWD\" planveyor_plan_bundle --check docs/plans/261015_0939_general_pi_format_correction.md",
+      "exit_code": 1,
+      "disposition": "Только отсутствующий PLANNED first-pass review; остальные 16 paths OK."
+    },
+    {
+      "command": "\"$PLANVEYOR_RUNTIME_ROOT/bin/planveyor\" --project \"$PWD\" planveyor_plan_bundle --preflight docs/plans/261015_0939_general_pi_format_correction.md",
+      "exit_code": 0,
+      "result": "17 paths, 0 issues, one PLANNED review"
+    },
+    {
+      "command": "PYTHONDONTWRITEBYTECODE=1 \"$PYBIN\" -B - <bounded timeout-observability mock probe>",
+      "exit_code": 0,
+      "cases": 2,
+      "result": "Bytes/text/absent partial outputs, SHA/hex, prior trace, unchanged timeout=120, explicit nonterminal record, same exception re-raised; subprocess.run mocked."
+    },
+    {
+      "command": "PYTHONDONTWRITEBYTECODE=1 \"$PYBIN\" -B - <bounded GeneralPIFormatCorrectionTests fixture probe>",
+      "exit_code": 0,
+      "cases": 1,
+      "result": "Identical second malformed bytes preserve original receipt and spent slot; same reservation id cannot admit third ingest; zero third-ingest delta. Existing synthetic Git-root fixture and mocked bundle boundary; not public dispatch."
+    }
+  ],
+  "reused_candidate_proof": {
+    "current_target_map_sha256": "43972878474c4c37f700ee0daf5fe2e7c2393e07228f28a947eec56f289dd7a2",
+    "prior_target_map_sha256": "a70bb96b80092492b70876e25920866a2746afced2912e5d1897072e4b195730",
+    "dependency_identity": "Подстановка exact pre-Q3 shell-test SHA в current 14-file map воспроизвела prior digest; 13 остальных targets unchanged. Direct imports остальных suites не используют shell test; Make scan inputs, включающие shell test, имеют fresh results.",
+    "suites": [
+      {
+        "command": "PYTHONDONTWRITEBYTECODE=1 \"$PYBIN\" -B -m unittest discover -s scripts -p 'test_process_improvements.py' -v",
+        "exit_code": 0,
+        "tests": 57,
+        "log_ref": ".tmp/planveyor-fix-261014-tmp/coder-a2-suite_process-02.log",
+        "sha256": "8a2ae90b830e641200d29edb819fe8fbcb03e99e70cce87c7480e7d592a352fc"
+      },
+      {
+        "command": "PYTHONDONTWRITEBYTECODE=1 \"$PYBIN\" -B -m unittest discover -s scripts -p 'test_followups_capture.py' -v",
+        "exit_code": 0,
+        "tests": 88,
+        "log_ref": ".tmp/planveyor-fix-261014-tmp/coder-a2-suite_followups-01.log",
+        "sha256": "9ba86f2569738c567a9ffb4566222a610852d1302f252935bd456cfd5cb793d2"
+      },
+      {
+        "command": "PYTHONDONTWRITEBYTECODE=1 \"$PYBIN\" -B -m unittest discover -s scripts -p 'test_docs_closeout.py' -v",
+        "exit_code": 0,
+        "tests": 152,
+        "log_ref": ".tmp/planveyor-fix-261014-tmp/coder-a2-suite_docs-01.log",
+        "sha256": "f0f43a173d71447c64ceb5a6d222a00b19d648057bf7c8ac703df66f7bc669f2"
+      },
+      {
+        "command": "PYTHONDONTWRITEBYTECODE=1 \"$PYBIN\" -B -m unittest discover -s scripts -p 'test_contract_authority_shell.py' -v",
+        "exit_code": 0,
+        "tests": 38,
+        "log_ref": ".tmp/planveyor-fix-261014-tmp/coder-a2-suite_shell-02.log",
+        "sha256": "a47409d2a66a319d7d40505beb700697328ad7b3fbf79e83ba671ab9652651a7"
+      },
+      {
+        "command": "PYTHONDONTWRITEBYTECODE=1 \"$PYBIN\" -B -m unittest discover -s scripts -p 'test_sibling_runbook.py' -v",
+        "exit_code": 0,
+        "tests": 35,
+        "log_ref": ".tmp/planveyor-fix-261014-tmp/coder-a2-suite_sibling-01.log",
+        "sha256": "6021c4a94609d751307303e8442831de0b16bd2e05bff33502a183947902ff6b"
+      },
+      {
+        "command": "PYTHONDONTWRITEBYTECODE=1 \"$PYBIN\" -B -m unittest discover -s scripts -p 'test_manager_custom_pipeline_prompt_contract.py' -v",
+        "exit_code": 0,
+        "tests": 69,
+        "log_ref": ".tmp/planveyor-fix-261014-tmp/coder-a2-suite_prompt-02.log",
+        "sha256": "bb7f5eb886bf7a49e23a495d38bb186a85b83b650bea50fd6d698b80b173f2bd"
+      },
+      {
+        "command": "PYTHONDONTWRITEBYTECODE=1 \"$PYBIN\" -B -m unittest discover -s scripts -p 'test_sibling_contract_docs.py' -v",
+        "exit_code": 0,
+        "tests": 22,
+        "log_ref": ".tmp/planveyor-fix-261014-tmp/coder-a2-suite_sibling_docs-02.log",
+        "sha256": "eb5152d2fc43d8f65a46e358fe7994de94d1f7ccd5db7889dc9ea5fe58e3ab11"
+      }
+    ],
+    "make": [
+      {
+        "command": "make verify",
+        "exit_code": 0,
+        "result": "GREEN: 1 module / 5 portability checks; selected plan/archive inputs omitted",
+        "log_sha256": "706c12b19c3bc747ad34ada3f575fbb49eb9e1c49384b7dea297e1038f1cdf59"
+      },
+      {
+        "command": "make doc-lint",
+        "exit_code": 0,
+        "result": "Candidate default roots OK; separate known frozen canonical doc-lint RED not relabelled",
+        "log_sha256": "db9e0347fe07fcfa7b06cc475cc80daa3ba75c18484ac8fcc32ea3c3561d50c3"
+      },
+      {
+        "command": "make typecheck",
+        "exit_code": 0,
+        "result": "12 configured sources; no issues",
+        "log_sha256": "8b88f6d12bd312c1b024b66d07a7f7619a68482ac4d64e475759b1823199faa5"
+      },
+      {
+        "command": "make oss-release-scan",
+        "exit_code": 0,
+        "result": "blockers=0 / warnings=0",
+        "log_sha256": "186e18dd108eadea721a05385270658aed8bb0ac83fed13dc4211919de5cc3cd"
+      }
+    ],
+    "historical_red": {
+      "log_ref": ".tmp/planveyor-fix-261014-tmp/coder-a2-suite_shell-01.log",
+      "sha256": "fc1692658a4a1be51b394d238d21845f7d05715db54f06b5d910740dde491df3",
+      "result": "38 tests / 1 failure / 1 error; original timeout remains unknown"
+    }
+  },
+  "current": true,
+  "written_at": "2026-10-15T14:31:26Z"
+,
+  "target_snapshot": {
+  "bundle_sha256": "9248465fe4daee2e57d111695ada934bd5a73edef349f79a18b6693f5a73853c",
+  "code_draft": "docs/code_drafts/261015_0939_general_pi_format_correction__code_draft.md",
+  "files": [
+    {
+      "git_mode": "100644",
+      "path": "copier_template/docs/tools/prompts/manager_collab_pipeline.md",
+      "sha256": "d4b25212e9bc995c183f5580331da5f51b3a29685d05835c53efb7a301f722ee",
+      "size_bytes": 167095
+    },
+    {
+      "git_mode": "100644",
+      "path": "docs/process_improvements/README.md",
+      "sha256": "8a3c36c778c88bb5da20f4d9b193e3770dde177efe3c824f64a758ac630109a4",
+      "size_bytes": 34691
+    },
+    {
+      "git_mode": "100644",
+      "path": "docs/tools/prompts/manager_collab_pipeline.md",
+      "sha256": "d4b25212e9bc995c183f5580331da5f51b3a29685d05835c53efb7a301f722ee",
+      "size_bytes": 167095
+    },
+    {
+      "git_mode": "100644",
+      "path": "scripts/docs_closeout.py",
+      "sha256": "79d9e0c52829a2da6a29f9649d1af1fdc9ff8525be96a129f8bec9191b031117",
+      "size_bytes": 241291
+    },
+    {
+      "git_mode": "100644",
+      "path": "scripts/followups_capture.py",
+      "sha256": "cda1bfbbae7b33071adb2ab3ff27efb1d645d814fdb9505ebd7ad17d7384a8d9",
+      "size_bytes": 383553
+    },
+    {
+      "git_mode": "100644",
+      "path": "scripts/process_improvements_collect.py",
+      "sha256": "40e96ea29b1eb332726fd871b536449f1cffc4f8cac2e9d57690916d0bdfe7d6",
+      "size_bytes": 150156
+    },
+    {
+      "git_mode": "100644",
+      "path": "scripts/sibling_closeout.py",
+      "sha256": "22b6e52153a2d966b8090399bae95753f3744e09e3737b908c52f383d6fd45a8",
+      "size_bytes": 25685
+    },
+    {
+      "git_mode": "100644",
+      "path": "scripts/sibling_runbook.py",
+      "sha256": "af8350c73cd51b57b415e3467d4965940ba28b656943a1ad5fd756ba1eaef371",
+      "size_bytes": 27604
+    },
+    {
+      "git_mode": "100644",
+      "path": "scripts/test_contract_authority_shell.py",
+      "sha256": "e9bb680fa8a76fbd3fb836ea2f58a7ed80c7cb86b4586e62a7b7d0316aeffb89",
+      "size_bytes": 205064
+    },
+    {
+      "git_mode": "100644",
+      "path": "scripts/test_docs_closeout.py",
+      "sha256": "e37c1b2283603e6ceecc937bed877dbeb5dfcc8781d91df35378dda55370fb72",
+      "size_bytes": 404977
+    },
+    {
+      "git_mode": "100644",
+      "path": "scripts/test_followups_capture.py",
+      "sha256": "6546e8b9cfe4c29fd618265c03d3f9becb45a002efc68cf6008363ccf9a5d5a6",
+      "size_bytes": 248441
+    },
+    {
+      "git_mode": "100644",
+      "path": "scripts/test_manager_custom_pipeline_prompt_contract.py",
+      "sha256": "9ec7ed3056263b70d903b0d2b2cc70fbad4ed1ab4656cbaec214d1581827bd59",
+      "size_bytes": 190034
+    },
+    {
+      "git_mode": "100644",
+      "path": "scripts/test_process_improvements.py",
+      "sha256": "7b408e6609974a51bd63d33288b4bde8b0501478ef5fcff850ffa7603b6dcb3a",
+      "size_bytes": 111556
+    },
+    {
+      "git_mode": "100644",
+      "path": "scripts/test_sibling_runbook.py",
+      "sha256": "3a6339d7dd61b9b2a156bc3020526fdcf967d0a88e14dbf2250bdd04d46711bd",
+      "size_bytes": 44750
+    }
+  ],
+  "hash_basis": "sha256 over canonical JSON (ensure_ascii=False, sort_keys=True, separators=(',', ':')) of hash_basis_payload; targets come from the primary code_draft_meta.targets, are normalized to repo-relative POSIX paths, sorted by path, and each file authenticates its bytes plus normalized git_mode (100755 iff the owner-execute bit is set, otherwise 100644)",
+  "hash_basis_payload": {
+    "algorithm": "sha256",
+    "files": [
+      {
+        "git_mode": "100644",
+        "path": "copier_template/docs/tools/prompts/manager_collab_pipeline.md",
+        "sha256": "d4b25212e9bc995c183f5580331da5f51b3a29685d05835c53efb7a301f722ee",
+        "size_bytes": 167095
+      },
+      {
+        "git_mode": "100644",
+        "path": "docs/process_improvements/README.md",
+        "sha256": "8a3c36c778c88bb5da20f4d9b193e3770dde177efe3c824f64a758ac630109a4",
+        "size_bytes": 34691
+      },
+      {
+        "git_mode": "100644",
+        "path": "docs/tools/prompts/manager_collab_pipeline.md",
+        "sha256": "d4b25212e9bc995c183f5580331da5f51b3a29685d05835c53efb7a301f722ee",
+        "size_bytes": 167095
+      },
+      {
+        "git_mode": "100644",
+        "path": "scripts/docs_closeout.py",
+        "sha256": "79d9e0c52829a2da6a29f9649d1af1fdc9ff8525be96a129f8bec9191b031117",
+        "size_bytes": 241291
+      },
+      {
+        "git_mode": "100644",
+        "path": "scripts/followups_capture.py",
+        "sha256": "cda1bfbbae7b33071adb2ab3ff27efb1d645d814fdb9505ebd7ad17d7384a8d9",
+        "size_bytes": 383553
+      },
+      {
+        "git_mode": "100644",
+        "path": "scripts/process_improvements_collect.py",
+        "sha256": "40e96ea29b1eb332726fd871b536449f1cffc4f8cac2e9d57690916d0bdfe7d6",
+        "size_bytes": 150156
+      },
+      {
+        "git_mode": "100644",
+        "path": "scripts/sibling_closeout.py",
+        "sha256": "22b6e52153a2d966b8090399bae95753f3744e09e3737b908c52f383d6fd45a8",
+        "size_bytes": 25685
+      },
+      {
+        "git_mode": "100644",
+        "path": "scripts/sibling_runbook.py",
+        "sha256": "af8350c73cd51b57b415e3467d4965940ba28b656943a1ad5fd756ba1eaef371",
+        "size_bytes": 27604
+      },
+      {
+        "git_mode": "100644",
+        "path": "scripts/test_contract_authority_shell.py",
+        "sha256": "e9bb680fa8a76fbd3fb836ea2f58a7ed80c7cb86b4586e62a7b7d0316aeffb89",
+        "size_bytes": 205064
+      },
+      {
+        "git_mode": "100644",
+        "path": "scripts/test_docs_closeout.py",
+        "sha256": "e37c1b2283603e6ceecc937bed877dbeb5dfcc8781d91df35378dda55370fb72",
+        "size_bytes": 404977
+      },
+      {
+        "git_mode": "100644",
+        "path": "scripts/test_followups_capture.py",
+        "sha256": "6546e8b9cfe4c29fd618265c03d3f9becb45a002efc68cf6008363ccf9a5d5a6",
+        "size_bytes": 248441
+      },
+      {
+        "git_mode": "100644",
+        "path": "scripts/test_manager_custom_pipeline_prompt_contract.py",
+        "sha256": "9ec7ed3056263b70d903b0d2b2cc70fbad4ed1ab4656cbaec214d1581827bd59",
+        "size_bytes": 190034
+      },
+      {
+        "git_mode": "100644",
+        "path": "scripts/test_process_improvements.py",
+        "sha256": "7b408e6609974a51bd63d33288b4bde8b0501478ef5fcff850ffa7603b6dcb3a",
+        "size_bytes": 111556
+      },
+      {
+        "git_mode": "100644",
+        "path": "scripts/test_sibling_runbook.py",
+        "sha256": "3a6339d7dd61b9b2a156bc3020526fdcf967d0a88e14dbf2250bdd04d46711bd",
+        "size_bytes": 44750
+      }
+    ],
+    "schema_version": "review_target_snapshot.hash_basis.v2"
+  },
+  "plan": "docs/plans/261015_0939_general_pi_format_correction.md",
+  "schema_version": "review_target_snapshot.v2",
+  "target": "BUNDLE=current bundle_sha256=9248465fe4daee2e57d111695ada934bd5a73edef349f79a18b6693f5a73853c",
+  "target_paths": [
+    "copier_template/docs/tools/prompts/manager_collab_pipeline.md",
+    "docs/process_improvements/README.md",
+    "docs/tools/prompts/manager_collab_pipeline.md",
+    "scripts/docs_closeout.py",
+    "scripts/followups_capture.py",
+    "scripts/process_improvements_collect.py",
+    "scripts/sibling_closeout.py",
+    "scripts/sibling_runbook.py",
+    "scripts/test_contract_authority_shell.py",
+    "scripts/test_docs_closeout.py",
+    "scripts/test_followups_capture.py",
+    "scripts/test_manager_custom_pipeline_prompt_contract.py",
+    "scripts/test_process_improvements.py",
+    "scripts/test_sibling_runbook.py"
+  ],
+  "target_snapshot": {
+    "bundle_sha256": "9248465fe4daee2e57d111695ada934bd5a73edef349f79a18b6693f5a73853c",
+    "target": "BUNDLE=current"
+  }
+}
+}

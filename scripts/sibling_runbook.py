@@ -135,8 +135,15 @@ class Context:
         return self.call("sibling", "run", *arguments[2:], capture=False)
 
 
-def show_plan(reference: str, oracle: dict) -> dict:
+def show_plan(reference: str, oracle: dict, context: Context | None = None) -> dict:
     print(f"План: {reference}\nСтатус: {oracle['status_norm']}")
+    if context is not None and oracle["status_norm"] in {"done", "superseded"}:
+        from sibling_closeout import _correction_outcome, _cycle, _docs
+        outcome = _correction_outcome(reference, _docs(context, reference, _cycle(context, reference, None)))
+        if outcome is not None:
+            print(f"general_pi_format_correction_state={outcome['general_pi_format_correction_state']}")
+            print(outcome["message"])
+            return {"plan": reference, "oracle": oracle, "next": None, **outcome}
     questions = oracle.get("open_owner_questions", [])
     for question in questions:
         print(f"{question['id']}: {question['text']}")
@@ -430,7 +437,7 @@ def main(argv: list[str] | None = None) -> int:
             reference, oracle = context.plan(args.plan)
             if args.plan is not None:
                 context.call("planveyor_plan_set", reference)
-            show_plan(reference, oracle)
+            show_plan(reference, oracle, context)
         elif args.action == "answer":
             handle_answer(context, args)
         elif args.action == "upgrade":
@@ -448,6 +455,8 @@ def main(argv: list[str] | None = None) -> int:
             from sibling_closeout import handle_close, handle_ready
             result = handle_close(context, args) if args.action == "close" else handle_ready(context, args)
             if result is not None:
+                if result.get("general_pi_format_correction_state"):
+                    print("general_pi_format_correction_state=" + result["general_pi_format_correction_state"])
                 if result.get("message"):
                     print(result["message"])
                 for reference in result.get("paths", []):

@@ -36,9 +36,47 @@ Status family boundary:
 - `already_tracked`: collector доказал duplicate/already-tracked outcome с exact carrier/reason.
 - `blocked`: collector увидел malformed structured block, mismatched `source_ref`, invalid receipt или другой fail-closed input.
 
-Manager вызывает `scripts/process_improvements_collect.py --role <Role> --source-ref <plan_ref> --followups-capture-cycle-id <capture_cycle_id> --input - --json` после каждого general docs-finalize role output. Для explicit cycle collector пишет только `process_improvement_capture.v2` по exact пути `.tmp/process_improvements_capture/<source-slug>/<capture-cycle-id>/<role>.json`: `input_sha256` считается по raw stdin/`--input` bytes до strict UTF-8 decode, а source/role/cycle и exact before/after maps проверяются при readback. Первая continuation publication exclusive; exact leaf или proven contiguous later-role replay is no-write, а changed/corrupt/unproved duplicate fail-closed до PI mutation. Единственная разрешённая replacement transition — validated `blocked -> clean_noop|materialized|already_tracked`; v2 continuation receipt never перезаписывается. No-cycle compatibility остаётся отдельной legacy `process_improvement_capture.v1` fixed-path веткой и не может быть proof для current cycle. Только structured suggestions materialize-ятся в durable `docs/process_improvements/*`. `planveyor_docs_closeout <PLAN_PATH> --json` читает эти receipts и печатает `process_improvement_capture_state`, `process_improvement_capture_reason`, `process_improvement_capture_roles`, `process_improvement_backlog_paths`, `process_improvement_receipt_path`.
+Manager вызывает `scripts/process_improvements_collect.py --role <Role> --source-ref <plan_ref> --followups-capture-cycle-id <capture_cycle_id> --input - --json` после каждого general docs-finalize role output. Для explicit cycle collector пишет только `process_improvement_capture.v2` по exact пути `.tmp/process_improvements_capture/<source-slug>/<capture-cycle-id>/<role>.json`: `input_sha256` считается по raw stdin/`--input` bytes до strict UTF-8 decode, а source/role/cycle и exact before/after maps проверяются при readback. Первая continuation publication exclusive; exact leaf или proven contiguous later-role replay is no-write, а changed/corrupt/unproved duplicate fail-closed до PI mutation. Обычная recovery transition — validated `blocked -> clean_noop|materialized|already_tracked`; узкий typed correction lane ниже также сохраняет второй blocked refusal со spent reservation. Green v2 continuation receipt never перезаписывается. No-cycle compatibility остаётся отдельной legacy `process_improvement_capture.v1` fixed-path веткой и не может быть proof для current cycle. Только structured suggestions materialize-ятся в durable `docs/process_improvements/*`. `planveyor_docs_closeout <PLAN_PATH> --json` читает эти receipts и печатает `process_improvement_capture_state`, `process_improvement_capture_reason`, `process_improvement_capture_roles`, `process_improvement_backlog_paths`, `process_improvement_receipt_path`.
 
 В collab general consumer Manager сначала сохраняет terminal tool result и проверяет фактический rc=0, затем single-object stdout framing, guarded JSON.parse и existing непустые string fields state/reason/receipt path/current cycle. Nonzero, plain-text, malformed JSON/shape, prefix/suffix/second value, unknown state или несовпадение current proof дают bounded STOP с исходной причиной, без retry, trimming или no-op substitution. Fresh stdout может иметь `input_sha256`, replay — не иметь; raw-input authority остаётся validated v2 receipt. Только existing collector admission и fresh schema-green capture-aware docs-closeout/readback доказывают current receipt; stdout/pathname и green summary не перекрывают missing/red/stale host. До четвёртой роли ожидаемый aggregate pending не скрывает current blocked; полный chain перед followups проверяет existing checkpoint.
+
+### Одна general PI format correction
+
+Строгий parser выделяет только grammar failure через dedicated `PIFormatError`,
+subtype `ValueError`; такой blocked v2 leaf имеет additive
+`error_type=pi_format_error`. Source/role/cycle, UTF-8, authority, I/O и unknown
+errors остаются untyped. Старый `collector_error` не даёт automatic admission,
+historical receipts не мигрируются. Полные corrected bytes пишет та же persistent
+роль; Manager сохраняет их verbatim и не повторяет docs/file edits.
+
+Fresh aggregate содержит `general_pi_format_corrections={}`. Schema-green
+docs-closeout возвращает `general_pi_format_correction_admission.v1` в поле
+`general_pi_format_correction_admission`: `state=not_applicable|retryable|blocked`,
+reason, exact plan/cycle/role, attempts_reserved, max_extra_attempts=1,
+next_dispatch и helper-owned proof. Retryable не снимает outer blocked и
+разрешает только reservation request. Полный predicate требует current source,
+authority/host, green contiguous prefix, один typed no-effect blocked leaf,
+отсутствующий suffix/checkpoint/followups, fresh live/derived/protected maps.
+
+Existing action `followups_capture.py reserve-general-pi-correction --project-root
+<root> --plan-ref <plan_ref> --capture-cycle-id <cycle> --role <Role>
+--docs-closeout-json -` получает полный retained JSON через stdin и независимо
+повторяет predicate/CAS до atomic durable publication. Только fresh
+`state=reserved` с reservation_id разрешает один send. В existing aggregate
+role record `general_pi_format_correction.v1` хранит source/project/cycle/role,
+attempts_reserved=1, original receipt path/object identity, точные
+original_receipt_utf8 и SHA-256. Initial не расходует slot; crash, lost result,
+повтор reserve/ack и новый invocation не возвращают попытку.
+
+Corrected collector получает `--format-correction-reservation-id <reservation_id>`
+и проверяет stored reservation/original binding отдельно от send admission.
+После replacement сохраняются точные original bytes/input digest/error; second
+malformed сохраняет новый отказ и spent slot, без третьего dispatch. После green
+обязательны оставшийся general order, checkpoint и обычный terminal docs sink.
+Sibling stdout сообщает `general_pi_format_correction_state=retryable|blocked`
+при совместимом operational rc=0; это не успех close/run. Blocked исключает
+stage/commit и требует Owner stop; retryable относится только к текущему живому
+Manager/handle. Invalid invocation/authority/infrastructure сохраняет nonzero.
 
 ### Exact general-to-followups checkpoint
 

@@ -207,6 +207,7 @@ def _docs(context: Any, plan: str, cycle: str | None) -> dict:
 
 def _completed(payload: dict) -> bool:
     return (payload.get("state") == "completed" and payload.get("bundle_ok") is True
+            and payload.get("general_pi_format_correction_admission", {}).get("state") not in {"retryable", "blocked"}
             and not payload.get("bundle_errors") and payload.get("final_docs_commit") in {"no_op", "landed"}
             and payload.get("process_improvement_capture_state") in {"clean_noop", "materialized", "already_tracked"}
             and payload.get("followups_reconciliation", {}).get("state") in {"clean_noop", "external_clean_noop", "external_clean"}
@@ -217,6 +218,20 @@ def _result(state: str, plan: str, message: str, **details: Any) -> dict:
     return {"state": state, "plan": plan, "message": message, **details}
 
 
+def _correction_outcome(plan: str, payload: dict) -> dict | None:
+    admission = payload.get("general_pi_format_correction_admission")
+    state = admission.get("state") if isinstance(admission, dict) else None
+    if state not in {"retryable", "blocked"} and payload.get("process_improvement_capture_state") != "blocked":
+        return None
+    if state == "retryable":
+        message = "Формат PI требует единственной коррекции в текущем живом Manager через тот же handle; новый run не восстанавливает право отправки. Закрытие заблокировано."
+    else:
+        state = "blocked"
+        reason = admission.get("reason", "unknown") if isinstance(admission, dict) else "unknown"
+        message = f"Коррекция PI заблокирована ({reason}). Остановитесь и передайте исходный отказ Owner; повтор run/close не является следующим шагом."
+    return _result(state, plan, message, general_pi_format_correction_state=state, closeout=payload, next_command=None)
+
+
 def handle_close(context: Any, args: Any) -> dict:
     plan, oracle = context.plan()
     terminal = None
@@ -225,6 +240,9 @@ def handle_close(context: Any, args: Any) -> dict:
         terminal_bundle, terminal_root = _bundle(context, plan, require_green=False, allow_docs_stage=True)
         cycle = _cycle(context, plan, getattr(args, "cycle", None))
         docs = _docs(context, plan, cycle)
+        correction = _correction_outcome(plan, docs)
+        if correction is not None:
+            return correction
         terminal = (terminal_root, cycle, docs)
         # A legacy/provisional Done still needs its semantic commit. The
         # canonical docs classifier distinguishes it from a receipt-owned tail.
@@ -356,6 +374,9 @@ def handle_ready(context: Any, args: Any) -> dict:
                        oracle=oracle, next_command="planveyor sibling run")
     cycle = _cycle(context, plan, getattr(args, "cycle", None))
     docs = _docs(context, plan, cycle)
+    correction = _correction_outcome(plan, docs)
+    if correction is not None:
+        return correction
     if not _completed(docs):
         return _result("pending", plan, f"Closeout ещё не завершён: {docs.get('reason_code')}. Выполните planveyor sibling close.",
                        closeout=docs, next_command="planveyor sibling close")

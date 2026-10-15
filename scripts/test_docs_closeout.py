@@ -7035,6 +7035,62 @@ class DocsCloseoutV2FollowupsTests(unittest.TestCase):
                 self.assertEqual(result["reason"], "followup_v2_source_commit_unreachable")
 
 
+class DocsCloseoutFormatCorrectionTests(unittest.TestCase):
+    def _fixture(self, root):
+        try:
+            from scripts.test_followups_capture import GeneralPIFormatCorrectionTests
+        except ModuleNotFoundError:
+            from test_followups_capture import GeneralPIFormatCorrectionTests
+        proof = GeneralPIFormatCorrectionTests()
+        return proof, proof.fixture(root, "Coder")
+
+    def test_format_correction_schema_parity_and_authoritative_red(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory).resolve(); proof, (fixture, module, cap, cycle, leaf) = self._fixture(root)
+            payload = proof.payload(root, fixture, module, cycle)
+            admission = payload["general_pi_format_correction_admission"]
+            self.assertEqual((admission["state"], payload["state"], payload["process_improvement_capture_state"]), ("retryable", "blocked", "blocked"))
+            self.assertEqual((admission["role"], admission["attempts_reserved"], admission["max_extra_attempts"]), ("Coder", 0, 1))
+            self.assertIn("general_pi_format_correction_state=retryable", module.render_text(payload))
+            self.assertIn("general_pi_format_correction_state=retryable", payload["dispatch_context_block"])
+            for variant in ("unknown_key", "budget", "proof", "cycle", "false_green"):
+                candidate = json.loads(json.dumps(payload))
+                nested = candidate["general_pi_format_correction_admission"]
+                if variant == "unknown_key": nested["unknown"] = 1
+                elif variant == "budget": nested["attempts_reserved"] = True
+                elif variant == "proof": nested["proof"] = []
+                elif variant == "cycle": nested["capture_cycle_id"] = "foreign"
+                else: candidate["state"] = "completed"
+                result = module.finalize_docs_closeout_payload(candidate)
+                self.assertEqual((result["schema_state"], result["state"]), ("blocked", "blocked"))
+            original = leaf.read_bytes(); untyped = json.loads(original); untyped.pop("error_type"); leaf.write_text(json.dumps(untyped))
+            red = proof.payload(root, fixture, module, cycle)
+            self.assertEqual(red["general_pi_format_correction_admission"]["state"], "blocked")
+            self.assertEqual(red["process_improvement_capture_state"], "blocked")
+
+    def test_corrected_cycle_reaches_ordinary_compact_terminal_noop(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory).resolve(); proof, (fixture, module, cap, cycle, leaf) = self._fixture(root)
+            reserved, _ = proof.reserve(root, fixture, module, cap, cycle, "Coder")
+            cap.process_improvements_collect.collect_process_improvements(project_root=root, role="Coder", source_ref=fixture.plan_ref,
+                text=proof.clean, followups_capture_cycle_id=cycle)
+            for role in ("Planner", "Reviewer"):
+                cap.process_improvements_collect.collect_process_improvements(project_root=root, role=role, source_ref=fixture.plan_ref,
+                    text=proof.clean, followups_capture_cycle_id=cycle)
+            continuation = proof.payload(root, fixture, module, cycle)
+            self.assertEqual(continuation["followups_continuation_admission"]["state"], "ready")
+            cap.checkpoint_general_pi(root, fixture.plan_ref, cycle)
+            for role in cap.REQUIRED_ROLES:
+                cap.prepare_role(root, fixture.plan_ref, cycle, role)
+                raw = json.dumps({"role": role, "proposed_rows": [], "role_no_items_reason": "No new fixture followups."}).encode()
+                cap.submit_ordinary_v2(root, plan_ref=fixture.plan_ref, capture_cycle_id=cycle, role=role, raw_input=raw, write=True)
+                cap.bind_ordinary_v2(root, plan_ref=fixture.plan_ref, capture_cycle_id=cycle, role=role, submission_current=True, write=True)
+            cap.freeze_ordinary_v2(root, plan_ref=fixture.plan_ref, capture_cycle_id=cycle, write=True)
+            final = proof.payload(root, fixture, module, cycle)
+            self.assertEqual((final["schema_state"], final["state"], final["final_docs_commit"]), ("ok", "completed", "no_op"), final)
+            self.assertEqual(final["general_pi_format_correction_admission"]["state"], "not_applicable")
+
+
 class DocsCloseoutContinuationAdmissionTests(unittest.TestCase):
     plan_ref = "docs/plans/260902_0010_continuation_fixture.md"
 

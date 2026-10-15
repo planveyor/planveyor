@@ -55,6 +55,12 @@ _DIRECT_AUTHORITY_CONSUMERS = (
 _PUBLIC_PI_CANDIDATE_PATHS = (
     "scripts/process_improvements_collect.py",
     "scripts/followups_capture.py",
+    "scripts/docs_closeout.py",
+    "scripts/sibling_closeout.py",
+    "scripts/sibling_runbook.py",
+    "docs/tools/prompts/manager_collab_pipeline.md",
+    "copier_template/docs/tools/prompts/manager_collab_pipeline.md",
+    "docs/process_improvements/README.md",
     "scripts/test_contract_authority_writers.py",
     "scripts/test_process_improvements.py",
     "scripts/test_followups_capture.py",
@@ -644,16 +650,93 @@ class ContractAuthorityShellIntegrationTests(unittest.TestCase):
             str(fixture.target_root),
             *arguments,
         ]
-        result = subprocess.run(
-            command,
-            cwd=fixture.target_root,
-            env=self._shell_environment(fixture),
-            input=input_text,
-            text=True,
-            capture_output=True,
-            check=False,
-            timeout=120,
-        )
+        started_monotonic = time.monotonic()
+        try:
+            result = subprocess.run(
+                command,
+                cwd=fixture.target_root,
+                env=self._shell_environment(fixture),
+                input=input_text,
+                text=True,
+                capture_output=True,
+                check=False,
+                timeout=120,
+            )
+        except subprocess.TimeoutExpired as exc:
+            elapsed_seconds = time.monotonic() - started_monotonic
+            identity: dict[str, object] = {
+                "project_root": str(fixture.target_root),
+                "runtime_root": str(fixture.runtime_root),
+                "expected_runtime_commit": fixture.runtime_commit,
+            }
+            for name, root in (
+                ("candidate_runtime_sha256", fixture.runtime_root),
+                ("candidate_source_sha256", SCRIPT_DIR.parent),
+            ):
+                try:
+                    identity[name] = self._public_pi_candidate_hashes(root)
+                except Exception as identity_error:
+                    identity[name] = {
+                        "snapshot_error_type": type(identity_error).__name__,
+                        "snapshot_error": str(identity_error),
+                    }
+            for name, path in (
+                ("authority_marker", fixture.target_root / "docs/_meta/planveyor_contract_authority.v1.json"),
+                ("runtime_git_head", fixture.runtime_root / ".git/HEAD"),
+            ):
+                try:
+                    raw_identity = path.read_bytes()
+                    identity[name] = {
+                        "bytes_hex": raw_identity.hex(),
+                        "sha256": hashlib.sha256(raw_identity).hexdigest(),
+                    }
+                except Exception as identity_error:
+                    identity[name] = {
+                        "snapshot_error_type": type(identity_error).__name__,
+                        "snapshot_error": str(identity_error),
+                    }
+
+            def partial_output(value: bytes | str | None) -> dict[str, object]:
+                if value is None:
+                    return {"available": False}
+                if isinstance(value, bytes):
+                    return {
+                        "available": True,
+                        "kind": "bytes",
+                        "bytes_hex": value.hex(),
+                        "byte_count": len(value),
+                        "sha256": hashlib.sha256(value).hexdigest(),
+                    }
+                return {"available": True, "kind": "text", "text": value}
+
+            print(
+                json.dumps(
+                    {
+                        "schema": "public_pi_command_timeout.v1",
+                        "state": "nonterminal_timeout",
+                        "command_terminal": False,
+                        "label": label,
+                        "argv": command,
+                        "started_monotonic": started_monotonic,
+                        "deadline_monotonic": started_monotonic + 120,
+                        "deadline_seconds": 120,
+                        "elapsed_seconds": elapsed_seconds,
+                        "reported_timeout_seconds": exc.timeout,
+                        "stdin_sha256": (
+                            hashlib.sha256(input_text.encode("utf-8")).hexdigest()
+                            if input_text is not None
+                            else None
+                        ),
+                        "prior_trace": list(trace) if trace is not None else [],
+                        "identity": identity,
+                        "partial_stdout": partial_output(exc.stdout),
+                        "partial_stderr": partial_output(exc.stderr),
+                    },
+                    sort_keys=True,
+                ),
+                flush=True,
+            )
+            raise
         if trace is not None:
             trace.append(
                 {
@@ -1006,6 +1089,7 @@ class ContractAuthorityShellIntegrationTests(unittest.TestCase):
         plan_meta = {
             "plan_meta": {
                 "cluster": "process",
+                "required_manager_mode": "manager-collab",
                 "tags": [],
                 "phase_overlay": None,
                 "phase_state": None,
@@ -1116,6 +1200,137 @@ class ContractAuthorityShellIntegrationTests(unittest.TestCase):
             "candidate_source_sha256": source_candidate_hashes,
             "candidate_fixture_sha256": self._public_pi_candidate_hashes(fixture.runtime_root),
         }
+
+    def test_public_candidate_format_correction_all_roles_and_bounded_outcomes(self) -> None:
+        roles = ("Architect", "Coder", "Planner", "Reviewer")
+        with AuthorityFixture() as fixture:
+            setup = self._prepare_public_pi_composition_fixture(fixture)
+            seed = fixture.target_root
+            plan_ref = str(setup["plan_ref"])
+            hashes = dict(setup["candidate_source_sha256"])
+            for role in roles:
+                for second_malformed in (False, True):
+                    with self.subTest(role=role, second_malformed=second_malformed):
+                        # One immutable attested runtime; each case owns a fresh
+                        # standalone Git root with no shared capture state.
+                        fixture.target_root = fixture.root / f"correction-{role.lower()}-{int(second_malformed)}"
+                        shutil.copytree(seed, fixture.target_root)
+                        self.assertTrue((fixture.target_root / ".git").is_dir())
+                        self.assertEqual(git(fixture.target_root, "rev-parse", "--show-toplevel"), str(fixture.target_root))
+                        trace = []
+
+                        def public(arguments, body=None, *, success=True):
+                            result = self._run_public_pi_command(fixture, label="format-correction",
+                                arguments=arguments, input_text=body, trace=trace)
+                            if success:
+                                self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+                                return json.loads(result.stdout)
+                            self.assertNotEqual(result.returncode, 0, result.stdout + result.stderr)
+                            return result
+
+                        # The existing selected-plan carrier is fixture setup only;
+                        # the separate cold regression below forbids writing it.
+                        (fixture.target_root / ".planveyor.planpath").write_text(plan_ref + "\n")
+                        payload = public(["planveyor_docs_closeout", plan_ref, "--json"])
+                        begun = public(["planveyor_followups_capture", "begin", "--plan-ref", plan_ref, "--docs-closeout-json", "-"], json.dumps(payload))
+                        cycle = begun["capture_cycle_id"]
+                        for prefix in roles[:roles.index(role)]:
+                            body = self._public_pi_clean_body() if role == "Reviewer" else self._public_pi_suggestion_body(plan_ref)
+                            public(["planveyor_runtime_py", "process_improvements_collect.py", "--role", prefix, "--source-ref", plan_ref,
+                                "--followups-capture-cycle-id", cycle, "--input", "-", "--json"], body)
+                        collector = ["planveyor_runtime_py", "process_improvements_collect.py", "--role", role, "--source-ref", plan_ref,
+                            "--followups-capture-cycle-id", cycle, "--input", "-", "--json"]
+                        malformed = "## Process improvements\nunsupported prose\n"
+                        public(collector, malformed, success=False)
+                        # Use the canonical producer rather than a filename guess.
+                        try:
+                            import process_improvements_collect as collector_module
+                        except ModuleNotFoundError:
+                            from scripts import process_improvements_collect as collector_module
+                        leaf = fixture.target_root / collector_module.capture_receipt_rel_path(plan_ref, role, cycle)
+                        original = leaf.read_bytes()
+                        initial = public(["planveyor_docs_closeout", plan_ref, "--followups-capture-cycle-id", cycle, "--json"])
+                        self.assertEqual(initial["schema_state"], "ok", initial.get("schema_errors"))
+                        self.assertEqual(initial["general_pi_format_correction_admission"]["state"], "retryable", initial)
+                        head = git(fixture.target_root, "rev-parse", "HEAD")
+                        index = git(fixture.target_root, "diff", "--cached", "--binary")
+                        for command in (["sibling", "close", "--cycle", cycle], ["sibling", "close", "--cycle", cycle, "--commit"]):
+                            out = self._run_public_pi_command(fixture, label="blocked-close", arguments=command, trace=trace)
+                            self.assertEqual(out.returncode, 0, out.stdout + out.stderr)
+                            self.assertIn("general_pi_format_correction_state=retryable", out.stdout)
+                            self.assertNotIn("Можно начать следующую задачу", out.stdout)
+                        reserved = public(["planveyor_followups_capture", "reserve-general-pi-correction", "--plan-ref", plan_ref,
+                            "--capture-cycle-id", cycle, "--role", role, "--docs-closeout-json", "-"], json.dumps(initial))
+                        self.assertEqual(reserved["state"], "reserved")
+                        aggregate = fixture.target_root / ".tmp/followups_capture" / Path(plan_ref).stem / cycle / "followups_capture_receipt.json"
+                        spent_bytes = aggregate.read_bytes()
+                        public(["planveyor_followups_capture", "reserve-general-pi-correction", "--plan-ref", plan_ref,
+                            "--capture-cycle-id", cycle, "--role", role, "--docs-closeout-json", "-"], json.dumps(initial), success=False)
+                        self.assertEqual(aggregate.read_bytes(), spent_bytes)
+                        spent = public(["planveyor_docs_closeout", plan_ref, "--followups-capture-cycle-id", cycle, "--json"])
+                        self.assertEqual(spent["general_pi_format_correction_admission"]["state"], "blocked")
+                        corrected = malformed + "second refusal\n" if second_malformed else (
+                            self._public_pi_clean_body() if role == "Reviewer" else self._public_pi_suggestion_body(plan_ref))
+                        result = public(collector + ["--format-correction-reservation-id", reserved["reservation_id"]], corrected, success=not second_malformed)
+                        record = json.loads(aggregate.read_bytes())["general_pi_format_corrections"][role]
+                        self.assertEqual(record["original_receipt_utf8"].encode(), original)
+                        self.assertEqual(record["original_receipt_sha256"], hashlib.sha256(original).hexdigest())
+                        self.assertEqual(record["attempts_reserved"], 1)
+                        self.assertEqual(git(fixture.target_root, "rev-parse", "HEAD"), head)
+                        self.assertEqual(git(fixture.target_root, "diff", "--cached", "--binary"), index)
+                        if second_malformed:
+                            before = aggregate.read_bytes(), leaf.read_bytes()
+                            public(collector + ["--format-correction-reservation-id", reserved["reservation_id"]], self._public_pi_clean_body(), success=False)
+                            self.assertEqual(before, (aggregate.read_bytes(), leaf.read_bytes()))
+                            blocked = self._run_public_pi_command(fixture, label="consumed-close", arguments=["sibling", "close", "--cycle", cycle, "--commit"], trace=trace)
+                            self.assertEqual(blocked.returncode, 0, blocked.stdout + blocked.stderr)
+                            self.assertIn("general_pi_format_correction_state=blocked", blocked.stdout)
+                        elif role == "Reviewer":
+                            public(["planveyor_followups_capture", "checkpoint-general-pi", "--plan-ref", plan_ref, "--capture-cycle-id", cycle])
+                            for current in roles:
+                                public(["planveyor_followups_capture", "prepare-role", "--plan-ref", plan_ref, "--capture-cycle-id", cycle, "--role", current])
+                                compact = json.dumps({"role": current, "proposed_rows": [], "role_no_items_reason": "No fixture followups."})
+                                public(["planveyor_followups_capture", "submit-ordinary-v2", "--plan-ref", plan_ref, "--capture-cycle-id", cycle,
+                                    "--role", current, "--input", "-", "--write"], compact)
+                                public(["planveyor_followups_capture", "bind-ordinary-v2", "--plan-ref", plan_ref, "--capture-cycle-id", cycle,
+                                    "--role", current, "--submission-current", "--write"])
+                            public(["planveyor_followups_capture", "freeze-ordinary-v2", "--plan-ref", plan_ref, "--capture-cycle-id", cycle, "--write"])
+                            final = public(["planveyor_docs_closeout", plan_ref, "--followups-capture-cycle-id", cycle, "--json"])
+                            self.assertEqual((final["state"], final["final_docs_commit"]), ("completed", "no_op"), final)
+                        self.assertEqual(self._public_pi_candidate_hashes(fixture.runtime_root), hashes)
+                        self.assertEqual(git(fixture.runtime_root, "rev-parse", "HEAD"), fixture.runtime_commit)
+                        self.assertEqual(self._public_pi_candidate_hashes(SCRIPT_DIR.parent), hashes)
+
+    def test_cold_explicit_plan_cycle_uses_existing_fake_client_and_no_pointer_or_init(self) -> None:
+        try:
+            from scripts.test_sibling_runbook import NativeSiblingCommitPolicyTests
+        except ModuleNotFoundError:
+            from test_sibling_runbook import NativeSiblingCommitPolicyTests
+        cls = NativeSiblingCommitPolicyTests
+        cls.setUpClass()
+        try:
+            native = cls()
+            target, reference = native.selected("cold-explicit-correction", status="Blocked")
+            native.facade("sibling", "run", cwd=target)
+            pointer = target / ".planveyor.planpath"
+            pointer.unlink()
+            before_events = native.events(target)
+            init_before = tree_snapshot(target / ".planveyor.init_runs")
+            cycle = "383e2187-9739-4b95-bc57-9866803718eb"
+            result = native.facade("--project", str(target), "planveyor_manager_collab_cmd", "run", reference,
+                "--followups-capture-cycle-id", cycle)
+            events = native.events(target)
+            self.assertEqual(len(events), len(before_events) + 1, result.stdout + result.stderr)
+            event = events[-1]
+            self.assertIn("resume", event["argv"])
+            self.assertIn("PLAN_PATH=" + reference, event["payload"])
+            self.assertIn("FOLLOWUPS_CAPTURE_CYCLE_ID=" + cycle, event["payload"])
+            self.assertEqual(event["payload"].rstrip().splitlines()[-1], "MANAGER_CMD=run " + reference)
+            self.assertFalse(pointer.exists())
+            self.assertEqual(tree_snapshot(target / ".planveyor.init_runs"), init_before)
+            self.assertFalse((target / ".planveyor.planqueue.json").exists())
+        finally:
+            cls.tearDownClass()
 
     def _run_public_pi_composition(self, *, materialized: bool) -> None:
         """Future-gated full public composition, with a durable stdout trace."""
@@ -1984,6 +2199,8 @@ class ContractAuthorityShellIntegrationTests(unittest.TestCase):
                     """
                 ),
                 "Missing required field: suggested_fix",
+                "PIFormatError",
+                "pi_format_error",
             ),
             (
                 "parsed_foreign_source",
@@ -1993,10 +2210,12 @@ class ContractAuthorityShellIntegrationTests(unittest.TestCase):
                     1,
                 ),
                 "Structured \u0060source_ref\u0060 must match manager-fed/header source_ref",
+                "ValueError",
+                None,
             ),
         )
 
-        for case_name, body_for, expected_error in cases:
+        for case_name, body_for, expected_error, expected_exception, expected_receipt_type in cases:
             with self.subTest(case=case_name):
                 public_recipe: dict[str, object]
                 public_projection: dict[str, object]
@@ -2041,6 +2260,10 @@ class ContractAuthorityShellIntegrationTests(unittest.TestCase):
                     receipt = json.loads(receipt_path.read_text(encoding="utf-8"))
                     self.assertEqual(receipt["capture_state"], "blocked")
                     self.assertEqual(receipt["reason_code"], "collector_error")
+                    if expected_receipt_type is None:
+                        self.assertNotIn("error_type", receipt)
+                    else:
+                        self.assertEqual(receipt["error_type"], expected_receipt_type)
                     self.assertIn(expected_error, str(receipt["error"]))
                     self.assertEqual(list(receipt_path.parent.glob("*.json")), [receipt_path])
                     public_projection = self._public_pi_capture_projection(receipt)
@@ -2093,7 +2316,7 @@ class ContractAuthorityShellIntegrationTests(unittest.TestCase):
                     payload = json.loads(result.stdout)
                     self.assertEqual(payload["context_state"], "engaged")
                     self.assertEqual(payload["runtime_commit"], semantic_fixture.runtime_commit)
-                    self.assertEqual(payload["error_type"], "ValueError")
+                    self.assertEqual(payload["error_type"], expected_exception)
                     self.assertIn(expected_error, payload["error"])
                     self.assertEqual(
                         collector._safe_pi_object_map(semantic_fixture.target_root, plan_ref),
@@ -2102,6 +2325,10 @@ class ContractAuthorityShellIntegrationTests(unittest.TestCase):
                     receipt = json.loads(receipt_path.read_text(encoding="utf-8"))
                     self.assertEqual(receipt["capture_state"], "blocked")
                     self.assertEqual(receipt["reason_code"], "collector_error")
+                    if expected_receipt_type is None:
+                        self.assertNotIn("error_type", receipt)
+                    else:
+                        self.assertEqual(receipt["error_type"], expected_receipt_type)
                     self.assertIn(expected_error, str(receipt["error"]))
                     self.assertEqual(list(receipt_path.parent.glob("*.json")), [receipt_path])
                     self.assertEqual(
