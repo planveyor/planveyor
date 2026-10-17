@@ -4,10 +4,12 @@ from __future__ import annotations
 import argparse
 import contextlib
 import io
+import hashlib
 import json
 import os
 from pathlib import Path
 import shutil
+import stat
 import subprocess
 import sys
 import tempfile
@@ -300,13 +302,32 @@ planveyor_arch() { print status-driven >> "$PLANVEYOR_CTX_ROOT/.fixture_role_cal
             (cls.runtime / "scripts/sibling_fixture_native.py").write_text(NATIVE_POLICY_FIXTURE_PROGRAM)
         facade_path.write_text(facade_path.read_text().replace(
             "_planveyor_authority_finalize_loaded_source || return $?", fixture_adapter + "\n_planveyor_authority_finalize_loaded_source || return $?"))
-        (cls.runtime / "scripts/sibling_fixture_stats.py").write_text("print('sid=fixture')\n")
+        if facade_path.read_text().replace(fixture_adapter + "\n", "", 1) != (ROOT / "scripts/planveyor.zsh").read_text():
+            raise AssertionError("stale candidate adapter/policy source")
+        (cls.runtime / "scripts/sibling_fixture_stats.py").write_text(
+            NATIVE_POLICY_FIXTURE_STATS if getattr(cls, "actual_native_policy_sink", False)
+            else "print('sid=fixture')\n")
         with (cls.runtime / "copier_template/.gitignore.jinja").open("a") as handle:
             handle.write("\n.fixture_init_calls\n.fixture_role_calls\n")
             if getattr(cls, "actual_native_policy_sink", False):
-                handle.write(".fixture_native_calls\n")
+                handle.write(".fixture_native_calls\n.fixture_native_mode\n.fixture_stats_mode\n")
         git(cls.runtime, "add", "--all")
         git(cls.runtime, "commit", "--quiet", "-m", "Disposable human sibling command fixture")
+        # Assert the candidate lineage before any consumer/bootstrap effects.
+        cls.source_inventory = {}
+        for relative in ("scripts/sibling_runbook.py", "scripts/planveyor/role_runtime.zsh",
+                         "scripts/planveyor/session_init.zsh",
+                         "bin/planveyor", "scripts/contract_authority_bridge.py",
+                         "scripts/contract_authority_context.py", "scripts/contract_authority_snapshot.py"):
+            candidate = (ROOT / relative).read_bytes()
+            copied = (cls.runtime / relative).read_bytes()
+            if candidate != copied:
+                raise AssertionError("stale candidate fixture source: " + relative)
+            if stat.S_IMODE((ROOT / relative).stat().st_mode) != stat.S_IMODE((cls.runtime / relative).stat().st_mode):
+                raise AssertionError("stale candidate fixture mode: " + relative)
+            cls.source_inventory[relative] = hashlib.sha256(candidate).hexdigest()
+        if git(cls.runtime, "status", "--porcelain=v1"):
+            raise AssertionError("candidate runtime must be clean before consumer init")
         cls.seed = cls.root / "seed"
         initialized = cls.facade("sibling", "init", os.fspath(cls.seed), "--author-name", "Actual Fixture Owner", "--author-email", "actual-fixture@example.invalid")
         if "Sibling создан" not in initialized.stdout:
@@ -349,6 +370,39 @@ planveyor_arch() { print status-driven >> "$PLANVEYOR_CTX_ROOT/.fixture_role_cal
                 self.assertIn("usage:", result.stdout)
         self.assertEqual(git(self.seed, "status", "--porcelain=v1"), before)
         self.assertFalse((self.seed / ".planveyor.session.manager").exists())
+
+    def test_tui_help_and_arguments_refuse_before_effects(self):
+        target = self.target("tui-public-refusal")
+        reference = self.write_plan(target)
+        self.facade("--project", os.fspath(target), "sibling", "plan", reference)
+        (target / ".planveyor.owner_answers").write_text("TO=manager\nPLAN_PATH=" + reference + "\n---\nPending actual answer.\n")
+        before = protected_inventory(target)
+        for arguments in (("sibling", "--help"), ("sibling", "tui", "--help"),
+                          ("help", "sibling")):
+            result = self.facade(*arguments)
+            self.assertIn("tui", result.stdout)
+            self.assertIn("native_existing", result.stdout)
+        for extra in ((reference,), ("--q",), ("--merge",), ("--cycle", "invalid"),
+                      ("--followups-capture-cycle-id", "invalid"), ("--unknown",),
+                      ("--runtime-root", os.fspath(self.runtime)),
+                      ("--project-root", os.fspath(target)), ("--invocation-root", os.fspath(target))):
+            with self.subTest(extra=extra):
+                result = self.facade("sibling", "tui", *extra, cwd=target, check=False)
+                self.assertNotEqual(result.returncode, 0)
+                self.assertEqual(protected_inventory(target), before)
+        # An independent Git checkout without a consumer marker is an absent
+        # consumer, not a pretend non-Git directory under a repo-local TMPDIR.
+        absent = self.root / "tui-no-consumer"
+        absent.mkdir()
+        git(absent, "init", "--quiet")
+        git(absent, "commit", "--quiet", "--allow-empty", "-m", "No consumer fixture")
+        for cwd in (self.runtime, absent):
+            with self.subTest(cwd=cwd.name):
+                unchanged = protected_inventory(cwd)
+                result = self.facade("sibling", "tui", cwd=cwd, check=False)
+                self.assertNotEqual(result.returncode, 0)
+                self.assertEqual(protected_inventory(cwd), unchanged)
+        self.assertEqual(protected_inventory(target), before)
 
     def test_plan_infers_project_from_nested_cwd_and_validates_before_pointer_write(self):
         target = self.target("plan-inference")
@@ -518,16 +572,52 @@ _planveyor_codex_session_stats_script() { print -r -- "$PLANVEYOR_RUNTIME_ROOT/s
 _planveyor_codex() { _planveyor_py_any "$PLANVEYOR_RUNTIME_ROOT/scripts/sibling_fixture_native.py" "$@"; }
 '''
 
+def protected_inventory(target):
+    """Exact protected bytes, including session/receipts, queue and Git state."""
+    return {path.relative_to(target).as_posix(): path.read_bytes()
+            for path in target.rglob("*") if path.is_file()}
+
+
+NATIVE_POLICY_FIXTURE_STATS = '''import pathlib, sys
+mode = pathlib.Path.cwd() / ".fixture_stats_mode"
+value = mode.read_text().strip() if mode.exists() else "valid"
+if value == "missing":
+    mode.unlink()
+    print("Session not found: fixture saved session")
+    raise SystemExit(1)
+if value == "error":
+    print("fixture session checker failed")
+    raise SystemExit(7)
+print("sid=fixture")
+'''
+
+
 NATIVE_POLICY_FIXTURE_PROGRAM = '''import json, pathlib, re, sys
 argv = sys.argv[1:]
 stdin = sys.stdin.read() if argv and argv[-1] == "-" else ""
 payload = stdin if argv and argv[-1] == "-" else argv[-1]
 header = payload.split("[ALWAYS START]", 1)[0]
 role = re.search(r"^ROLE=(Architect|Manager)$", header, re.MULTILINE).group(1)
-with (pathlib.Path.cwd() / ".fixture_native_calls").open("a") as stream:
+root = pathlib.Path.cwd()
+calls = root / ".fixture_native_calls"
+previous = [json.loads(line) for line in calls.read_text().splitlines()] if calls.exists() else []
+with calls.open("a") as stream:
     stream.write(json.dumps({"argv": argv, "stdin": stdin, "payload": payload, "role": role}) + "\\n")
 sid = {"Architect": "11111111-1111-4111-8111-111111111111", "Manager": "22222222-2222-4222-8222-222222222222"}[role]
+if "resume" not in argv:
+    count = sum(event["role"] == role and "resume" not in event["argv"] for event in previous)
+    sid = sid[:-1] + str(int(sid[-1]) + count)
 print("session id: " + sid)
+if argv and argv[0] == "resume":
+    mode_path = root / ".fixture_native_mode"
+    mode = mode_path.read_text().strip() if mode_path.exists() else "valid"
+    if mode.startswith("drift"):
+        runtime = pathlib.Path(re.search(r"^PLANVEYOR_RUNTIME_ROOT=(.+)$", header, re.MULTILINE).group(1))
+        with (runtime / "scripts/sibling_runbook.py").open("a") as stream:
+            stream.write("\\n# disposable client-boundary runtime drift\\n")
+    if mode in {"error", "drift-error"}:
+        print("fixture permission/client failure", file=sys.stderr)
+        raise SystemExit(39)
 '''
 
 
@@ -556,10 +646,352 @@ class NativeSiblingCommitPolicyTests(unittest.TestCase):
         self.facade("--project", os.fspath(target), "sibling", "plan", reference)
         return target, reference
 
+    def payload_parts(self, payload):
+        lines = payload.splitlines(keepends=True)
+        boundary = next((index for index, line in enumerate(lines)
+                         if line.rstrip("\r\n") == "[ALWAYS START]"), None)
+        self.assertIsNotNone(boundary, "missing standalone control/body boundary")
+        return [line.rstrip("\r\n") for line in lines[:boundary]], "".join(lines[boundary:])
+
     def assert_policy(self, event, expected):
-        header = event["payload"].split("[ALWAYS START]", 1)[0]
-        self.assertEqual([line for line in header.splitlines() if line.startswith("COMMIT_POLICY=")],
+        header, _ = self.payload_parts(event["payload"])
+        self.assertEqual([line for line in header if line.startswith("COMMIT_POLICY=")],
                          ["COMMIT_POLICY=" + expected])
+
+    def assert_payload_header(self, event, role, policy, *, reference=None, pre_status=None, cycle=None):
+        header, _ = self.payload_parts(event["payload"])
+        self.assertEqual(event["role"], role)
+        expected = {"ROLE": role, "PYBIN": os.fspath(Path(sys.executable)),
+                    "COMMIT_POLICY": policy, "PLANVEYOR_RUNTIME_ROOT": os.fspath(self.runtime),
+                    "PLAN_PATH": reference, "PRE_STATUS_LINE": pre_status,
+                    "FOLLOWUPS_CAPTURE_CYCLE_ID": cycle}
+        for key, value in expected.items():
+            self.assertEqual([line for line in header if line.startswith(key + "=")],
+                             [] if value is None else [key + "=" + value], key)
+
+    def current_status_line(self, target, reference):
+        rows = [f"{index}:" + line for index, line in enumerate((target / reference).read_text().splitlines(), 1)
+                if line.startswith("**Status:**")]
+        self.assertEqual(len(rows), 1)
+        return rows[0]
+
+    def approved_init_body(self, target, role):
+        from test_contract_authority_support import shell_loader_literal
+
+        # The real reader selects the declared member under its sealed context
+        # and runtime pin; a filesystem prompt copy is not the body oracle.
+        command = shell_loader_literal(self.runtime) + '\nplanveyor_source_runtime "$1" || exit $?\n_planveyor_role_prompt_body "$2" init\n'
+        result = run(["/bin/zsh", "-fc", command, "approved-init-body",
+                      os.fspath(self.runtime / "scripts/planveyor.zsh"), role.lower()],
+                     cwd=target, env=dict(self.env, PLANVEYOR_RUNTIME_ROOT=os.fspath(self.runtime)))
+        header, body = self.payload_parts(result.stdout)
+        self.assertEqual([line for line in header if line.startswith("PLANVEYOR_RUNTIME_ROOT=")],
+                         ["PLANVEYOR_RUNTIME_ROOT=" + os.fspath(self.runtime)])
+        return body.rstrip("\n")
+
+    def assert_init_event(self, event, target, role, policy):
+        self.assert_payload_header(event, role, policy)
+        self.assertEqual(event["argv"][0], "exec")
+        self.assertNotIn("resume", event["argv"])
+        self.assertEqual(event["argv"][-1], "-")
+        self.assertEqual(event["stdin"], event["payload"])
+        header, body = self.payload_parts(event["payload"])
+        self.assertFalse(any(line.startswith("MANAGER_CMD=") for line in header))
+        self.assertFalse(event["payload"].rstrip().splitlines()[-1].startswith("MANAGER_CMD="))
+        self.assertEqual(body.rstrip("\n"), self.approved_init_body(target, role))
+
+    def tui_target(self, name):
+        target, reference = self.selected(name, status="Blocked")
+        path = target / reference
+        path.write_text("\n".join(line for line in path.read_text().splitlines()
+                                  if "id=Q1" not in line) + "\n")
+        return target, reference
+
+    def manager_receipt(self, target):
+        return self.native_receipt(target, "manager")
+
+    def native_receipt(self, target, role):
+        # Native pointers carry metadata comments; use the actual public reader.
+        sid = self.facade("--project", os.fspath(target), "planveyor_session", role).stdout.strip()
+        path = target / ".planveyor.init_runs/by_sid" / sid / "meta.json"
+        receipt = json.loads(path.read_text())
+        self.assertEqual(receipt["sid"], sid)
+        self.assertEqual(receipt["role"], role)
+        self.assertEqual(receipt["session_key"], role)
+        self.assertEqual(receipt["outcome"], "success")
+        self.assertEqual(receipt["exit_code"], 0)
+        self.assertEqual(receipt["authority_context"]["state"], "engaged")
+        self.assertEqual(receipt["authority_context"]["project_root"], os.fspath(target))
+        self.assertEqual(receipt["authority_context"]["runtime_pin"]["runtime_root"], os.fspath(self.runtime))
+        checked = self.facade("--project", os.fspath(target), "sibling", "--internal",
+                              "session-check", role, sid)
+        self.assertEqual(checked.stdout.strip(), "ready")
+        return sid, path.read_bytes()
+
+    def assert_tui_payload(self, event, reference, status="Blocked"):
+        self.assert_policy(event, "native_existing")
+        self.assertEqual(event["role"], "Manager")
+        self.assertEqual(event["argv"][0], "resume")
+        self.assertEqual(event["argv"][-1], event["payload"])
+        self.assertEqual(event["stdin"], "")
+        header, _ = self.payload_parts(event["payload"])
+        pre_status = [line for line in header if line.startswith("PRE_STATUS_LINE=")]
+        self.assertEqual(len(pre_status), 1)
+        self.assertRegex(pre_status[0], r"^PRE_STATUS_LINE=\d+:\*\*Status:\*\* " + status + "$")
+        self.assert_payload_header(event, "Manager", "native_existing", reference=reference,
+                                   pre_status=pre_status[0].split("=", 1)[1])
+        self.assertEqual(event["payload"].rstrip().splitlines()[-1], "MANAGER_CMD=run")
+        self.assertNotIn("--q", event["argv"])
+        self.assertNotIn("--merge", event["argv"])
+
+    def test_tui_resolver_nested_and_explicit_second_checkout(self):
+        target, reference = self.tui_target("tui-resolver-one")
+        other, _ = self.tui_target("tui-resolver-two")
+        before = protected_inventory(other)
+        self.facade("sibling", "tui", cwd=target / "docs/plans")
+        identity = self.manager_receipt(target)
+        self.facade("--project", os.fspath(target), "sibling", "tui", cwd=other / "docs")
+        self.assertEqual(self.manager_receipt(target), identity)
+        events = self.events(target)
+        self.assertEqual(len(events), 3)
+        self.assert_tui_payload(events[1], reference)
+        self.assert_tui_payload(events[2], reference)
+        self.assertEqual(protected_inventory(other), before)
+
+    def test_tui_markerless_legacy_refuses_before_session_effects(self):
+        target, reference = self.tui_target("tui-markerless")
+        marker = target / "docs/_meta/planveyor_contract_authority.v1.json"
+        self.assertEqual(json.loads(marker.read_text())["schema_version"], 3)
+        marker.unlink()  # Deliberate negative seed; baseline starts after deletion.
+        (target / ".planveyor.owner_answers").write_text("TO=manager\nPLAN_PATH=" + reference + "\n---\nPreserve pending answer.\n")
+        before = protected_inventory(target)
+        for action in ("tui", "run"):
+            with self.subTest(action=action):
+                result = self.facade("sibling", action, cwd=target, check=False)
+                self.assertEqual(result.returncode, 3, result.stderr)
+                self.assertIn("invalid or missing contract marker", result.stderr)
+                self.assertNotIn("invalid choice", result.stderr)
+                self.assertEqual(self.events(target), [])
+                self.assertEqual(protected_inventory(target), before)
+
+    def test_tui_engaged_missing_session_bootstraps_only_through_facade(self):
+        target, reference = self.tui_target("tui-engaged-bootstrap")
+        marker = json.loads((target / "docs/_meta/planveyor_contract_authority.v1.json").read_text())
+        self.assertEqual(marker["schema_version"], 3)
+        before = protected_inventory(target)
+        refused = self.facade("--project", os.fspath(target), "planveyor_manager_collab_tui", check=False)
+        self.assertEqual(refused.returncode, 1, refused.stderr)
+        self.assertIn("Missing session id. Initialize it first: planveyor_manager_init", refused.stderr)
+        self.assertEqual(protected_inventory(target), before)
+        self.facade("sibling", "tui", cwd=target)
+        events = self.events(target)
+        self.assertEqual(len(events), 2)
+        self.assert_init_event(events[0], target, "Manager", "native_existing")
+        self.assert_tui_payload(events[1], reference)
+        self.assert_payload_header(events[1], "Manager", "native_existing", reference=reference,
+                                   pre_status=self.current_status_line(target, reference))
+        sid, _ = self.manager_receipt(target)
+        self.assertIn(sid, events[1]["argv"])
+        self.assertFalse((target / ".planveyor.planqueue.json").exists())
+        self.assertEqual((target / reference).read_bytes(), before[reference])
+        self.assertEqual((target / ".git/index").read_bytes(), before[".git/index"])
+        self.assertEqual(git(target, "diff", "--cached", "--name-only"), "")
+
+    def test_tui_reuses_receipt_and_refreshes_current_plan_payload(self):
+        target, reference = self.tui_target("tui-current-plan")
+        self.facade("sibling", "tui", cwd=target)
+        identity = self.manager_receipt(target)
+        self.facade("sibling", "tui", cwd=target)
+        next_ref = "docs/plans/261003_1201_second.md"
+        (target / next_ref).write_text((target / reference).read_text().replace("Blocked", "Coder intake"))
+        self.facade("sibling", "plan", next_ref, cwd=target)
+        self.facade("sibling", "tui", cwd=target)
+        self.assertEqual(self.manager_receipt(target), identity)
+        events = self.events(target)
+        self.assertEqual(len(events), 4)
+        self.assertEqual(sum("resume" not in event["argv"] for event in events), 1)
+        for event in events[1:3]:
+            self.assert_tui_payload(event, reference)
+        self.assert_tui_payload(events[3], next_ref, "Coder intake")
+        self.assertNotIn("PLAN_PATH=" + reference + "\n", events[3]["payload"])
+        self.assertFalse((target / ".planveyor.planqueue.json").exists())
+
+    def test_tui_invalid_plan_session_and_foreign_receipts_are_effect_free(self):
+        for name in ("missing-plan", "malformed-plan", "malformed-session", "incompatible-mode", "open-qna"):
+            with self.subTest(name=name):
+                target, reference = self.tui_target("tui-invalid-" + name)
+                if name == "missing-plan":
+                    (target / ".planveyor.planpath").unlink()
+                elif name == "malformed-plan":
+                    (target / ".planveyor.planpath").write_text(reference + "\n" + reference + "\n")
+                elif name == "malformed-session":
+                    (target / ".planveyor.session.manager").write_text("not-a-session\n")
+                else:
+                    path = target / reference
+                    if name == "incompatible-mode":
+                        path.write_text(path.read_text().replace("manager-collab", "manager-custom-pipeline"))
+                    else:
+                        path.write_text(path.read_text() + "- [2026-10-03 12:00] (Architect -> Owner, id=Q1, status=open) Q: Decide.\n")
+                        self.assertEqual(plan_status_oracle.owner_qna_readback(path.read_text())[0], "open")
+                (target / ".planveyor.owner_answers").write_text("TO=manager\nPLAN_PATH=" + reference + "\n---\nKeep answer.\n")
+                before = protected_inventory(target)
+                refused = self.facade("sibling", "tui", cwd=target, check=False)
+                self.assertNotEqual(refused.returncode, 0, refused.stdout)
+                self.assertEqual(self.events(target), [])
+                self.assertEqual(protected_inventory(target), before)
+        target, _ = self.tui_target("tui-invalid-receipts")
+        self.facade("sibling", "tui", cwd=target)
+        sid, original = self.manager_receipt(target)
+        receipt = target / ".planveyor.init_runs/by_sid" / sid / "meta.json"
+        other, _ = self.tui_target("tui-foreign-receipt")
+        self.facade("sibling", "tui", cwd=other)
+        _, foreign = self.manager_receipt(other)
+        foreign_runtime = self.root / "tui-foreign-runtime"
+        shutil.copytree(self.runtime, foreign_runtime)
+        runtime_target, _ = self.tui_target("tui-foreign-runtime-owner")
+        run([os.fspath(foreign_runtime / "bin/planveyor"), "--project", os.fspath(runtime_target), "sibling", "tui"],
+            cwd=runtime_target, env=self.env)
+        runtime_sid = run([os.fspath(foreign_runtime / "bin/planveyor"), "--project", os.fspath(runtime_target),
+                           "planveyor_session", "manager"], cwd=runtime_target, env=self.env).stdout.strip()
+        runtime_foreign = (runtime_target / ".planveyor.init_runs/by_sid" / runtime_sid / "meta.json").read_bytes()
+        self.assertEqual(json.loads(runtime_foreign)["authority_context"]["runtime_pin"]["runtime_root"], os.fspath(foreign_runtime))
+        for name, body in (("malformed", b"{broken"), ("foreign-project", foreign),
+                           ("foreign-runtime", runtime_foreign)):
+            with self.subTest(receipt=name):
+                receipt.write_bytes(body)
+                (target / ".planveyor.owner_answers").write_text("TO=manager\n---\nKeep receipt-bound answer.\n")
+                before = protected_inventory(target)
+                refused = self.facade("sibling", "tui", cwd=target, check=False)
+                self.assertNotEqual(refused.returncode, 0)
+                if name.startswith("foreign"):
+                    self.assertIn("Receipt принадлежит другому project/runtime", refused.stderr)
+                self.assertEqual(protected_inventory(target), before)
+                self.assertEqual(len(self.events(target)), 2)
+        receipt.write_bytes(original)
+
+    def test_tui_process_exit_and_missing_saved_session_use_existing_checker(self):
+        target, reference = self.tui_target("tui-session-loss")
+        self.facade("sibling", "tui", cwd=target)
+        identity = self.manager_receipt(target)
+        # The external process ended; the saved SID remains valid.
+        self.facade("sibling", "tui", cwd=target)
+        self.assertEqual(self.manager_receipt(target), identity)
+        mode = target / ".fixture_stats_mode"
+        mode.write_text("error\n")
+        before = protected_inventory(target)
+        refused = self.facade("sibling", "tui", cwd=target, check=False)
+        self.assertEqual(refused.returncode, 7, refused.stderr)
+        self.assertIn("fixture session checker failed", refused.stderr)
+        self.assertEqual(protected_inventory(target), before)
+        mode.unlink()
+        receipt_path = target / ".planveyor.init_runs/by_sid" / identity[0] / "meta.json"
+        receipt_path.write_text("{invalid receipt")
+        before = protected_inventory(target)
+        refused = self.facade("sibling", "tui", cwd=target, check=False)
+        self.assertNotEqual(refused.returncode, 0)
+        self.assertEqual(protected_inventory(target), before)
+        self.assertEqual(len(self.events(target)), 3)
+        receipt_path.write_bytes(identity[1])
+        mode.write_text("missing\n")
+        self.facade("sibling", "tui", cwd=target)
+        current = self.manager_receipt(target)
+        self.assertNotEqual(current[0], identity[0])
+        events = self.events(target)
+        self.assertEqual(len(events), 5)
+        self.assertEqual(sum("resume" not in event["argv"] for event in events), 2)
+        self.assert_tui_payload(events[-1], reference)
+        self.assertIn(current[0], events[-1]["argv"])
+        self.assertFalse((target / ".planveyor.planqueue.json").exists())
+
+    def test_tui_cmd_architect_and_direct_policy_sequence_ignores_ambient(self):
+        target, reference = self.tui_target("tui-mode-sequence")
+        self.assertFalse((target / ".planveyor.session.manager").exists())
+        self.facade("sibling", "run", cwd=target)
+        identity = self.manager_receipt(target)
+        for action, ambient in (("tui", "human_explicit"), ("run", "native_existing")):
+            run([os.fspath(self.runtime / "bin/planveyor"), "--project", os.fspath(target), "sibling", action],
+                cwd=target, env=dict(self.env, PLANVEYOR_SIBLING_COMMIT_POLICY=ambient))
+        self.facade("sibling", "run", "--followups-capture-cycle-id", "33333333-3333-4333-8333-333333333333", cwd=target)
+        run([os.fspath(self.runtime / "bin/planveyor"), "--project", os.fspath(target), "planveyor_manager_collab_tui"],
+            cwd=target, env=dict(self.env, PLANVEYOR_SIBLING_COMMIT_POLICY="invalid"))
+        self.assertEqual(self.manager_receipt(target), identity)
+        events = self.events(target)
+        self.assertEqual(len(events), 6)
+        self.assertEqual(sum("resume" not in event["argv"] for event in events), 1)
+        for event, policy in zip(events, ("human_explicit", "human_explicit", "native_existing",
+                                          "human_explicit", "human_explicit", "native_existing")):
+            self.assert_policy(event, policy)
+        self.assert_init_event(events[0], target, "Manager", "human_explicit")
+        pre_status = self.current_status_line(target, reference)
+        self.assertTrue(pre_status.endswith("**Status:** Blocked"))
+        cycle = "33333333-3333-4333-8333-333333333333"
+        for index in (1, 3, 4):
+            event = events[index]
+            self.assert_payload_header(event, "Manager", "human_explicit", reference=reference,
+                                       pre_status=pre_status, cycle=cycle if index == 4 else None)
+            self.assertEqual(event["argv"][0], "exec")
+            self.assertEqual(event["argv"][-3:], ["resume", identity[0], event["payload"]])
+            self.assertEqual(event["stdin"], "")
+            self.assertEqual(event["payload"].rstrip().splitlines()[-1], "MANAGER_CMD=run " + reference)
+        for event in (events[2], events[5]):
+            self.assert_tui_payload(event, reference)
+            self.assert_payload_header(event, "Manager", "native_existing", reference=reference,
+                                       pre_status=pre_status)
+            self.assertEqual(event["argv"][-2:], [identity[0], event["payload"]])
+        plan = target / reference
+        plan.write_text(plan.read_text().replace("Blocked", "Architect initial draft"))
+        self.assertFalse((target / ".planveyor.session.architect").exists())
+        run([os.fspath(self.runtime / "bin/planveyor"), "--project", os.fspath(target), "sibling", "architect"],
+            cwd=target, env=dict(self.env, PLANVEYOR_SIBLING_COMMIT_POLICY="invalid"))
+        all_events = self.events(target)
+        self.assertEqual(all_events[:6], events)
+        architect_events = all_events[6:]
+        self.assertEqual(len(architect_events), 2)
+        self.assertEqual(sum("resume" not in event["argv"] for event in architect_events), 1)
+        architect_identity = self.native_receipt(target, "architect")
+        self.assertNotEqual(architect_identity[0], identity[0])
+        self.assert_init_event(architect_events[0], target, "Architect", "human_explicit")
+        architect_resume = architect_events[1]
+        architect_status = self.current_status_line(target, reference)
+        self.assertTrue(architect_status.endswith("**Status:** Architect initial draft"))
+        self.assert_payload_header(architect_resume, "Architect", "human_explicit", reference=reference,
+                                   pre_status=architect_status)
+        self.assertEqual(architect_resume["argv"][0], "exec")
+        self.assertEqual(architect_resume["argv"][-3:], ["resume", architect_identity[0], "-"])
+        self.assertEqual(architect_resume["stdin"], architect_resume["payload"])
+        self.assertEqual(self.native_receipt(target, "architect"), architect_identity)
+        self.assertEqual(self.manager_receipt(target), identity)
+        self.assertFalse((target / ".planveyor.planqueue.json").exists())
+
+    def test_tui_client_error_and_runtime_drift_preserve_native_outcome(self):
+        source = self.runtime / "scripts/sibling_runbook.py"
+        original = source.read_bytes()
+        for mode, expected_rc in (("error", 39), ("drift", 0), ("drift-error", 39)):
+            with self.subTest(mode=mode):
+                target, reference = self.tui_target("tui-native-outcome-" + mode)
+                (target / ".fixture_native_mode").write_text(mode)
+                before = protected_inventory(target)
+                try:
+                    result = self.facade("sibling", "tui", cwd=target, check=False)
+                    self.assertEqual(result.returncode, expected_rc, result.stderr)
+                    if mode.startswith("drift"):
+                        self.assertIn("runtime_changed_after_resume; manager_rc=" + str(expected_rc) + "; posthooks=skipped", result.stderr)
+                        self.assertNotIn("Plan status (post):", result.stderr)
+                        after = protected_inventory(target)
+                        self.assertEqual({name: body for name, body in after.items() if name.startswith(".planveyor.collab")},
+                                         {name: body for name, body in before.items() if name.startswith(".planveyor.collab")})
+                    else:
+                        self.assertIn("fixture permission/client failure", result.stderr)
+                    self.assertNotIn("План:", result.stdout)
+                    self.assertEqual(len(self.events(target)), 2)
+                    self.assert_tui_payload(self.events(target)[1], reference)
+                    self.assertEqual((target / reference).read_bytes(), before[reference])
+                    self.assertEqual((target / ".git/index").read_bytes(), before[".git/index"])
+                    self.assertEqual((target / ".git/HEAD").read_bytes(), before[".git/HEAD"])
+                    self.assertFalse((target / ".planveyor.planqueue.json").exists())
+                finally:
+                    # Only the disposable fake-client drift is restored.
+                    source.write_bytes(original)
 
     def test_actual_architect_cold_init_and_reused_resume_get_current_human_policy(self):
         target, reference = self.selected("policy-architect")
@@ -649,10 +1081,10 @@ class NativeSiblingCommitPolicyTests(unittest.TestCase):
                 self.assert_policy(self.events(target)[-1], "native_existing")
 
     def test_missing_mutable_and_invalid_sibling_selectors_refuse_before_child_or_answers(self):
-        original = "    local -r +x PLANVEYOR_SIBLING_COMMIT_POLICY=human_explicit || return 3\n"
+        original = '    local -r +x PLANVEYOR_SIBLING_COMMIT_POLICY="$sibling_commit_policy" || return 3\n'
         variants = {
             "missing": "",
-            "mutable": "    local +x PLANVEYOR_SIBLING_COMMIT_POLICY=human_explicit\n",
+            "mutable": '    local +x PLANVEYOR_SIBLING_COMMIT_POLICY="$sibling_commit_policy"\n',
             "invalid": "    local -r +x PLANVEYOR_SIBLING_COMMIT_POLICY=invalid || return 3\n",
         }
         self.assertEqual(git(self.runtime, "status", "--porcelain=v1"), "")
@@ -740,6 +1172,8 @@ _planveyor_prompt_file_for_role_phase() {
         for name, call, policy in (
             ("valid-human", "planveyor_sibling() { local -r +x PLANVEYOR_SIBLING_COMMIT_POLICY=human_explicit; "
              "_planveyor_role_prompt_body architect init; }; planveyor_sibling", "human_explicit"),
+            ("valid-native", "planveyor_sibling() { local -r +x PLANVEYOR_SIBLING_COMMIT_POLICY=native_existing; "
+             "_planveyor_role_prompt_body manager init; }; planveyor_sibling", "native_existing"),
             ("ambient-native", "export PLANVEYOR_SIBLING_COMMIT_POLICY=human_explicit; "
              "_planveyor_role_prompt_body architect init", "native_existing"),
         ):

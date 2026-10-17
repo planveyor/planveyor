@@ -388,8 +388,10 @@ def parser() -> argparse.ArgumentParser:
     answer = actions.add_parser("answer", help="сохранить фактический Owner ответ")
     answer.add_argument("question_id", nargs="?")
     answer.add_argument("--text", help="ваш ответ; без параметра читается stdin")
-    run = actions.add_parser("run", help="продолжить normal Manager для текущего plan")
+    run = actions.add_parser("run", help="один ход Manager; human_explicit, закрытие через close --commit")
     run.add_argument("--followups-capture-cycle-id", dest="cycle", help="явный existing cycle при восстановлении")
+    actions.add_parser("tui", help="открыть native Manager TUI; native_existing для текущего plan",
+                       description="Native Manager TUI с COMMIT_POLICY=native_existing; текущий plan выбирается через sibling plan.")
     close = actions.add_parser("close", help="показать точный набор или явно коммитить его")
     close.add_argument("--commit", action="store_true")
     close.add_argument("--message")
@@ -442,15 +444,22 @@ def main(argv: list[str] | None = None) -> int:
             handle_answer(context, args)
         elif args.action == "upgrade":
             handle_upgrade(context, args)
-        elif args.action in {"architect", "run"}:
+        elif args.action in {"architect", "run", "tui"}:
             # Executed by the shell adapter after this validation-only entry.
             reference, oracle = context.plan()
+            if args.action == "tui":
+                oracle = context.json_call("planveyor_plan_status_oracle", "--json",
+                                           "--manager-mode", "manager-collab", reference)
+                if oracle.get("manager_mode_admitted") is not True:
+                    context.fail("Текущий plan не допускает manager-collab.")
+                if oracle.get("owner_qna_readback_state") != "clean":
+                    context.fail("Сначала завершите canonical Owner Q&A текущего plan.")
             if args.action == "architect" and oracle["status_norm"] not in {
                 "architect initial draft", "architect draft", "ready for architect response",
                 "architect response", "ready for arch review", "architect arch review",
             }:
                 context.fail("Текущий status не принадлежит Architect; используйте planveyor sibling run.")
-            print(reference if args.action == "run" else oracle["status_norm"])
+            print(reference if args.action in {"run", "tui"} else oracle["status_norm"])
         else:
             from sibling_closeout import handle_close, handle_ready
             result = handle_close(context, args) if args.action == "close" else handle_ready(context, args)

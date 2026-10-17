@@ -1,0 +1,287 @@
+{
+  "run_id": "reviewer-code-risk-261017-104526-sibling-tui",
+  "lane_id": "reviewer_code_risk",
+  "runner_id": "codex",
+  "session_key": "reviewer_code_risk",
+  "sid": "N/A (why=private operator mapping is not published)",
+  "profile": "N/A (why=private operator mapping is not published)",
+  "model": "N/A (why=private operator mapping is not published)",
+  "reasoning_effort": "N/A (why=private operator mapping is not published)",
+  "prompt_file": "docs/tools/prompts/reviewer_status_driven.md",
+  "target_ref": "BUNDLE=current",
+  "coverage_domains": [
+    "correctness",
+    "tests quality",
+    "security/privacy",
+    "subprocess/timeouts",
+    "races/locks/atomicity",
+    "performance",
+    "observability",
+    "integrations",
+    "failure semantics"
+  ],
+  "findings": [],
+  "lane_status": "no_findings",
+  "no_findings_reason": "Независимо прочитаны exact seven-target diff и actual parser/policy/session/TUI producers, phase/header/body/receipt assertions и refusal/error/drift cases. Новых конкретных регрессий в risk domains не найдено; current protected bytes совпадают с executed V5, Q8 lifecycle delta квалифицирована отдельно.",
+  "limits": [
+    "Новый verify-full/repeat/equivalent full discovery запрещён Owner; будущая publication-wide проверка требует отдельного плана декомпозиции с учётом Opus и отдельного явного согласия до запуска. Новые preparation/origin/narrow/suites/doc-type runs из-за policy-only delta не выполнялись.",
+    "V5 actual run/sink/post-parity rc0 берутся из plan-resident native Coder Evidence 2026-10-17 12:57–12:59. Независимо прочитанные retained logs подтверждают counts/OK/no relevant skip, а current read-only hash/mode/HEAD/index/context check подтверждает применимость; это не новый behavioral execution.",
+    "Historical Make run_rc/sink_rc/post-parity=UNKNOWN; log SHA-256 61002d1388843eb7a66fd6d8a486b55f6ac831b65342ef131c85eb18f38b53ce, Ran3481/10 genuine non-Git skips/GREEN — log-only, skips не PASS. Test self-report 6ч19м16.460с, log interval 6ч19м29.011с, terminal wall UNKNOWN; historical daemon break/old failures/pre-recovery UNKNOWN сохранены.",
+    "Provider-free fixtures не доказывают live provider authentication, external permissions, five-handle liveness, semantic Done/commit или terminal docs closeout; эти outcomes не заявлены."
+  ],
+  "source_refs": [
+    "scripts/sibling_runbook.py:388",
+    "scripts/sibling_runbook.py:447",
+    "scripts/planveyor.zsh:2709",
+    "scripts/planveyor.zsh:17178",
+    "scripts/planveyor/role_runtime.zsh:6101",
+    "scripts/planveyor/session_init.zsh:549",
+    "scripts/planveyor/session_init.zsh:614",
+    "scripts/test_sibling_runbook.py:646",
+    "scripts/test_sibling_contract_docs.py:209",
+    "docs/plans/261015_2304_sibling_tui_native_entry.md::Evidence (V5 2026-10-17 12:57–12:59)"
+  ],
+  "delta": "Тонкий explicit TUI entry с native_existing; Architect/CMD human_explicit, resolver/admission/receipt guards и native outcome сохранены; семь implementation/doc targets неизменны после V5.",
+  "outcome": "Risk lane завершена без findings; synthesis, final review header и top-level status принадлежат contracts lane.",
+  "current": true,
+  "written_at": "2026-10-17T10:45:26Z",
+  "target_snapshot": {
+    "bundle_sha256": "139c87016fe6ae90ce8afedad59e4899e12ec92c414b10641db16d3156584ae0",
+    "code_draft": "docs/code_drafts/261015_2304_sibling_tui_native_entry__code_draft.md",
+    "files": [
+      {
+        "git_mode": "100644",
+        "path": "copier_template/AGENTS.md.jinja",
+        "sha256": "8316a52cfe3dd734d92179cf00a24609a84a71bb54640c5205e3f1afba87bc29",
+        "size_bytes": 4894
+      },
+      {
+        "git_mode": "100644",
+        "path": "docs/followups/release_backlog.md",
+        "sha256": "33543d1f0291037d7d5bf38e2842f8269db068ab13c1fad85c42d38e84f4adf1",
+        "size_bytes": 33379
+      },
+      {
+        "git_mode": "100644",
+        "path": "docs/release_backlog.md",
+        "sha256": "1481739f2f1dfb1356382076ceae0e35f9643086991049ffbe22e82b04bd3500",
+        "size_bytes": 44458
+      },
+      {
+        "git_mode": "100644",
+        "path": "scripts/planveyor.zsh",
+        "sha256": "2a87299feca71c3af5b8d23cbc566bbadf319c2e5bbac06ce04838300ba9e841",
+        "size_bytes": 817653
+      },
+      {
+        "git_mode": "100644",
+        "path": "scripts/sibling_runbook.py",
+        "sha256": "f00871db38dd2cd8cc0fc4b97954b046d836d01c9c6e54d0b3768992c7fcb812",
+        "size_bytes": 28473
+      },
+      {
+        "git_mode": "100644",
+        "path": "scripts/test_sibling_contract_docs.py",
+        "sha256": "e3cebfe32333a9c34fba0363676277900caa02719aa717538aacc7b83ae0ad54",
+        "size_bytes": 54970
+      },
+      {
+        "git_mode": "100644",
+        "path": "scripts/test_sibling_runbook.py",
+        "sha256": "3c3b63698c80b1cace56ada5e0f412da056f70116cb2e40c6d16a2d0e35d0ce6",
+        "size_bytes": 72078
+      }
+    ],
+    "hash_basis": "sha256 over canonical JSON (ensure_ascii=False, sort_keys=True, separators=(',', ':')) of hash_basis_payload; targets come from the primary code_draft_meta.targets, are normalized to repo-relative POSIX paths, sorted by path, and each file authenticates its bytes plus normalized git_mode (100755 iff the owner-execute bit is set, otherwise 100644)",
+    "hash_basis_payload": {
+      "algorithm": "sha256",
+      "files": [
+        {
+          "git_mode": "100644",
+          "path": "copier_template/AGENTS.md.jinja",
+          "sha256": "8316a52cfe3dd734d92179cf00a24609a84a71bb54640c5205e3f1afba87bc29",
+          "size_bytes": 4894
+        },
+        {
+          "git_mode": "100644",
+          "path": "docs/followups/release_backlog.md",
+          "sha256": "33543d1f0291037d7d5bf38e2842f8269db068ab13c1fad85c42d38e84f4adf1",
+          "size_bytes": 33379
+        },
+        {
+          "git_mode": "100644",
+          "path": "docs/release_backlog.md",
+          "sha256": "1481739f2f1dfb1356382076ceae0e35f9643086991049ffbe22e82b04bd3500",
+          "size_bytes": 44458
+        },
+        {
+          "git_mode": "100644",
+          "path": "scripts/planveyor.zsh",
+          "sha256": "2a87299feca71c3af5b8d23cbc566bbadf319c2e5bbac06ce04838300ba9e841",
+          "size_bytes": 817653
+        },
+        {
+          "git_mode": "100644",
+          "path": "scripts/sibling_runbook.py",
+          "sha256": "f00871db38dd2cd8cc0fc4b97954b046d836d01c9c6e54d0b3768992c7fcb812",
+          "size_bytes": 28473
+        },
+        {
+          "git_mode": "100644",
+          "path": "scripts/test_sibling_contract_docs.py",
+          "sha256": "e3cebfe32333a9c34fba0363676277900caa02719aa717538aacc7b83ae0ad54",
+          "size_bytes": 54970
+        },
+        {
+          "git_mode": "100644",
+          "path": "scripts/test_sibling_runbook.py",
+          "sha256": "3c3b63698c80b1cace56ada5e0f412da056f70116cb2e40c6d16a2d0e35d0ce6",
+          "size_bytes": 72078
+        }
+      ],
+      "schema_version": "review_target_snapshot.hash_basis.v2"
+    },
+    "plan": "docs/plans/261015_2304_sibling_tui_native_entry.md",
+    "schema_version": "review_target_snapshot.v2",
+    "target": "BUNDLE=current bundle_sha256=139c87016fe6ae90ce8afedad59e4899e12ec92c414b10641db16d3156584ae0",
+    "target_paths": [
+      "copier_template/AGENTS.md.jinja",
+      "docs/followups/release_backlog.md",
+      "docs/release_backlog.md",
+      "scripts/planveyor.zsh",
+      "scripts/sibling_runbook.py",
+      "scripts/test_sibling_contract_docs.py",
+      "scripts/test_sibling_runbook.py"
+    ],
+    "target_snapshot": {
+      "bundle_sha256": "139c87016fe6ae90ce8afedad59e4899e12ec92c414b10641db16d3156584ae0",
+      "target": "BUNDLE=current"
+    }
+  },
+  "target_snapshot_stdout": "{\n  \"bundle_sha256\": \"139c87016fe6ae90ce8afedad59e4899e12ec92c414b10641db16d3156584ae0\",\n  \"code_draft\": \"docs/code_drafts/261015_2304_sibling_tui_native_entry__code_draft.md\",\n  \"files\": [\n    {\n      \"git_mode\": \"100644\",\n      \"path\": \"copier_template/AGENTS.md.jinja\",\n      \"sha256\": \"8316a52cfe3dd734d92179cf00a24609a84a71bb54640c5205e3f1afba87bc29\",\n      \"size_bytes\": 4894\n    },\n    {\n      \"git_mode\": \"100644\",\n      \"path\": \"docs/followups/release_backlog.md\",\n      \"sha256\": \"33543d1f0291037d7d5bf38e2842f8269db068ab13c1fad85c42d38e84f4adf1\",\n      \"size_bytes\": 33379\n    },\n    {\n      \"git_mode\": \"100644\",\n      \"path\": \"docs/release_backlog.md\",\n      \"sha256\": \"1481739f2f1dfb1356382076ceae0e35f9643086991049ffbe22e82b04bd3500\",\n      \"size_bytes\": 44458\n    },\n    {\n      \"git_mode\": \"100644\",\n      \"path\": \"scripts/planveyor.zsh\",\n      \"sha256\": \"2a87299feca71c3af5b8d23cbc566bbadf319c2e5bbac06ce04838300ba9e841\",\n      \"size_bytes\": 817653\n    },\n    {\n      \"git_mode\": \"100644\",\n      \"path\": \"scripts/sibling_runbook.py\",\n      \"sha256\": \"f00871db38dd2cd8cc0fc4b97954b046d836d01c9c6e54d0b3768992c7fcb812\",\n      \"size_bytes\": 28473\n    },\n    {\n      \"git_mode\": \"100644\",\n      \"path\": \"scripts/test_sibling_contract_docs.py\",\n      \"sha256\": \"e3cebfe32333a9c34fba0363676277900caa02719aa717538aacc7b83ae0ad54\",\n      \"size_bytes\": 54970\n    },\n    {\n      \"git_mode\": \"100644\",\n      \"path\": \"scripts/test_sibling_runbook.py\",\n      \"sha256\": \"3c3b63698c80b1cace56ada5e0f412da056f70116cb2e40c6d16a2d0e35d0ce6\",\n      \"size_bytes\": 72078\n    }\n  ],\n  \"hash_basis\": \"sha256 over canonical JSON (ensure_ascii=False, sort_keys=True, separators=(',', ':')) of hash_basis_payload; targets come from the primary code_draft_meta.targets, are normalized to repo-relative POSIX paths, sorted by path, and each file authenticates its bytes plus normalized git_mode (100755 iff the owner-execute bit is set, otherwise 100644)\",\n  \"hash_basis_payload\": {\n    \"algorithm\": \"sha256\",\n    \"files\": [\n      {\n        \"git_mode\": \"100644\",\n        \"path\": \"copier_template/AGENTS.md.jinja\",\n        \"sha256\": \"8316a52cfe3dd734d92179cf00a24609a84a71bb54640c5205e3f1afba87bc29\",\n        \"size_bytes\": 4894\n      },\n      {\n        \"git_mode\": \"100644\",\n        \"path\": \"docs/followups/release_backlog.md\",\n        \"sha256\": \"33543d1f0291037d7d5bf38e2842f8269db068ab13c1fad85c42d38e84f4adf1\",\n        \"size_bytes\": 33379\n      },\n      {\n        \"git_mode\": \"100644\",\n        \"path\": \"docs/release_backlog.md\",\n        \"sha256\": \"1481739f2f1dfb1356382076ceae0e35f9643086991049ffbe22e82b04bd3500\",\n        \"size_bytes\": 44458\n      },\n      {\n        \"git_mode\": \"100644\",\n        \"path\": \"scripts/planveyor.zsh\",\n        \"sha256\": \"2a87299feca71c3af5b8d23cbc566bbadf319c2e5bbac06ce04838300ba9e841\",\n        \"size_bytes\": 817653\n      },\n      {\n        \"git_mode\": \"100644\",\n        \"path\": \"scripts/sibling_runbook.py\",\n        \"sha256\": \"f00871db38dd2cd8cc0fc4b97954b046d836d01c9c6e54d0b3768992c7fcb812\",\n        \"size_bytes\": 28473\n      },\n      {\n        \"git_mode\": \"100644\",\n        \"path\": \"scripts/test_sibling_contract_docs.py\",\n        \"sha256\": \"e3cebfe32333a9c34fba0363676277900caa02719aa717538aacc7b83ae0ad54\",\n        \"size_bytes\": 54970\n      },\n      {\n        \"git_mode\": \"100644\",\n        \"path\": \"scripts/test_sibling_runbook.py\",\n        \"sha256\": \"3c3b63698c80b1cace56ada5e0f412da056f70116cb2e40c6d16a2d0e35d0ce6\",\n        \"size_bytes\": 72078\n      }\n    ],\n    \"schema_version\": \"review_target_snapshot.hash_basis.v2\"\n  },\n  \"plan\": \"docs/plans/261015_2304_sibling_tui_native_entry.md\",\n  \"schema_version\": \"review_target_snapshot.v2\",\n  \"target\": \"BUNDLE=current bundle_sha256=139c87016fe6ae90ce8afedad59e4899e12ec92c414b10641db16d3156584ae0\",\n  \"target_paths\": [\n    \"copier_template/AGENTS.md.jinja\",\n    \"docs/followups/release_backlog.md\",\n    \"docs/release_backlog.md\",\n    \"scripts/planveyor.zsh\",\n    \"scripts/sibling_runbook.py\",\n    \"scripts/test_sibling_contract_docs.py\",\n    \"scripts/test_sibling_runbook.py\"\n  ],\n  \"target_snapshot\": {\n    \"bundle_sha256\": \"139c87016fe6ae90ce8afedad59e4899e12ec92c414b10641db16d3156584ae0\",\n    \"target\": \"BUNDLE=current\"\n  }\n}\n",
+  "evidence": {
+    "protected_bytes_readback": {
+      "state": "unchanged_v5_protected_bytes",
+      "source_head": "a6f8dcfe90cd9411310f5d8fcb3bd68b703ac854",
+      "fixture_head": "ca321cc33815c7ca3a9539e240ccb87aae2dd290",
+      "exact_patch_sha256": "dbca61393efbd68e32435e622bac256ffd4ade133334f25c96e7d94fa9cb8961",
+      "target_fingerprints": {
+        "scripts/sibling_runbook.py": {
+          "sha256": "f00871db38dd2cd8cc0fc4b97954b046d836d01c9c6e54d0b3768992c7fcb812",
+          "mode": 420
+        },
+        "scripts/planveyor.zsh": {
+          "sha256": "2a87299feca71c3af5b8d23cbc566bbadf319c2e5bbac06ce04838300ba9e841",
+          "mode": 420
+        },
+        "scripts/test_sibling_runbook.py": {
+          "sha256": "3c3b63698c80b1cace56ada5e0f412da056f70116cb2e40c6d16a2d0e35d0ce6",
+          "mode": 420
+        },
+        "scripts/test_sibling_contract_docs.py": {
+          "sha256": "e3cebfe32333a9c34fba0363676277900caa02719aa717538aacc7b83ae0ad54",
+          "mode": 420
+        },
+        "copier_template/AGENTS.md.jinja": {
+          "sha256": "8316a52cfe3dd734d92179cf00a24609a84a71bb54640c5205e3f1afba87bc29",
+          "mode": 420
+        },
+        "docs/release_backlog.md": {
+          "sha256": "1481739f2f1dfb1356382076ceae0e35f9643086991049ffbe22e82b04bd3500",
+          "mode": 420
+        },
+        "docs/followups/release_backlog.md": {
+          "sha256": "33543d1f0291037d7d5bf38e2842f8269db068ab13c1fad85c42d38e84f4adf1",
+          "mode": 420
+        }
+      },
+      "context_count": 24,
+      "readonly_dependency": {
+        "copy": {
+          "mode": 420,
+          "sha256": "cfa8b6d37d4bfa50f8136dbfd44ae0ad3245c80c57b666e0504978d97d13c40c"
+        },
+        "head": {
+          "mode": 420,
+          "sha256": "cfa8b6d37d4bfa50f8136dbfd44ae0ad3245c80c57b666e0504978d97d13c40c"
+        },
+        "source": {
+          "mode": 420,
+          "sha256": "cfa8b6d37d4bfa50f8136dbfd44ae0ad3245c80c57b666e0504978d97d13c40c"
+        }
+      },
+      "current_lifecycle": {
+        "docs/plans/261015_2304_sibling_tui_native_entry.md": {
+          "sha256": "1142d3b251c2d4435a62732236e1d4cb2af8bf2e7d1b7d56cfe6aca5293d65c1",
+          "mode": 420
+        },
+        "docs/code_drafts/261015_2304_sibling_tui_native_entry__code_draft.md": {
+          "sha256": "fb0e205a168f96709af9ae35a077e52b02eefce955068de30272543b4b3a3b8f",
+          "mode": 420
+        }
+      },
+      "historical_lifecycle": {
+        "docs/plans/261015_2304_sibling_tui_native_entry.md": {
+          "mode": 420,
+          "sha256": "7e5586969c18125936faddb4dc88d6e03981799f77a55e133a895d10a09fcd00"
+        },
+        "docs/code_drafts/261015_2304_sibling_tui_native_entry__code_draft.md": {
+          "mode": 420,
+          "sha256": "c56cf4a292ae0b3d0857160f887c6fb385b9ed7e7b495eeec2412a8db486cb34"
+        }
+      },
+      "original_index_head_status": "unchanged",
+      "copied_inventory33": "historical_exact_clean"
+    },
+    "current_short_gates": {
+      "plan_lint": 0,
+      "scoped_doc_lint": 0,
+      "bundle_preflight": {
+        "exit_code": 0,
+        "paths": 10,
+        "roots": 1,
+        "issues": 0,
+        "review_state": "PLANNED"
+      },
+      "exact_path_diff_check": 0,
+      "oracle": {
+        "exit_code": 0,
+        "status": "Ready for Review",
+        "manager_mode_admitted": true,
+        "owner_qna_readback_state": "clean",
+        "route_guard_triggered": false,
+        "machine_authority_decision_state": "frozen_confirmed",
+        "machine_authority_decision_ref_state": "valid"
+      },
+      "coder_censor": {
+        "exit_code": 0,
+        "state": "complete",
+        "reason_code": "complete_current_receipt",
+        "dispatch_id": "censor:coder:ec695e89-5f22-460b-a585-afc0d5b95573"
+      }
+    },
+    "reused_v5": {
+      "origin": "OK",
+      "narrow_named_tests": 6,
+      "narrow_count_each": 1,
+      "native_suite": 44,
+      "docs_suite": 23,
+      "bare_suite": 84,
+      "authority_suite": 38,
+      "relevant_skips": 0,
+      "reported_native_run_rc": 0,
+      "reported_sink_rc": 0,
+      "reported_post_parity_rc": 0,
+      "whole_t08_architect_tail": "actual reached by completed test assertions",
+      "candidate_doc_lint": "OK",
+      "candidate_typecheck": "no issues in 12 source files"
+    },
+    "commands_run": [
+      "\"$PLANVEYOR_RUNTIME_ROOT/bin/planveyor\" --project \"$PWD\" planveyor_runtime_py plan_lint.py docs/plans/261015_2304_sibling_tui_native_entry.md",
+      "PYBIN=\"$PYBIN\" bash ./scripts/run_doc_lint.sh --root docs/plans/261015_2304_sibling_tui_native_entry.md --root docs/code_drafts/261015_2304_sibling_tui_native_entry__code_draft.md --root copier_template/AGENTS.md.jinja --root docs/release_backlog.md --root docs/followups/release_backlog.md",
+      "\"$PLANVEYOR_RUNTIME_ROOT/bin/planveyor\" --project \"$PWD\" planveyor_plan_bundle --preflight docs/plans/261015_2304_sibling_tui_native_entry.md",
+      "\"$PLANVEYOR_RUNTIME_ROOT/bin/planveyor\" --project \"$PWD\" planveyor_review_target_snapshot docs/plans/261015_2304_sibling_tui_native_entry.md --current-bundle",
+      "git diff HEAD --check -- scripts/sibling_runbook.py scripts/planveyor.zsh scripts/test_sibling_runbook.py scripts/test_sibling_contract_docs.py copier_template/AGENTS.md.jinja docs/release_backlog.md docs/followups/release_backlog.md"
+    ]
+  }
+}

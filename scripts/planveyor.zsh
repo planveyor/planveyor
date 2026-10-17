@@ -2707,15 +2707,15 @@ _planveyor_role_prompt_body() {
   local -r PLANVEYOR_CTX_JSON="$_planveyor_ctx_json"
   local -r PLANVEYOR_CTX_STATE="$_planveyor_ctx_state"
   # Current sibling authority is a readonly local from the actual adapter
-  # call stack. Ambient/exported selectors never select human commit policy.
+  # call stack. Ambient/exported selectors never select commit policy.
   local commit_policy=native_existing
   if (( ${funcstack[(Ie)planveyor_sibling]} > 0 )); then
     if [[ ${(t)PLANVEYOR_SIBLING_COMMIT_POLICY-} != scalar-local-readonly ||
-          "${PLANVEYOR_SIBLING_COMMIT_POLICY:-}" != human_explicit ]]; then
+          "${PLANVEYOR_SIBLING_COMMIT_POLICY:-}" != (human_explicit|native_existing) ]]; then
       print -u2 -r -- 'planveyor sibling: invalid invocation commit policy'
       return 3
     fi
-    commit_policy=human_explicit
+    commit_policy="$PLANVEYOR_SIBLING_COMMIT_POLICY"
   fi
   role_id="$(_planveyor_normalize_role_id "${1:-}")" || return 1
   [[ -n "${phase_id//[[:space:]]/}" ]] || return 1
@@ -17106,6 +17106,9 @@ _planveyor_sibling_ensure_native_session() {
     }
     sid="$(planveyor_session "$role")" || return $?
     [[ "$sid" != '<SESSION_ID>' ]] || { print -u2 -r -- 'planveyor sibling: placeholder native session pointer'; return 3; }
+    [[ "$sid" != *[[:space:]]* ]] && _planveyor_is_uuid "$sid" || {
+      print -u2 -r -- 'planveyor sibling: invalid native session pointer'; return 3
+    }
     decision="$(_planveyor_py_any "$runtime/scripts/sibling_runbook.py" \
       --runtime-root "$runtime" --project-root "$project" --invocation-root "$invocation" \
       --internal session-check "$role" "$sid")" || return $?
@@ -17172,12 +17175,14 @@ planveyor_sibling() {
     _planveyor_plan_set_header_status "$project/$3" Done
     return $?
   fi
-  if [[ "$action" == architect || "$action" == run ]]; then
+  if [[ "$action" == architect || "$action" == run || "$action" == tui ]]; then
     # Invocation-local, unexported and readonly; validate before selection,
     # bootstrap/resume or any Owner-answer consumption.
-    local -r +x PLANVEYOR_SIBLING_COMMIT_POLICY=human_explicit || return 3
+    local sibling_commit_policy=human_explicit
+    [[ "$action" != tui ]] || sibling_commit_policy=native_existing
+    local -r +x PLANVEYOR_SIBLING_COMMIT_POLICY="$sibling_commit_policy" || return 3
     [[ ${(t)PLANVEYOR_SIBLING_COMMIT_POLICY-} == scalar-local-readonly &&
-       "$PLANVEYOR_SIBLING_COMMIT_POLICY" == human_explicit ]] || {
+       "$PLANVEYOR_SIBLING_COMMIT_POLICY" == "$sibling_commit_policy" ]] || {
       print -u2 -r -- 'planveyor sibling: invalid invocation commit policy'
       return 3
     }
@@ -17191,6 +17196,11 @@ planveyor_sibling() {
         'architect initial draft') planveyor_arch_initial || return $? ;;
         *) planveyor_arch || return $? ;;
       esac
+    elif [[ "$action" == tui ]]; then
+      # Preserve the native result, including its runtime-drift diagnostic.
+      # A later convenience readback must not run after the interactive call.
+      planveyor_manager_collab_tui
+      return $?
     else
       shift
       planveyor_manager_collab_cmd run "$selection" "$@" || return $?
