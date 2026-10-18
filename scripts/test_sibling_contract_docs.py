@@ -13,6 +13,7 @@ from pathlib import Path
 from unittest import mock
 
 import consumer_contract
+import oss_release_scan as scan_mod
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -124,10 +125,9 @@ SIBLING_DOC_NAMESPACE_CONTRACTS = {
     "docs/contract_notices": ("docs/playbooks/docs_architecture.md", "docs/contract_notices/<change-id>.json"),
 }
 
-# Owner-private model, host and repository names must not reach a sibling.
-# MinIO stays allowed: it names the public `s3_minio_sqlite` archive backend.
-# "GPT-6.1 Sol" stays allowed: review templates name it as the default lane model.
-PRIVATE_FINGERPRINT_RE = re.compile(r"\b(?:GLM|Grok|(?<!GPT-6\.1 )Sol|Astra|TrueNAS|[Rr]acex)\b")
+# Public model wording policy is independent of the external private dictionary.
+# MinIO and the exact default lane model spelling stay allowed.
+PUBLIC_MODEL_FINGERPRINT_RE = re.compile(r"\b(?:GLM|Grok|(?<!GPT-6\.1 )Sol|Astra)\b")
 
 # Directories whose delivered copy must hold exactly the same tracked file set as docs/<dir>.
 MIRRORED_TEMPLATE_DIRECTORIES = (
@@ -160,6 +160,24 @@ PARTIAL_TEMPLATE_DIRECTORIES = (
 TEMPLATE_RENDERED_ONLY = frozenset({".gitignore"})
 # Copier excludes these by default; macOS Finder may leave them in either tree.
 COPIER_EXCLUDED_NAMES = frozenset({".DS_Store"})
+
+
+def _delivered_fingerprint_offenders(root: Path, template_root: Path) -> list[str]:
+    rules = scan_mod.load_marker_rules(root)
+    offenders = []
+    for path in sorted(template_root.rglob("*")):
+        if not path.is_file() or path.name in COPIER_EXCLUDED_NAMES:
+            continue
+        relative = path.relative_to(template_root).as_posix()
+        text = path.read_text(encoding="utf-8")
+        for line_no, line in enumerate(text.splitlines(), start=1):
+            for match in PUBLIC_MODEL_FINGERPRINT_RE.finditer(line):
+                offenders.append(f"{scan_mod.safe_path(relative, rules)}:{line_no}: {match.group(0)}")
+        for finding in scan_mod.marker_findings(text, relative, "public-copy", rules):
+            offenders.append(f"{finding.path}:{finding.line}: {finding.category}: {finding.token}")
+    return offenders
+
+
 # Codex loads repository skills from .agents/skills; the engine keeps their
 # sources under skills/, so those template copies map to a different prefix.
 TEMPLATE_SOURCE_PREFIXES = ((".agents/skills/", "skills/"),)
@@ -988,16 +1006,61 @@ class SiblingContractDocsTest(unittest.TestCase):
             )
 
     def test_delivered_files_carry_no_private_fingerprints(self) -> None:
-        offenders = []
-        for path in sorted(TEMPLATE_ROOT.rglob("*")):
-            if not path.is_file() or path.name in COPIER_EXCLUDED_NAMES:
-                continue
-            relative = path.relative_to(TEMPLATE_ROOT).as_posix()
-            for line_no, line in enumerate(path.read_text(encoding="utf-8").splitlines(), start=1):
-                for match in PRIVATE_FINGERPRINT_RE.finditer(line):
-                    offenders.append(f"{relative}:{line_no}: {match.group(0)}")
+        offenders = _delivered_fingerprint_offenders(ROOT, TEMPLATE_ROOT)
         if offenders:
             self.fail("delivered files must use neutral wording:\n" + "\n".join(offenders))
+
+    def _fingerprint_fixture(self) -> tuple[Path, Path, dict[str, str]]:
+        temporary = tempfile.TemporaryDirectory(prefix="delivered_fingerprint_")
+        self.addCleanup(temporary.cleanup)
+        root = Path(temporary.name) / "project"
+        template = root / "copier_template"
+        template.mkdir(parents=True)
+        env = dict(os.environ)
+        env.pop(scan_mod.MARKER_ENV, None)
+        return root, template, env
+
+    def test_public_model_fingerprint_policy_and_exceptions_without_dictionary(self) -> None:
+        root, template, env = self._fingerprint_fixture()
+        (template / "positive.txt").write_text("GLM\nGrok\nSol\nAstra\nGPT-6.1X Sol\ngpt-6.1 Sol\n", encoding="utf-8")
+        (template / "negative.txt").write_text("GPT-6.1 Sol\nMinIO\nxGLMy Grokish Solace Astral\nglm grok sol astra\n", encoding="utf-8")
+        (template / ".DS_Store").write_text("GLM\n", encoding="utf-8")
+        with mock.patch.dict(os.environ, env, clear=True):
+            offenders = _delivered_fingerprint_offenders(root, template)
+        self.assertEqual(offenders, [f"positive.txt:{line}: {term}" for line, term in enumerate(("GLM", "Grok", "Sol", "Astra", "Sol", "Sol"), 1)])
+
+    def test_private_fingerprint_common_matcher_uses_synthetic_external_dictionary(self) -> None:
+        root, template, env = self._fingerprint_fixture()
+        marker = root.parent / "synthetic-markers.txt"
+        env[scan_mod.MARKER_ENV] = str(marker)
+        (template / "positive.txt").write_text('safe\nａｃｍｅ_private\n("acme_" +\n "private")\ndef example():\n    return ("acme_") + "private"\nawait ("acme_" + "private")\n', encoding="utf-8")
+        (template / "negative.txt").write_text("acmeXprivate\nacme\u200e_private\nreturn make('acme_') + 'private'\nawait ('acme_') + 'private'\nawait 'acme_' + 'private'\n", encoding="utf-8")
+        for dictionary in ("acme_private\n", "re:(?=acme_private)\n"):
+            marker.write_text(dictionary, encoding="utf-8")
+            with self.subTest(dictionary=dictionary), mock.patch.dict(os.environ, env, clear=True), mock.patch.object(scan_mod, "marker_findings", wraps=scan_mod.marker_findings) as common:
+                offenders = _delivered_fingerprint_offenders(root, template)
+            self.assertEqual(common.call_count, 2)
+            self.assertTrue(all(call.args[3] and call.args[3][0].category == "private_marker" for call in common.call_args_list))
+            self.assertEqual(offenders, [f"positive.txt:{line}: private_marker: <masked>" for line in (2, 3, 6, 7)])
+            self.assertNotIn("acme", "\n".join(offenders))
+
+    def test_private_fingerprint_dictionary_unset_and_invalid_input(self) -> None:
+        root, template, env = self._fingerprint_fixture()
+        (template / "sample.txt").write_text("GLM\nacme_private\n", encoding="utf-8")
+        with mock.patch.dict(os.environ, env, clear=True), mock.patch.object(scan_mod, "marker_findings", wraps=scan_mod.marker_findings) as common:
+            self.assertEqual(_delivered_fingerprint_offenders(root, template), ["sample.txt:1: GLM"])
+        self.assertEqual(common.call_count, 1)
+        self.assertEqual(common.call_args.args[3], ())
+        external = root.parent / "synthetic-markers.txt"
+        external.write_text("acme_private\n", encoding="utf-8")
+        inside = root / "inside-markers.txt"
+        inside.write_text("acme_private\n", encoding="utf-8")
+        link = root.parent / "marker-link.txt"
+        link.symlink_to(external)
+        for marker in (root.parent / "missing.txt", inside, link):
+            with self.subTest(marker=marker), mock.patch.dict(os.environ, {**env, scan_mod.MARKER_ENV: str(marker)}, clear=True):
+                with self.assertRaisesRegex(scan_mod.ScanInputError, "^scanner input is invalid$"):
+                    _delivered_fingerprint_offenders(root, template)
 
     def test_transmitted_instructions_use_external_facade_and_delivered_guide(self) -> None:
         for relative, text in self._delivered_markdown():

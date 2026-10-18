@@ -4,14 +4,18 @@ from __future__ import annotations
 """Read-only public safety scanner for tracked OSS release inputs."""
 
 import argparse
+import ast
+from bisect import bisect_right
 from dataclasses import asdict, dataclass
 import json
+import keyword
 import os
 from pathlib import Path, PurePosixPath
 import re
 import stat
 import subprocess
 import sys
+import unicodedata
 from typing import Iterable, Sequence
 
 
@@ -125,6 +129,424 @@ class MarkerRule:
     category: str
     pattern: re.Pattern[str]
     author_literal: str | None = None
+
+
+ZERO_WIDTH_POINTS = frozenset("\u200b\u200c\u200d\u2060\ufeff")
+ASCII_CASE_PAIR_RE = re.compile(r"\[([A-Za-z])([A-Za-z])\]")
+STRING_OPEN_RE = re.compile(r'''(?i)([rubf]{0,2})("""|\x27\x27\x27|"|\x27)''')
+
+
+@dataclass(frozen=True)
+class _SourceView:
+    text: str
+    spans: tuple[tuple[int, int], ...]
+
+
+@dataclass(frozen=True)
+class _StringPart:
+    kind: str
+    start: int
+    end: int
+    view: _SourceView | None = None
+
+
+def _canonical_literal(value: str) -> str:
+    return "".join(char for char in unicodedata.normalize("NFKC", value) if char not in ZERO_WIDTH_POINTS)
+
+
+def _join_views(parts: Sequence[_SourceView]) -> _SourceView:
+    return _SourceView("".join(part.text for part in parts), tuple(span for part in parts for span in part.spans))
+
+
+def _canonical_view(view: _SourceView) -> _SourceView:
+    # NFKD first exposes both compatibility expansions and combining marks.
+    # Canonical ordering and NFC composition then retain every contributor.
+    decomposed: list[tuple[str, tuple[int, int]]] = []
+    marks: list[tuple[str, tuple[int, int]]] = []
+    for char, span in zip(view.text, view.spans):
+        for piece in unicodedata.normalize("NFKD", char):
+            if unicodedata.combining(piece):
+                marks.append((piece, span))
+            else:
+                decomposed.extend(sorted(marks, key=lambda item: unicodedata.combining(item[0])))
+                marks = []
+                decomposed.append((piece, span))
+    decomposed.extend(sorted(marks, key=lambda item: unicodedata.combining(item[0])))
+    composed: list[tuple[str, tuple[int, int]]] = []
+    starter: int | None = None
+    last_class = 0
+    for char, span in decomposed:
+        char_class = unicodedata.combining(char)
+        if starter is not None and (last_class < char_class or last_class == 0):
+            old, old_span = composed[starter]
+            combined = unicodedata.normalize("NFC", old + char)
+            if len(combined) == 1:
+                composed[starter] = (combined, (min(old_span[0], span[0]), max(old_span[1], span[1])))
+                continue
+        if char_class == 0:
+            starter = len(composed)
+        composed.append((char, span))
+        last_class = char_class
+    if "".join(char for char, _ in composed) != unicodedata.normalize("NFKC", view.text):
+        raise ScanInputError("scanner input is invalid")
+    filtered = [(char, span) for char, span in composed if char not in ZERO_WIDTH_POINTS]
+    text = "".join(char for char, _ in filtered)
+    result: list[tuple[str, tuple[int, int]]] = []
+    cursor = 0
+    while cursor < len(text):
+        pair = ASCII_CASE_PAIR_RE.match(text, cursor)
+        if pair and pair[1] != pair[2] and pair[1].lower() == pair[2].lower():
+            spans = [span for _, span in filtered[cursor : pair.end()]]
+            result.append((pair[1].lower(), (min(start for start, _ in spans), max(end for _, end in spans))))
+            cursor = pair.end()
+        else:
+            result.append(filtered[cursor])
+            cursor += 1
+    return _SourceView("".join(char for char, _ in result), tuple(span for _, span in result))
+
+
+def _decode_string_token(text: str, start: int, end: int, prefix: str, quote: str) -> _SourceView | None:
+    if prefix.lower() not in {"", "u", "r"}:
+        return None
+    body_start = start + len(prefix) + len(quote)
+    body_end = end - len(quote)
+    pieces: list[tuple[str, tuple[int, int]]] = []
+    cursor = body_start
+    simple = {"\\": "\\", "'": "'", '"': '"', "a": "\a", "b": "\b", "f": "\f", "n": "\n", "r": "\r", "t": "\t", "v": "\v"}
+    while cursor < body_end:
+        char = text[cursor]
+        if char != "\\" or prefix.lower() == "r":
+            end_char = cursor + 1
+            if char == "\r":
+                if text[end_char : end_char + 1] == "\n":
+                    end_char += 1
+                char = "\n"
+            pieces.append((char, (cursor, end_char)))
+            cursor = end_char
+            continue
+        begin = cursor
+        cursor += 1
+        if cursor >= body_end:
+            return None
+        code = text[cursor]
+        cursor += 1
+        if code in "\r\n":
+            if code == "\r" and text[cursor : cursor + 1] == "\n":
+                cursor += 1
+            continue
+        if code in simple:
+            value = simple[code]
+        elif code in "01234567":
+            while cursor < min(begin + 4, body_end) and text[cursor] in "01234567":
+                cursor += 1
+            value = chr(int(text[begin + 1 : cursor], 8))
+        elif code in "xuU":
+            count = {"x": 2, "u": 4, "U": 8}[code]
+            digits = text[cursor : cursor + count]
+            if len(digits) != count or not re.fullmatch(r"[0-9a-fA-F]+", digits) or cursor + count > body_end:
+                return None
+            try:
+                value = chr(int(digits, 16))
+            except ValueError:
+                return None
+            cursor += count
+        elif code == "N" and text[cursor : cursor + 1] == "{":
+            close = text.find("}", cursor + 1, body_end)
+            if close < 0:
+                return None
+            try:
+                value = unicodedata.lookup(text[cursor + 1 : close])
+            except KeyError:
+                return None
+            cursor = close + 1
+        else:
+            return None
+        pieces.extend((piece, (begin, cursor)) for piece in value)
+    try:
+        # This is exactly one lexically recognized scalar token, never an expression.
+        value = ast.literal_eval(text[start:end])
+    except (SyntaxError, ValueError, UnicodeError):
+        return None
+    if not isinstance(value, str) or value != "".join(char for char, _ in pieces):
+        return None
+    return _SourceView(value, tuple(span for _, span in pieces))
+
+
+def _string_parts(text: str) -> list[_StringPart]:
+    parts: list[_StringPart] = []
+    cursor = 0
+    while cursor < len(text):
+        start = cursor
+        opener = STRING_OPEN_RE.match(text, cursor)
+        if opener:
+            prefix, quote = opener.groups()
+            permitted = not (start and (text[start - 1].isalnum() or text[start - 1] == "_"))
+            cursor = opener.end()
+            closed = False
+            while cursor < len(text):
+                if text.startswith(quote, cursor):
+                    cursor += len(quote)
+                    closed = True
+                    break
+                if text[cursor] == "\\":
+                    cursor += 3 if text[cursor + 1 : cursor + 3] == "\r\n" else 2
+                elif len(quote) == 1 and text[cursor] in "\r\n":
+                    break
+                else:
+                    cursor += 1
+            cursor = min(cursor, len(text))
+            view = _decode_string_token(text, start, cursor, prefix, quote) if permitted and closed else None
+            parts.append(_StringPart("string" if view is not None else "boundary", start, cursor, view))
+            continue
+        char = text[cursor]
+        if char == "\\" and text[cursor + 1 : cursor + 2] in {"\n", "\r"}:
+            cursor += 2
+            if text[cursor - 1] == "\r" and text[cursor : cursor + 1] == "\n":
+                cursor += 1
+            kind = "gap"
+        elif char in "\r\n":
+            cursor += 1
+            kind = "newline"
+        elif char.isspace():
+            cursor += 1
+            kind = "gap"
+        elif char == "#":
+            cursor = text.find("\n", cursor)
+            if cursor < 0:
+                cursor = len(text)
+            kind = "boundary"
+        elif char.isalnum() or char == "_":
+            cursor += 1
+            while cursor < len(text) and (text[cursor].isalnum() or text[cursor] == "_"):
+                cursor += 1
+            kind = "boundary"
+        else:
+            cursor += 1
+            kind = {"(": "open", ")": "close", "+": "plus"}.get(char, "boundary")
+        parts.append(_StringPart(kind, start, cursor))
+    return parts
+
+
+def _literal_views(text: str) -> list[_SourceView]:
+    parts = _string_parts(text)
+    pairs: dict[int, int] = {}
+    stack: list[int] = []
+    call_opens: set[int] = set()
+    await_strings: set[int] = set()
+    previous: _StringPart | None = None
+    previous_is_keyword = False
+    previous_is_await = False
+    last_boundary = -1
+    for index, part in enumerate(parts):
+        if part.kind == "gap":
+            continue
+        if part.kind == "newline":
+            if not stack:
+                previous = None
+                previous_is_keyword = False
+                previous_is_await = False
+            continue
+        if part.kind == "string" and previous_is_await:
+            await_strings.add(index)
+        if part.kind == "open":
+            # A callable operand is a dynamic boundary. Its constant arguments
+            # remain inspectable, but its closing parenthesis cannot join an Add.
+            if previous is not None and (
+                previous.kind in {"string", "close"}
+                or (previous.kind == "boundary" and not previous_is_keyword and (
+                    text[previous.end - 1].isalnum()
+                    or text[previous.end - 1] in "_]}\"'"
+                ))
+            ):
+                call_opens.add(index)
+            stack.append(index)
+            if len(stack) > 128:
+                raise ScanInputError("scanner input is invalid")
+        elif part.kind == "close" and stack:
+            pairs[stack.pop()] = index
+        if part.kind == "boundary":
+            last_boundary = index
+        # Await consumes one primary, so its result cannot join an outer Add.
+        # Its inner constants remain inspectable, as do ordinary call arguments.
+        word = text[part.start : part.end] if part.kind == "boundary" else ""
+        previous_is_await = word == "await" and (previous is None or text[previous.start : previous.end] != ".")
+        previous_is_keyword = (
+            keyword.iskeyword(word) and word not in {"False", "None", "True", "await"}
+            and (previous is None or text[previous.start : previous.end] != ".")
+        )
+        previous = part
+    incomplete_start = min((index for index in stack if index >= last_boundary), default=len(parts))
+    # One range pass replaces searching every pair separately for every fragment.
+    nesting_delta = [0] * (len(parts) + 1)
+    for start, end in pairs.items():
+        nesting_delta[start + 1] += 1
+        nesting_delta[end] -= 1
+    nested_at = []
+    level = 0
+    for delta in nesting_delta[:-1]:
+        level += delta
+        nested_at.append(level > 0)
+
+    def skip(index: int, nested: bool) -> int:
+        while index < len(parts) and (parts[index].kind == "gap" or (nested and parts[index].kind == "newline")):
+            index += 1
+        return index
+
+    def atom(index: int, nested: bool, depth: int) -> tuple[_SourceView, int] | None:
+        if depth > 128:
+            raise ScanInputError("scanner input is invalid")
+        index = skip(index, nested)
+        if index >= len(parts):
+            return None
+        if parts[index].kind == "open":
+            if index not in pairs or index in call_opens:
+                return None
+            parsed = expression(index + 1, True, depth + 1)
+            if parsed is None:
+                return None
+            view, end = parsed
+            end = skip(end, True)
+            return (view, end + 1) if end == pairs[index] else None
+        if parts[index].kind != "string":
+            return None
+        values = []
+        while index < len(parts) and parts[index].kind == "string":
+            values.append(parts[index].view)
+            end = index + 1
+            index = skip(end, nested)
+        return _join_views(values), end
+
+    failed_expressions: set[tuple[int, bool]] = set()
+
+    def expression(index: int, nested: bool, depth: int) -> tuple[_SourceView, int] | None:
+        index = skip(index, nested)
+        if (index, nested) in failed_expressions:
+            return None
+        values = []
+        suffix_starts: list[tuple[int, bool]] = []
+        while True:
+            parsed = atom(index, nested, depth)
+            if parsed is None:
+                # Every same-level constant suffix reaches this same boundary.
+                # Inner group/argument starts remain independently inspectable.
+                failed_expressions.update(suffix_starts)
+                failed_expressions.add((index, nested))
+                return None
+            view, end = parsed
+            if parts[index].kind == "string":
+                suffix_starts.extend(
+                    (candidate, nested) for candidate in range(index, end)
+                    if parts[candidate].kind == "string"
+                )
+            else:
+                suffix_starts.append((index, nested))
+            values.append(view)
+            next_index = skip(end, nested)
+            if next_index >= len(parts) or parts[next_index].kind != "plus":
+                return _join_views(values), end
+            index = skip(next_index + 1, nested)
+
+    views = []
+    index = 0
+    while index < len(parts):
+        if parts[index].kind not in {"string", "open"} or index > incomplete_start:
+            index += 1
+            continue
+        parsed = atom(index, nested_at[index], 0) if index in await_strings else expression(index, nested_at[index], 0)
+        if parsed is None:
+            index += 1
+            continue
+        view, index = parsed
+        views.append(view)
+    return views
+
+
+def _marker_matches(text: str, rel: str, rules: Sequence[MarkerRule], source_kind: str) -> list[tuple[int, int, str]]:
+    if source_kind not in {"content", "path", "metadata"}:
+        raise ScanInputError("scanner input is invalid")
+    if not rules:
+        return []
+    try:
+        raw = _SourceView(text, tuple((index, index + 1) for index in range(len(text))))
+        candidates = [raw, _canonical_view(raw)]
+        if source_kind != "path":
+            for view in _literal_views(text):
+                candidates.extend((view, _canonical_view(view)))
+        author_starts: list[int] = []
+        author_lines: list[str] = []
+        if any(rule.author_literal is not None for rule in rules):
+            offset = 0
+            for line in text.splitlines(keepends=True):
+                author_starts.append(offset)
+                author_lines.append((line.splitlines() or [""])[0])
+                offset += len(line)
+        found: set[tuple[int, int, str]] = set()
+        raw_zero_origins: set[tuple[int, int]] = set()
+        for view in candidates:
+            offset = 0
+            lines = [view.text] if source_kind == "path" else view.text.splitlines(keepends=True)
+            for line in lines:
+                logical_line = line if source_kind == "path" else (line.splitlines() or [""])[0]
+                for rule in rules:
+                    for match in rule.pattern.finditer(logical_line):
+                        spans = view.spans[offset + match.start() : offset + match.end()]
+                        if spans:
+                            start = min(begin for begin, _ in spans)
+                            end = max(finish for _, finish in spans)
+                        else:
+                            # Contextual zero-width regexes have a source boundary,
+                            # even though no character contributes a nonempty span.
+                            boundary = offset + match.start()
+                            right = (
+                                view.spans[boundary][0] if boundary < len(view.spans)
+                                else view.spans[-1][1] if view.spans else 0
+                            )
+                            left = view.spans[boundary - 1][1] if boundary else right
+                            if view is raw:
+                                start = right
+                                raw_zero_origins.add((id(rule), start))
+                            elif (id(rule), left) in raw_zero_origins:
+                                start = left
+                            elif (id(rule), right) in raw_zero_origins:
+                                start = right
+                            elif left != right and (prefix_match := rule.pattern.match(
+                                logical_line, match.start(), match.start()
+                            )) is not None and prefix_match.end() == match.start():
+                                # Prefix-supported matches stay after their left
+                                # contributor across removed text or token gaps.
+                                start = left
+                            else:
+                                start = right
+                            end = start
+                        if rule.author_literal is not None:
+                            row = bisect_right(author_starts, start) - 1
+                            raw_start, raw_line = author_starts[row], author_lines[row]
+                            if end <= raw_start + len(raw_line) and _allowed_author_identity(
+                                rule, rel, raw_line, start - raw_start, end - raw_start
+                            ):
+                                continue
+                        found.add((start, end, rule.category))
+                offset += len(line)
+        return sorted(found)
+    except ScanInputError:
+        raise
+    except Exception as exc:
+        raise ScanInputError("scanner input is invalid") from exc
+
+
+def marker_findings(text: str, rel: str, scope: str, rules: Sequence[MarkerRule], *, source_kind: str = "content") -> list[Finding]:
+    """Match only externally supplied rules, retaining original physical origins."""
+    starts = [0]
+    offset = 0
+    for line in text.splitlines(keepends=True):
+        offset += len(line)
+        # EOF is not an additional physical line for a zero-width match.
+        if offset < len(text):
+            starts.append(offset)
+    return [
+        _finding(rel, bisect_right(starts, start) if source_kind == "content" else 0, category, scope, rules)
+        for start, _end, category in _marker_matches(text, rel, rules, source_kind)
+    ]
 
 
 def is_under(path: str, parents: Iterable[str]) -> bool:
@@ -245,13 +667,16 @@ def _require_regular_file(path: Path) -> None:
         _raise_input_error()
 
 
-def literal_pattern(value: str) -> re.Pattern[str]:
+def literal_pattern(value: str, *, short_name: bool = True) -> re.Pattern[str]:
+    value = _canonical_literal(value)
     if not value or not value.strip():
         _raise_input_error()
     pieces = re.split(r"[-_. ]+", value)
     expression = r"[-_ .]?".join(re.escape(piece) for piece in pieces)
     if not expression:
         _raise_input_error()
+    if short_name and re.fullmatch(r"\w{1,4}", value):
+        expression = rf"(?<!\w){expression}(?!\w)"
     try:
         return re.compile(expression, re.I)
     except re.error as exc:  # pragma: no cover - escaped values cannot fail
@@ -259,6 +684,7 @@ def literal_pattern(value: str) -> re.Pattern[str]:
 
 
 def author_pattern(value: str) -> re.Pattern[str]:
+    value = _canonical_literal(value)
     if not value or not value.strip() or value != value.strip():
         _raise_input_error()
     try:
@@ -293,7 +719,7 @@ def load_marker_rules(root: Path) -> tuple[MarkerRule, ...]:
             continue
         if entry.startswith("path:"):
             payload = entry[len("path:") :]
-            rules.append(MarkerRule("personal_path", literal_pattern(payload)))
+            rules.append(MarkerRule("personal_path", literal_pattern(payload, short_name=False)))
             continue
         if entry.startswith("re:"):
             payload = entry[len("re:") :]
@@ -427,10 +853,13 @@ def archive_inventory(root: Path, manifest: Path, scope: str) -> tuple[list[str]
 
 
 def _matches_for_path_redaction(rules: Sequence[MarkerRule]) -> tuple[re.Pattern[str], ...]:
-    return tuple(pattern for _, pattern in GENERIC_RULES) + tuple(rule.pattern for rule in rules) + THIRD_PARTY_DUMP_PATTERNS
+    del rules
+    return tuple(pattern for _, pattern in GENERIC_RULES) + THIRD_PARTY_DUMP_PATTERNS
 
 
 def safe_path(rel: str, rules: Sequence[MarkerRule]) -> str:
+    if _marker_matches(rel, rel, rules, "path"):
+        return MASKED_TOKEN
     result = rel
     for pattern in _matches_for_path_redaction(rules):
         result = pattern.sub(MASKED_TOKEN, result)
@@ -454,12 +883,12 @@ def _allowed_security_contact(rel: str, line_no: int, category: str, value: str)
     return category == "email" and rel in SECURITY_CONTACT_PATHS and line_no > 0 and value == SANCTIONED_SECURITY_CONTACT
 
 
-def _allowed_author_identity(rule: MarkerRule, rel: str, line: str, match: re.Match[str]) -> bool:
+def _allowed_author_identity(rule: MarkerRule, rel: str, line: str, start: int, end: int) -> bool:
     if rule.author_literal is None:
         return False
-    value = match.group(0)
-    left = line[match.start() - 1 : match.start()]
-    right = line[match.end() : match.end() + 1]
+    value = line[start:end]
+    left = line[start - 1 : start]
+    right = line[end : end + 1]
     return (
         rel in {"LICENSE", "NOTICE"}
         and LEGAL_ATTRIBUTION_RE.search(line) is not None
@@ -490,16 +919,12 @@ def _line_findings(line: str, rel: str, line_no: int, scope: str, rules: Sequenc
     for pattern in THIRD_PARTY_DUMP_PATTERNS:
         for _match in pattern.finditer(line):
             findings.append(_finding(rel, line_no, "third_party_prompt_dump", scope, rules))
-    for rule in rules:
-        for match in rule.pattern.finditer(line):
-            if rule.category == "owner_identity" and _allowed_author_identity(rule, rel, line, match):
-                continue
-            findings.append(_finding(rel, line_no, rule.category, scope, rules))
     return findings
 
 
 def _path_findings(rel: str, scope: str, rules: Sequence[MarkerRule]) -> list[Finding]:
     findings = _line_findings(rel, rel, 0, scope, rules)
+    findings.extend(marker_findings(rel, rel, scope, rules, source_kind="path"))
     if THIRD_PARTY_SOURCE_RE.search(rel):
         findings.append(_finding(rel, 0, "third_party_source_path", scope, rules))
     return findings
@@ -569,6 +994,7 @@ def scan(root: Path, scope: str, *, archive_manifest: Path | None = None) -> lis
         for value in manifest_metadata.get(rel, ()):
             for line in value.splitlines() or [value]:
                 findings.extend(_line_findings(line, rel, 0, scope, rules))
+            findings.extend(marker_findings(value, rel, scope, rules, source_kind="metadata"))
         findings.extend(_path_findings(rel, scope, rules))
         text = _read_tracked_content(root, rel, tracked, scope)
         if text is None:
@@ -576,6 +1002,7 @@ def scan(root: Path, scope: str, *, archive_manifest: Path | None = None) -> lis
             continue
         for line_no, line in enumerate(text.splitlines(), start=1):
             findings.extend(_line_findings(line, rel, line_no, scope, rules))
+        findings.extend(marker_findings(text, rel, scope, rules))
     return findings
 
 

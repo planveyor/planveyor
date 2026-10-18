@@ -171,6 +171,201 @@ class OssReleaseScanTests(unittest.TestCase):
             "sanitization_status": "pending",
         }
 
+    def synthetic_rules(self, content: str = "acme_private\n") -> tuple[scan_mod.MarkerRule, ...]:
+        root = self.make_repo()
+        marker = self.external_markers(root, content)
+        self.addCleanup(marker.unlink, missing_ok=True)
+        with mock.patch.dict(os.environ, {scan_mod.MARKER_ENV: str(marker)}):
+            return scan_mod.load_marker_rules(root)
+
+    def test_marker_normalization_nfkc_and_zero_width(self) -> None:
+        rules = self.synthetic_rules()
+        fullwidth = "".join(chr(ord(char) + 0xFEE0) for char in "acme_private")
+        positives = [fullwidth] + ["acme" + point + "_private" for point in "\u200b\u200c\u200d\u2060\ufeff"]
+        for value in positives:
+            with self.subTest(value=value):
+                self.assertEqual(len(scan_mod.marker_findings(value, "sample.txt", "public-copy", rules)), 1)
+        for value in ("acme\u200e_private", "acmeXprivate", "aсme_private"):
+            self.assertEqual(scan_mod.marker_findings(value, "sample.txt", "public-copy", rules), [])
+        canonical_dictionary = self.synthetic_rules(fullwidth + "\n")
+        self.assertEqual(len(scan_mod.marker_findings("acme_private", "sample.txt", "public-copy", canonical_dictionary)), 1)
+        generic_variant = "".join(chr(ord(char) + 0xFEE0) for char in generic_home())
+        self.assertEqual(scan_mod._line_findings(generic_variant, "sample.txt", 1, "public-copy", ()), [])
+
+    def test_marker_normalization_ascii_case_pairs_only(self) -> None:
+        rules = self.synthetic_rules()
+        for value in ("[Aa]cme_private", "[aA]cme_private", "[Aa][Cc]me_private"):
+            self.assertEqual(len(scan_mod.marker_findings(value, "sample.txt", "public-copy", rules)), 1)
+        for value in ("[ab]cme_private", "[a-z]cme_private", "(a)cme_private", "[aa]cme_private", "[Aa]+cme_private"):
+            self.assertEqual(scan_mod.marker_findings(value, "sample.txt", "public-copy", rules), [])
+
+    def test_marker_constant_literal_fragments_and_boundaries(self) -> None:
+        rules = self.synthetic_rules()
+        positives = (
+            '"acme_private"', r'"\x61cme_private"', "u'acme_' + r'private'",
+            "'acme_' 'private'", "('acme_'\n 'private')",
+            "('acme_' +\n ('private'))", "'acme_' \\\n 'private'",
+            '"""acme_""" + """private"""',
+            '"acme_\\\r\nprivate"',
+            "return ('acme_') + 'private'", "return (('acme_')) + 'private'",
+            "yield ('acme_') + 'private'",
+            "if ('acme_') + 'private': pass", "not ('acme_') + 'private'",
+        )
+        for text in positives:
+            with self.subTest(text=text):
+                self.assertEqual(len(scan_mod.marker_findings(text, "sample.txt", "public-copy", rules)), 1)
+        for text, expected_line in (
+            ("def example():\n    return ('acme_') + 'private'", 2),
+            ('def example():\n    return ("\\x61cme_") + "private"', 2),
+            ("def example():\n    return (\n        'acme_' +\n        'private'\n    )", 3),
+        ):
+            with self.subTest(keyword_source_line=text):
+                self.assertEqual([item.line for item in scan_mod.marker_findings(text, "sample.txt", "public-copy", rules)], [expected_line])
+        for text in ("'acme_'\n'private'", "'acme_'; 'private'", "('acme_' # stop\n 'private')", "('acme_' + 'private'", "'acme_' +"):
+            with self.subTest(text=text):
+                self.assertEqual(scan_mod.marker_findings(text, "sample.txt", "public-copy", rules), [])
+
+    def test_marker_dynamic_and_unsupported_fragments_are_not_evaluated(self) -> None:
+        rules = self.synthetic_rules()
+        negatives = (
+            "'acme_' + value + 'private'", "make('acme_') + 'private'",
+            "obj.acme_ + 'private'", "parts['acme_'] + 'private'",
+            "'acme_' * 2 + 'private'", "'%sprivate' % 'acme_'",
+            "''.join(['acme_', 'private'])", 'f"acme_{value}"',
+            r'b"\x61cme_private"', r'f"\x61cme_private{value}"', r'"\q\x61cme_private"',
+            "return make('acme_') + 'private'", "yield make('acme_') + 'private'",
+            "obj.return('acme_') + 'private'", "return_value('acme_') + 'private'",
+            "match('acme_') + 'private'", "None('acme_') + 'private'",
+            "await ('acme_') + 'private'", "await 'acme_' + 'private'",
+            "await (('acme_')) + 'private'", "(await ('acme_')) + 'private'",
+            "return await ('acme_') + 'private'", "not await ('acme_') + 'private'",
+        )
+        for text in negatives:
+            with self.subTest(text=text):
+                self.assertEqual(scan_mod.marker_findings(text, "sample.txt", "public-copy", rules), [])
+        with mock.patch.object(scan_mod.ast, "literal_eval", wraps=scan_mod.ast.literal_eval) as scalar:
+            findings = scan_mod.marker_findings(r'call("\x61cme_private")', "sample.txt", "public-copy", rules)
+        self.assertEqual(len(findings), 1)
+        self.assertTrue(scalar.call_args_list)
+        self.assertTrue(all(call.args == (r'"\x61cme_private"',) for call in scalar.call_args_list))
+        operands = 48
+        for separator in (" + ", " "):
+            chain = separator.join(["'safe'"] * operands) + " + value"
+            with self.subTest(separator=separator), mock.patch.object(scan_mod, "_join_views", wraps=scan_mod._join_views) as joined:
+                self.assertEqual(scan_mod.marker_findings(chain, "sample.txt", "public-copy", rules), [])
+            joined_characters = sum(len(view.text) for call in joined.call_args_list for view in call.args[0])
+            self.assertLessEqual(joined_characters, 8 * operands)
+        for text in (
+            "('acme_' + 'private') + value", r'call(("\x61cme_private")) + value',
+            "await ('acme_' + 'private')", "await (('acme_' + 'private'))",
+            "await 'acme_' 'private'", r'await "\x61cme_private"',
+        ):
+            self.assertEqual(len(scan_mod.marker_findings(text, "sample.txt", "public-copy", rules)), 1)
+
+    def test_marker_source_lines_spans_and_duplicate_views(self) -> None:
+        rules = self.synthetic_rules()
+        late = '"safe" + (\n "\\x61cme_"\n "private"\n)'
+        self.assertEqual([item.line for item in scan_mod.marker_findings(late, "sample.txt", "public-copy", rules)], [2])
+        for text in ('"""safe\nacme_private"""', '(\n "\\x61cme_private"\n)'):
+            self.assertEqual([item.line for item in scan_mod.marker_findings(text, "sample.txt", "public-copy", rules)], [2])
+        combined = self.synthetic_rules("å_private\n")
+        text = '("safe" +\n "A" +\n "\\u030a_private")'
+        self.assertEqual([item.line for item in scan_mod.marker_findings(text, "sample.txt", "public-copy", combined)], [2])
+        self.assertEqual(len(scan_mod.marker_findings('"acme_private"', "sample.txt", "public-copy", rules)), 1)
+        self.assertEqual(len(scan_mod.marker_findings("acme_private acme_private", "sample.txt", "public-copy", rules)), 2)
+        self.assertEqual(len(scan_mod.marker_findings("'acme_' + 'private'; 'acme_' + 'private'", "sample.txt", "public-copy", rules)), 2)
+
+    def test_marker_short_unicode_name_boundaries(self) -> None:
+        for name in ("я", "лю", "люк", "люкс"):
+            rules = self.synthetic_rules(name + "\n")
+            with self.subTest(name=name):
+                self.assertEqual(len(scan_mod.marker_findings(name + " (" + name + ")", "sample.txt", "public-copy", rules)), 2)
+                for text in ("前" + name + "後", "_" + name, name + "_", name + "5"):
+                    self.assertEqual(scan_mod.marker_findings(text, "sample.txt", "public-copy", rules), [])
+        rules = self.synthetic_rules("acme_private\npath:лю\n")
+        self.assertEqual(len(scan_mod.marker_findings("prefixacme_private", "sample.txt", "public-copy", rules)), 1)
+        self.assertEqual(len(scan_mod.marker_findings("前лю後", "sample.txt", "public-copy", rules)), 1)
+
+    def test_marker_raw_regex_and_author_allowance_preserved(self) -> None:
+        raw_rules = self.synthetic_rules("re:ＡＣＭＥ\n")
+        self.assertEqual(len(scan_mod.marker_findings("ＡＣＭＥ", "sample.txt", "public-copy", raw_rules)), 1)
+        self.assertEqual(len(scan_mod.marker_findings(r'"\uff21\uff23\uff2d\uff25"', "sample.txt", "public-copy", raw_rules)), 1)
+        contextual = self.synthetic_rules("re:(?=acme_private)\nre:(?<=acme_private)\n")
+        self.assertEqual(
+            scan_mod._marker_matches("acme_private acme_private", "sample.txt", contextual, "content"),
+            [(position, position, "private_marker") for position in (0, 12, 13, 25)],
+        )
+        for text, expected_lines in (
+            ("acme_private", [1, 1]),
+            ('"acme_private"', [1, 1]),
+            ("safe\nacme_private\nacme_private", [2, 2, 3, 3]),
+            ('("safe" +\n "\\x61cme_" +\n "private")', [2, 3]),
+        ):
+            with self.subTest(text=text):
+                observed = scan_mod.marker_findings(text, "sample.txt", "public-copy", contextual)
+                self.assertEqual([item.line for item in observed], expected_lines)
+                self.assertTrue(all(item.token == scan_mod.MASKED_TOKEN for item in observed))
+        behind = self.synthetic_rules("re:(?<=acme_private)\n")
+        for text in ('("acme_private" +\n "safe")', '("\\x61cme_private" +\n "safe")'):
+            with self.subTest(interior_lookbehind=text):
+                observed = scan_mod.marker_findings(text, "sample.txt", "public-copy", behind)
+                self.assertEqual([item.line for item in observed], [1])
+        for pattern, position in (("(?<=foo)", 3), ("(?<=foo)(?=.)", 3), ("(?=bar)", 4)):
+            context = self.synthetic_rules("re:" + pattern + "\n")
+            with self.subTest(interior_pattern=pattern):
+                self.assertEqual(scan_mod._marker_matches("foo\u200bbar", "sample.txt", context, "content"), [(position, position, "private_marker")])
+        root = self.make_repo()
+        self.write(root, "README.md", "safe\nacme_private")
+        self.track(root, "README.md")
+        marker = self.external_markers(root, "re:(?=acme_private)\n")
+        self.addCleanup(marker.unlink, missing_ok=True)
+        result = self.run_scan(root, "--scope", "public-copy", "--format", "json", "--fail-on", "blocker", marker=marker)
+        self.assertEqual(result.returncode, 1, result.stderr)
+        self.assertEqual(json.loads(result.stdout)["findings"], [
+            {"path": "README.md", "line": 2, "category": "private_marker", "severity": "blocker", "token": scan_mod.MASKED_TOKEN}
+        ])
+        author = self.synthetic_rules("author:acme_maintainer\n")
+        self.assertEqual(scan_mod.marker_findings("Copyright 2026 acme_maintainer", "LICENSE", "public-copy", author), [])
+        fullwidth = "".join(chr(ord(char) + 0xFEE0) for char in "acme_maintainer")
+        for text in ("Copyright 2026 " + fullwidth, r'Copyright 2026 "\x61cme_maintainer"', "Copyright 2026 acme_maintainer7"):
+            self.assertEqual(len(scan_mod.marker_findings(text, "LICENSE", "public-copy", author)), 1)
+
+    def test_marker_normalized_path_and_metadata_masking(self) -> None:
+        rules = self.synthetic_rules()
+        fullwidth = "".join(chr(ord(char) + 0xFEE0) for char in "acme_private")
+        path = "notes/" + fullwidth + ".md"
+        findings = scan_mod.marker_findings(path, path, "public-copy", rules, source_kind="path")
+        self.assertEqual([(item.path, item.line, item.token) for item in findings], [(scan_mod.MASKED_TOKEN, 0, scan_mod.MASKED_TOKEN)])
+        self.assertEqual(scan_mod.marker_findings("'acme_' + 'private'", "sample.txt", "public-copy", rules, source_kind="path"), [])
+        contextual = self.synthetic_rules("re:(?=acme_private)\n")
+        observed = scan_mod.marker_findings(path, path, "public-copy", contextual, source_kind="path")
+        self.assertEqual([(item.path, item.line, item.token) for item in observed], [(scan_mod.MASKED_TOKEN, 0, scan_mod.MASKED_TOKEN)])
+        with tempfile.TemporaryDirectory(prefix="oss_scan_normalized_metadata_") as temporary:
+            parent = Path(temporary)
+            archive = parent / "staged"
+            self.write(archive, "docs/evidence/canon_notes/policy.md", "safe\n")
+            item = self.evidence_item()
+            item["why_included"] = '("acme_" +\n "private")'
+            item["sanitization_status"] = fullwidth
+            manifest = self.manifest(parent, [item])
+            for dictionary in ("acme_private\n", "re:(?=acme_private)\n"):
+                marker = self.external_markers(archive, dictionary)
+                with self.subTest(dictionary=dictionary), mock.patch.dict(os.environ, {scan_mod.MARKER_ENV: str(marker)}):
+                    observed = scan_mod.scan(archive, "public-copy", archive_manifest=manifest)
+                self.assertEqual([item.line for item in observed], [0, 0])
+                self.assertTrue(all(item.token == scan_mod.MASKED_TOKEN for item in observed))
+
+    def test_marker_parser_errors_fail_closed(self) -> None:
+        rules = self.synthetic_rules()
+        for failure in (RecursionError("synthetic overflow"), RuntimeError("synthetic parser failure")):
+            with mock.patch.object(scan_mod, "_literal_views", side_effect=failure):
+                with self.assertRaises(scan_mod.ScanInputError):
+                    scan_mod.marker_findings('"safe"', "sample.txt", "public-copy", rules)
+        with self.assertRaises(scan_mod.ScanInputError):
+            scan_mod.marker_findings("(" * 129 + "'safe'" + ")" * 129, "sample.txt", "public-copy", rules)
+        with self.assertRaises(scan_mod.ScanInputError):
+            scan_mod.marker_findings("safe", "sample.txt", "public-copy", (), source_kind="unsupported")
+
     def test_non_git_and_nested_root_fail_closed(self) -> None:
         with tempfile.TemporaryDirectory(prefix="oss_scan_non_git_") as temporary:
             non_git = Path(temporary)

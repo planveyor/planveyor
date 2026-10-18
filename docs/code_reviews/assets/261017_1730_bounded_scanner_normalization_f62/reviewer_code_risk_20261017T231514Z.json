@@ -1,0 +1,321 @@
+{
+  "run_id": "reviewer_code_risk:20261017T231514Z",
+  "lane_id": "reviewer_code_risk",
+  "runner_id": "codex",
+  "session_key": "reviewer_code_risk",
+  "sid": "N/A (why=private operator identity is not published; current native continuity independently verified)",
+  "profile": "manager-collab",
+  "model": "gpt-6.1-sol",
+  "reasoning_effort": "ultra",
+  "prompt_file": "docs/tools/prompts/reviewer_status_driven.md",
+  "target_ref": "BUNDLE=current bundle_sha256=318b92ea2bd6676051ecb4dd8200b6c720efb8973dac2dfd9a5afc1b4ed8b2d0",
+  "coverage_domains": [
+    "correctness",
+    "tests quality",
+    "security/privacy",
+    "subprocess/timeouts",
+    "performance",
+    "integrations",
+    "failure semantics"
+  ],
+  "findings": [
+    {
+      "id": "risk:R3",
+      "severity": "S1 Blocker",
+      "domain": "correctness",
+      "title": "Keyword перед группой ошибочно превращает constant concat в dynamic call",
+      "source_refs": [
+        "scripts/oss_release_scan.py:348",
+        "scripts/oss_release_scan.py:386",
+        "scripts/oss_release_scan.py:439",
+        "scripts/test_oss_release_scan.py:202",
+        "scripts/test_oss_release_scan.py:218"
+      ]
+    }
+  ],
+  "lane_status": "complete",
+  "no_findings_reason": "N/A (why=one new source-backed correctness finding is materialized)",
+  "limits": [
+    "Новые product tests/probes/benchmarks/qualification не запускались; current T-correction-3 и separate Coder CENSOR full receipts прочитаны напрямую и сверены с actual source bytes.",
+    "Новая finding основана на exact current source trace; разрешённый T1 не содержит keyword-before-group assertion, поэтому его green не доказывает этот case.",
+    "Risk не меняет live review/header/status/aggregate и не закрывает formal B1; final Contracts reconciliation остаётся отдельной lane.",
+    "RRI1–RRI3 actual green; post-write RRF1–RRF5 outcomes определяются полными timely native receipts/final selector, без anticipated green."
+  ],
+  "written_at": "2026-10-17T23:15:14Z",
+  "current": true,
+  "target_snapshot": {
+    "bundle_sha256": "318b92ea2bd6676051ecb4dd8200b6c720efb8973dac2dfd9a5afc1b4ed8b2d0",
+    "code_draft": "docs/code_drafts/261017_1730_bounded_scanner_normalization_f62__code_draft.md",
+    "files": [
+      {
+        "git_mode": "100644",
+        "path": "docs/tools/oss_evidence_selection.md",
+        "sha256": "4684130695a1f46476ddad58e9f3e842ca472432899064ce906d229dcf9253f6",
+        "size_bytes": 11360
+      },
+      {
+        "git_mode": "100644",
+        "path": "scripts/oss_release_scan.py",
+        "sha256": "509510864733989f2dd8bc9500f0edf1c8a01fac55f415f643791a5695718aa6",
+        "size_bytes": 41891
+      },
+      {
+        "git_mode": "100644",
+        "path": "scripts/test_oss_release_scan.py",
+        "sha256": "c5430e4c60ef13a27038391b78f88ba946f45036252795e0b984712d3b7c34a6",
+        "size_bytes": 46338
+      },
+      {
+        "git_mode": "100644",
+        "path": "scripts/test_sibling_contract_docs.py",
+        "sha256": "2fc5303cfad1915711cee73f3227aac6984ab937694464c6e0bc30fab49891a9",
+        "size_bytes": 59024
+      }
+    ],
+    "hash_basis": "sha256 over canonical JSON (ensure_ascii=False, sort_keys=True, separators=(',', ':')) of hash_basis_payload; targets come from the primary code_draft_meta.targets, are normalized to repo-relative POSIX paths, sorted by path, and each file authenticates its bytes plus normalized git_mode (100755 iff the owner-execute bit is set, otherwise 100644)",
+    "hash_basis_payload": {
+      "algorithm": "sha256",
+      "files": [
+        {
+          "git_mode": "100644",
+          "path": "docs/tools/oss_evidence_selection.md",
+          "sha256": "4684130695a1f46476ddad58e9f3e842ca472432899064ce906d229dcf9253f6",
+          "size_bytes": 11360
+        },
+        {
+          "git_mode": "100644",
+          "path": "scripts/oss_release_scan.py",
+          "sha256": "509510864733989f2dd8bc9500f0edf1c8a01fac55f415f643791a5695718aa6",
+          "size_bytes": 41891
+        },
+        {
+          "git_mode": "100644",
+          "path": "scripts/test_oss_release_scan.py",
+          "sha256": "c5430e4c60ef13a27038391b78f88ba946f45036252795e0b984712d3b7c34a6",
+          "size_bytes": 46338
+        },
+        {
+          "git_mode": "100644",
+          "path": "scripts/test_sibling_contract_docs.py",
+          "sha256": "2fc5303cfad1915711cee73f3227aac6984ab937694464c6e0bc30fab49891a9",
+          "size_bytes": 59024
+        }
+      ],
+      "schema_version": "review_target_snapshot.hash_basis.v2"
+    },
+    "plan": "docs/plans/261017_1730_bounded_scanner_normalization_f62.md",
+    "schema_version": "review_target_snapshot.v2",
+    "target": "BUNDLE=current bundle_sha256=318b92ea2bd6676051ecb4dd8200b6c720efb8973dac2dfd9a5afc1b4ed8b2d0",
+    "target_paths": [
+      "docs/tools/oss_evidence_selection.md",
+      "scripts/oss_release_scan.py",
+      "scripts/test_oss_release_scan.py",
+      "scripts/test_sibling_contract_docs.py"
+    ],
+    "target_snapshot": {
+      "bundle_sha256": "318b92ea2bd6676051ecb4dd8200b6c720efb8973dac2dfd9a5afc1b4ed8b2d0",
+      "target": "BUNDLE=current"
+    }
+  },
+  "schema_version": "reviewer_code_risk_payload.v1",
+  "producer_stdout": "{\n  \"bundle_sha256\": \"318b92ea2bd6676051ecb4dd8200b6c720efb8973dac2dfd9a5afc1b4ed8b2d0\",\n  \"code_draft\": \"docs/code_drafts/261017_1730_bounded_scanner_normalization_f62__code_draft.md\",\n  \"files\": [\n    {\n      \"git_mode\": \"100644\",\n      \"path\": \"docs/tools/oss_evidence_selection.md\",\n      \"sha256\": \"4684130695a1f46476ddad58e9f3e842ca472432899064ce906d229dcf9253f6\",\n      \"size_bytes\": 11360\n    },\n    {\n      \"git_mode\": \"100644\",\n      \"path\": \"scripts/oss_release_scan.py\",\n      \"sha256\": \"509510864733989f2dd8bc9500f0edf1c8a01fac55f415f643791a5695718aa6\",\n      \"size_bytes\": 41891\n    },\n    {\n      \"git_mode\": \"100644\",\n      \"path\": \"scripts/test_oss_release_scan.py\",\n      \"sha256\": \"c5430e4c60ef13a27038391b78f88ba946f45036252795e0b984712d3b7c34a6\",\n      \"size_bytes\": 46338\n    },\n    {\n      \"git_mode\": \"100644\",\n      \"path\": \"scripts/test_sibling_contract_docs.py\",\n      \"sha256\": \"2fc5303cfad1915711cee73f3227aac6984ab937694464c6e0bc30fab49891a9\",\n      \"size_bytes\": 59024\n    }\n  ],\n  \"hash_basis\": \"sha256 over canonical JSON (ensure_ascii=False, sort_keys=True, separators=(',', ':')) of hash_basis_payload; targets come from the primary code_draft_meta.targets, are normalized to repo-relative POSIX paths, sorted by path, and each file authenticates its bytes plus normalized git_mode (100755 iff the owner-execute bit is set, otherwise 100644)\",\n  \"hash_basis_payload\": {\n    \"algorithm\": \"sha256\",\n    \"files\": [\n      {\n        \"git_mode\": \"100644\",\n        \"path\": \"docs/tools/oss_evidence_selection.md\",\n        \"sha256\": \"4684130695a1f46476ddad58e9f3e842ca472432899064ce906d229dcf9253f6\",\n        \"size_bytes\": 11360\n      },\n      {\n        \"git_mode\": \"100644\",\n        \"path\": \"scripts/oss_release_scan.py\",\n        \"sha256\": \"509510864733989f2dd8bc9500f0edf1c8a01fac55f415f643791a5695718aa6\",\n        \"size_bytes\": 41891\n      },\n      {\n        \"git_mode\": \"100644\",\n        \"path\": \"scripts/test_oss_release_scan.py\",\n        \"sha256\": \"c5430e4c60ef13a27038391b78f88ba946f45036252795e0b984712d3b7c34a6\",\n        \"size_bytes\": 46338\n      },\n      {\n        \"git_mode\": \"100644\",\n        \"path\": \"scripts/test_sibling_contract_docs.py\",\n        \"sha256\": \"2fc5303cfad1915711cee73f3227aac6984ab937694464c6e0bc30fab49891a9\",\n        \"size_bytes\": 59024\n      }\n    ],\n    \"schema_version\": \"review_target_snapshot.hash_basis.v2\"\n  },\n  \"plan\": \"docs/plans/261017_1730_bounded_scanner_normalization_f62.md\",\n  \"schema_version\": \"review_target_snapshot.v2\",\n  \"target\": \"BUNDLE=current bundle_sha256=318b92ea2bd6676051ecb4dd8200b6c720efb8973dac2dfd9a5afc1b4ed8b2d0\",\n  \"target_paths\": [\n    \"docs/tools/oss_evidence_selection.md\",\n    \"scripts/oss_release_scan.py\",\n    \"scripts/test_oss_release_scan.py\",\n    \"scripts/test_sibling_contract_docs.py\"\n  ],\n  \"target_snapshot\": {\n    \"bundle_sha256\": \"318b92ea2bd6676051ecb4dd8200b6c720efb8973dac2dfd9a5afc1b4ed8b2d0\",\n    \"target\": \"BUNDLE=current\"\n  }\n}\n",
+  "input_gates": [
+    {
+      "id": "RRI1",
+      "command": "\"$PLANVEYOR_RUNTIME_ROOT/bin/planveyor\" --project \"$PWD\" planveyor_runtime_py plan_status_oracle.py docs/plans/261017_1730_bounded_scanner_normalization_f62.md --json --manager-mode manager-collab",
+      "command_sha256": "397ad76ddbfaba81f928ff8bd29798fc143c81595676cd0b2efafe7ea1647f33",
+      "envelope_sha256": "4452e9f8e0debabc9075381e41ac059fdc95a5bf978d957245f7b202bf839b70",
+      "native_exit_code": 0,
+      "child_returncode": 0,
+      "elapsed_s": 11.378633749991423,
+      "timed_out": false,
+      "owned_group": true,
+      "reaped": true,
+      "group_gone": true,
+      "streams_complete": true,
+      "within_deadline": true,
+      "envelope_error": null
+    },
+    {
+      "id": "RRI2",
+      "command": "git diff HEAD --patch --stat -- scripts/oss_release_scan.py scripts/test_oss_release_scan.py scripts/test_sibling_contract_docs.py docs/tools/oss_evidence_selection.md",
+      "command_sha256": "3e0d52477c6b35905680235c2759d72eda11695321361f547923217753cd7c38",
+      "envelope_sha256": "4452e9f8e0debabc9075381e41ac059fdc95a5bf978d957245f7b202bf839b70",
+      "native_exit_code": 0,
+      "child_returncode": 0,
+      "elapsed_s": 0.013944000005722046,
+      "timed_out": false,
+      "owned_group": true,
+      "reaped": true,
+      "group_gone": true,
+      "streams_complete": true,
+      "within_deadline": true,
+      "envelope_error": null
+    },
+    {
+      "id": "RRI3",
+      "command": "\"$PLANVEYOR_RUNTIME_ROOT/bin/planveyor\" --project \"$PWD\" planveyor_review_target_snapshot docs/plans/261017_1730_bounded_scanner_normalization_f62.md --current-bundle",
+      "command_sha256": "8201658d11f9978ee166cbb0eb00af9f0816556ca72bd109f57ce11febd1d7f3",
+      "envelope_sha256": "4452e9f8e0debabc9075381e41ac059fdc95a5bf978d957245f7b202bf839b70",
+      "native_exit_code": 0,
+      "child_returncode": 0,
+      "elapsed_s": 9.5331405409961,
+      "timed_out": false,
+      "owned_group": true,
+      "reaped": true,
+      "group_gone": true,
+      "streams_complete": true,
+      "within_deadline": true,
+      "envelope_error": null
+    }
+  ],
+  "finding_details": [
+    {
+      "id": "risk:R3",
+      "severity": "S1 Blocker",
+      "domain": "correctness",
+      "title": "Keyword перед группой ошибочно превращает constant concat в dynamic call",
+      "source_refs": [
+        "scripts/oss_release_scan.py:348",
+        "scripts/oss_release_scan.py:386",
+        "scripts/oss_release_scan.py:439",
+        "scripts/test_oss_release_scan.py:202",
+        "scripts/test_oss_release_scan.py:218"
+      ],
+      "trigger": "В ordinary Python function body, содержащем return ('acme_') + 'private', dictionary literal acme_private должен обнаруживаться через уже принятый static STRING + balanced-parentheses contract.",
+      "source_trace": [
+        "_string_parts помещает return в boundary, не различая Python keyword и callable name. На open следующий guard проверяет только последний alphanumeric character boundary и добавляет эту группу в call_opens.",
+        "atom(open) возвращает None из-за call_opens. Outer recovery затем начинает expression на внутреннем STRING acme_, заканчивает его перед close и позднее отдельно добавляет STRING private после plus.",
+        "Ни raw/canonical view исходного текста, ни два раздельных decoded views не содержат acme_private. Добавление source-safe prefix return перед тем же ранее поддержанным ('acme_') + 'private' создаёт false negative; значение expression не требуется выполнять."
+      ],
+      "impact": "Private marker может пройти scanner и delivered-file F62 common consumer без blocker в обычном return expression. Тот же guard применяется к другим expression-introducing keywords; finding достаточно одного concrete return case.",
+      "recommendation": "Различать expression-introducing keywords/statement boundary и callable operand при построении call_opens, сохраняя negative make('acme_') + 'private'. Добавить addressed regression в existing static/dynamic T1 method и согласовать owning bounded proof до execution.",
+      "evidence_strength": "Source-only deterministic control-flow trace на producer-authenticated current source; counterexample/test/benchmark не исполнялся.",
+      "existing_proof_limit": "Current T1 содержит bare grouping и make/call dynamic controls, но не keyword-before-group control. All7green T-correction-3 truthful для заявленных assertions и не закрывает новый path.",
+      "routing_classification": "same-contract reroute; scope_expansion=n/a; source owner Architect для bounded re-entry перед Coder. Formal canonical lineage/aggregate решает Contracts."
+    }
+  ],
+  "review_notes": [
+    {
+      "topic": "Previous risk:R1 / formal B1",
+      "disposition": "Исходный empty-span drop устранён на current source: raw contextual zero-width emits boundary; same-rule raw origins reused across removed points/token gaps, prefix-supported decoded boundary chooses left contributor. Source and current T1 directly read: raw/escaped interior lookbehind, mirrored/two-sided raw controls, removed-point dedup, physical-line/EOF/line0/path masking. Это Risk source reconciliation, formal B1 live review не переписан.",
+      "source_refs": [
+        "scripts/oss_release_scan.py:481",
+        "scripts/oss_release_scan.py:492",
+        "scripts/oss_release_scan.py:523",
+        "scripts/test_oss_release_scan.py:274",
+        "scripts/test_oss_release_scan.py:289",
+        "scripts/test_oss_release_scan.py:313"
+      ]
+    },
+    {
+      "topic": "Previous risk:R2",
+      "disposition": "Failed same-level expression suffix starts memoized before recovery retries, включая implicit STRING adjacency; nested group/argument inspection сохраняется. Existing T1 instrumentation на48 operands/Add+adjacency и nested positives directly read/executed in current receipt. Known suffix-rescan path устранён по source reasoning; benchmark/public global linearity qualification не заявлены.",
+      "source_refs": [
+        "scripts/oss_release_scan.py:403",
+        "scripts/oss_release_scan.py:416",
+        "scripts/test_oss_release_scan.py:234"
+      ]
+    },
+    {
+      "topic": "Three initial static fixes",
+      "disposition": "Call-vs-group guard сохраняет make/call dynamic negative, но имеет отдельный keyword false negative risk:R3; precomputed nesting_delta/nested_at устраняет per-fragment all-pairs search, author raw line table строится один раз и ищется bisect. Historical original T1 failure не переоткрыт.",
+      "source_refs": [
+        "scripts/oss_release_scan.py:343",
+        "scripts/oss_release_scan.py:363",
+        "scripts/oss_release_scan.py:461",
+        "scripts/oss_release_scan.py:507"
+      ]
+    },
+    {
+      "topic": "Finite normalization / source mapping",
+      "disposition": "Прочитаны NFKD/order/NFC mapping и exact NFKC self-check, ровно5 removals, ASCII pair guard, scalar recognized STRING literal_eval, unsupported/dynamic controls, span/category dedup и physical lines; plain short Unicode1–4 boundaries и explicit path/author/re namespaces сохранены. Known keyword miss materialized separately.",
+      "source_refs": [
+        "scripts/oss_release_scan.py:161",
+        "scripts/oss_release_scan.py:266",
+        "scripts/oss_release_scan.py:529",
+        "scripts/oss_release_scan.py:654",
+        "scripts/test_oss_release_scan.py:181",
+        "scripts/test_oss_release_scan.py:245",
+        "scripts/test_oss_release_scan.py:258"
+      ]
+    },
+    {
+      "topic": "Integration / privacy / failure semantics",
+      "disposition": "Private scanner/path/metadata/F62 используют common matcher, safe_path не рекурсирует через Finding. Generic rules/security/version/raw author exceptions/inventory/Finding JSON/CLI0|1|2 не расширены. Public F62 loop unconditional/raw/case-sensitive с exact GPT-6.1 Sol exception even unset; external synthetic literal/contextual controls observe actual helper, invalid dictionary fail-closed. Read-only verify_suite error consumers и ScannerInputErrorTests прочитаны.",
+      "source_refs": [
+        "scripts/oss_release_scan.py:843",
+        "scripts/oss_release_scan.py:878",
+        "scripts/oss_release_scan.py:979",
+        "scripts/oss_release_scan.py:1058",
+        "scripts/test_sibling_contract_docs.py:130",
+        "scripts/test_sibling_contract_docs.py:165",
+        "scripts/test_sibling_contract_docs.py:1013",
+        "scripts/verify_suite.py:221",
+        "scripts/test_verify_suite.py:244"
+      ]
+    },
+    {
+      "topic": "Current source-bound evidence",
+      "disposition": "T-correction-3: native/child0 для T1 scanner38/T2 F62 four/T3 error two/T4 findings[] и T5–T7, full timely owned/reaped/group_gone/streams_complete/within_deadline=true, no timeout/error/signals. Product4+full draft pre/post SHA совпали с actual current files; plan subsequent operational CENSOR bytes имеют отдельные CC31–CC35 all0/current exact complete/missing[]/invalid[]. Old original/T-correction-2 failures, stopped budgets и old immutable support сохранены.",
+      "source_refs": [
+        "docs/plans/261017_1730_bounded_scanner_normalization_f62.md"
+      ]
+    },
+    {
+      "topic": "Bounds / authority",
+      "disposition": "Current producer target318b92... содержит ровно четыре declared product paths. Review остается current-red historical target до Contracts same-file rewrite; bundle preflight/check не запускались. Missing private SID не заменён task-name metadata, provenance carriers audit-only. MAD/ref/qualified core/ledger/external F62 Root-owned terminal boundary unchanged.",
+      "source_refs": [
+        "docs/code_drafts/261017_1730_bounded_scanner_normalization_f62__code_draft.md",
+        "docs/code_reviews/261017_1730_bounded_scanner_normalization_f62.md"
+      ]
+    }
+  ],
+  "prior_evidence": {
+    "product_receipts": {
+      "family": "T-correction-3",
+      "sha256": "08670b580350ae3a2233d4bdeac67d54a201c20cd5ee2ce5d6c0ccc5ca010801",
+      "outcome": "complete_green",
+      "tests": {
+        "T1": 38,
+        "T2": 4,
+        "T3": 2
+      },
+      "native_and_child_codes": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ]
+    },
+    "coder_censor_receipts": {
+      "sha256": "021270f2d2a655bf0451c73a255c22d47189e664540afdc6631b2b9a3781fbc4",
+      "outcome": "complete_green",
+      "state": "complete",
+      "reason_code": "complete_current_receipt",
+      "missing_fields": [],
+      "invalid_reasons": []
+    },
+    "old_risk_support": {
+      "ref": "docs/code_reviews/assets/261017_1730_bounded_scanner_normalization_f62/reviewer_code_risk_20261017T210251Z.json",
+      "sha256": "bd7b6035060a9347c83113769834d2ee15a8207e9664653f42301df4fe5e0747",
+      "read_directly": true,
+      "immutable": true
+    },
+    "core_sha256": "4452e9f8e0debabc9075381e41ac059fdc95a5bf978d957245f7b202bf839b70",
+    "qualifier_sha256": "2a7ebb897eed549aa0c8cc380e00e576e819d781a90d6153ee6a1c0682ce7c0c",
+    "entry_oracle": {
+      "status": "Ready for Review",
+      "manager_mode_state": "admitted",
+      "route_guard_triggered": false,
+      "owner_qna_readback_state": "clean",
+      "open_owner_questions": [],
+      "machine_authority_decision_state": "not_applicable",
+      "machine_authority_decision_reason": "ok",
+      "machine_authority_decision_ref_state": "valid"
+    }
+  }
+}
