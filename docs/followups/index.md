@@ -20,11 +20,12 @@ _DO NOT EDIT - regenerate via `PYTHONDONTWRITEBYTECODE=1 python3 -B scripts/foll
 | `docs/release_backlog.md#f1#native-windows-validation` | Windows native validation | `coder` | `open` | `null` |
 | `docs/release_backlog.md#f2#native-linux-validation` | Linux native validation | `coder` | `open` | `null` |
 
-### P2 (37 open)
+### P2 (38 open)
 | Source | Topic | To | Status | Plan |
 | --- | --- | --- | --- | --- |
 | `docs/plans/261007_1935_owner_task_sibling_flow.md#f53-v2-lifecycle-terminal-readback` | F53: перенос V2/K1 lifecycle и чтение закрытого source после последующих изменений | `architect` | `open` | `null` |
 | `docs/plans/261007_1935_owner_task_sibling_flow.md#sibling-upgrade-output` | Вывод sibling upgrade: candidate/problems при blocked rc 3 и notices при успехе | `coder` | `open` | `null` |
+| `docs/plans/261018_2230_review_scope_closeout.md#owner-runbook-codex-ru-review-scope-sync` | Синхронизировать русский owner runbook после изменения review scope contract | `architect` | `open` | `null` |
 | `docs/release_backlog.md#f3#owner-deferred-performance-context` | Owner-deferred performance/context optimization | `owner` | `open` | `null` |
 | `docs/release_backlog.md#f4#d06-p5-security-scanner-bound-family` | D06 P5: helper-owned bind/freeze; strict compact identity/source checks; no-overwrite/pre-manifest drift; unsafe ancestor/leaf refusal; bounded allowlisted stdin | `coder` | `open` | `null` |
 | `docs/release_backlog.md#f5#hosted-github-ci` | Hosted GitHub CI | `coder` | `open` | `null` |
