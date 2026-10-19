@@ -27,6 +27,7 @@ from scripts import followups_capture as FOLLOWUPS_CAPTURE
 from scripts import followups_apply as FOLLOWUPS_APPLY
 from scripts import followups_lint as FOLLOWUPS_LINT
 from scripts import plan_status_oracle as PLAN_STATUS_ORACLE
+from scripts import review_artifact_lint as REVIEW_ARTIFACT_LINT
 from scripts import review_visual_lane_contract as REVIEW_VISUAL_LANE_CONTRACT
 from scripts.test_support.process_contract_fixtures import run_zsh_fixture
 
@@ -90,6 +91,7 @@ PLAN_BUNDLE_MODES = {
     "--print",
     "--check",
     "--preflight",
+    "--scope-check",
     "--stage",
     "--commit-ready",
     "--commit-exact",
@@ -107,6 +109,387 @@ PLAN_LINT_SPEC.loader.exec_module(PLAN_LINT)
 
 
 class PlanBundleCommitReadyTests(unittest.TestCase):
+    def _scope_payload(self, root: Path, *, ok: bool = True, plan_rel: str = PLAN_REL) -> dict:
+        result = self._run_bundle(root, "--scope-check", plan_rel=plan_rel)
+        self.assertEqual(result.returncode, 0 if ok else 1, result.stdout + result.stderr)
+        payload = json.loads(result.stdout)
+        self.assertEqual(payload["schema"], "planveyor_plan_bundle_scope.v1")
+        self.assertEqual(payload["scope_ok"], ok)
+        self.assertEqual(set(payload), {
+            "schema", "plan", "scope_ok", "errors", "path_problems", "repo_roots", "support", "completion",
+        })
+
+        def check_keys(value):
+            if isinstance(value, dict):
+                self.assertFalse({"route", "next_owner", "green", "commit_ready", "admission", "permission"} & set(value))
+                for child in value.values():
+                    check_keys(child)
+            elif isinstance(value, list):
+                for child in value:
+                    check_keys(child)
+
+        check_keys(payload)
+        self.assertEqual(set(payload["completion"]["current_review_proof"]), {"state", "reason_code", "message", "diagnostics"})
+        return payload
+
+    def _scope_support_fixture(self, root: Path) -> tuple[dict, dict, str]:
+        self._materialize_bundle(root, materialize_review=False)
+        snapshot = self._compute_plan_snapshot(root, PLAN_REL)
+        support = {
+            "lane_id": "reviewer_code_risk", "run_id": "scope-fixture",
+            "target_snapshot": snapshot, "lane_status": "no_findings", "findings": [], "current": True,
+        }
+        support_rel = f"docs/code_reviews/assets/{Path(PLAN_REL).stem}/scope-support.json"
+        compact = {**support, "target_snapshot": snapshot["target_snapshot"], "full_payload_ref": support_rel}
+        self._scope_write_support(root, compact, support)
+        (root / REVIEW_REL).write_text(self._same_file_review_text(status="✅ OK", target_snapshot=str(snapshot["target"])), encoding="utf-8")
+        return compact, support, support_rel
+
+    def _scope_write_support(self, root: Path, compact: dict, support: dict | bytes) -> None:
+        support_path = root / compact["full_payload_ref"]
+        support_path.parent.mkdir(parents=True, exist_ok=True)
+        data = support if isinstance(support, bytes) else json.dumps(support, sort_keys=True).encode()
+        support_path.write_bytes(data)
+        compact["full_payload_sha256"] = hashlib.sha256(data).hexdigest()
+        plan_path = root / PLAN_REL
+        text = plan_path.read_text(encoding="utf-8").split("\n## Scope fixture evidence\n", 1)[0]
+        plan_path.write_text(text + "\n## Scope fixture evidence\n```json\n" + json.dumps(compact, sort_keys=True) + "\n```\n", encoding="utf-8")
+
+    def _scope_fault(self, root: Path, *, proof: object | None = None, append: str = "") -> subprocess.CompletedProcess[str]:
+        # Fault injection stays in the already copied isolated module. The real
+        # resolver and all other validators still run; production readers never change.
+        if proof is not None:
+            append += "\nfrom types import SimpleNamespace\ndef preflight_current_review_proof(*args, **kwargs):\n"
+            append += "    payload = " + repr(proof) + "\n"
+            append += "    return SimpleNamespace(state=payload.get('state'), review_path=None, reason_code=payload.get('reason_code'), message=payload.get('message'), as_dict=lambda: payload)\n"
+        (root / "scripts/plan_lint.py").write_text(PLAN_LINT_PATH.read_text(encoding="utf-8") + append, encoding="utf-8")
+        return run_zsh_fixture(
+            f"source scripts/planveyor.zsh && planveyor_plan_bundle --scope-check {PLAN_REL}",
+            cwd=root, path=os.environ.get("PATH", os.defpath), pybin=str(Path(sys.executable).resolve()),
+            fixture_env={"PLANVEYOR_ROOT": str(root)}, home=root / ".home", check=False,
+        )
+
+    def _scope_observation(self, root: Path) -> tuple:
+        files = {
+            str(path.relative_to(root)): path.read_bytes()
+            for path in root.rglob("*") if path.is_file() and ".git" not in path.relative_to(root).parts
+        }
+        return files, (root / ".git/index").read_bytes() if (root / ".git/index").exists() else None, self._git(root, "show-ref").stdout, self._git(root, "rev-parse", "HEAD").stdout
+
+    def test_scope_check_planned_absence_has_inventory_without_admission(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            root = Path(tmpdir).resolve()
+            self._init_repo(root)
+            self._materialize_bundle(root, materialize_review=False)
+            payload = self._scope_payload(root)
+            self.assertEqual(payload["plan"], PLAN_REL)
+            self.assertEqual(payload["repo_roots"][0]["bundle_paths"], sorted([PLAN_REL, DRAFT_REL, REVIEW_REL, PRIMARY_TARGET_REL]))
+            self.assertEqual(payload["path_problems"], {})
+            self.assertEqual(payload["completion"]["current_review_proof"]["state"], "planned")
+            self.assertEqual(payload["completion"]["review_artifacts"][0]["state"], "planned")
+            self.assertNotEqual(self._run_bundle(root, "--check").returncode, 0)
+
+    def test_scope_check_no_selected_lane_is_unvalidated(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            root = Path(tmpdir).resolve()
+            self._init_repo(root)
+            self._materialize_bundle(root, review_text="# Draft review\n**Target:** BUNDLE=current\n")
+            payload = self._scope_payload(root)
+            self.assertEqual(payload["support"]["selected"]["state"], "not_selected")
+            self.assertEqual(payload["support"]["selected"]["diagnostics"], [])
+            self.assertEqual(payload["completion"]["current_review_proof"]["reason_code"], "current_review_proof_target_invalid")
+
+    def test_scope_check_materialized_non_green_is_completion_only(self) -> None:
+        for label in ("red", "stale_red", "stale_green", "quarantine", "draft"):
+            with self.subTest(label=label), tempfile.TemporaryDirectory() as tmpdir:
+                root = Path(tmpdir).resolve()
+                self._init_repo(root)
+                self._materialize_bundle(root, status="❌ S1 blocker(ы)" if label in {"red", "stale_red"} else "✅ OK")
+                if label in {"stale_red", "quarantine"}:
+                    self._inject_plan_review_notes(root, self._stale_red_after_fix_plan_notes())
+                if label == "stale_green":
+                    compact, _support, _ref = self._scope_support_fixture(root)
+                    (root / PRIMARY_TARGET_REL).write_text("echo changed\n", encoding="utf-8")
+                if label == "draft":
+                    (root / REVIEW_REL).write_text("# Draft review\n", encoding="utf-8")
+                payload = self._scope_payload(root)
+                self.assertTrue(payload["completion"]["review_artifacts"])
+                self.assertNotEqual(self._run_bundle(root, "--check").returncode, 0)
+
+    def test_scope_check_stale_proof_with_newer_blocker_has_no_route(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            root = Path(tmpdir).resolve()
+            self._init_repo(root)
+            compact, support, _ref = self._scope_support_fixture(root)
+            (root / PRIMARY_TARGET_REL).write_text("echo fixed\n", encoding="utf-8")
+            (root / REVIEW_REL).write_text(self._same_file_review_text(status="❌ S1 blocker(ы)", blocker_state="open", target_snapshot=str(support["target_snapshot"]["target"]), date="2026-05-07 03:07 MSK"), encoding="utf-8")
+            payload = self._scope_payload(root)
+            self.assertEqual(payload["support"]["selected"]["state"], "stale_producer")
+            self.assertEqual(payload["completion"]["review_artifacts"][0]["state"], "needs_reviewer_rerun")
+            self.assertIn("Current state: open", (root / REVIEW_REL).read_text(encoding="utf-8"))
+            self.assertEqual(payload["completion"]["current_review_proof"]["reason_code"], "current_review_proof_producer_mismatch")
+
+    def test_scope_check_early_proof_mismatch_does_not_hide_bad_support(self) -> None:
+        for label in ("hash", "json", "schema", "parity"):
+            with self.subTest(label=label), tempfile.TemporaryDirectory() as tmpdir:
+                root = Path(tmpdir).resolve()
+                self._init_repo(root)
+                compact, support, ref = self._scope_support_fixture(root)
+                review = root / REVIEW_REL
+                review.write_text(review.read_text(encoding="utf-8").replace("**Target:** ", "**Target:** prefix ", 1), encoding="utf-8")
+                if label == "hash":
+                    (root / ref).write_bytes(b"tampered")
+                elif label == "json":
+                    self._scope_write_support(root, compact, b"not-json")
+                elif label == "schema":
+                    support["target_snapshot"] = {"target": "BUNDLE=current"}
+                    self._scope_write_support(root, compact, support)
+                else:
+                    support["run_id"] = "foreign-run"
+                    self._scope_write_support(root, compact, support)
+                payload = self._scope_payload(root, ok=False)
+                self.assertEqual(payload["support"]["selected"]["state"], "invalid")
+                self.assertEqual(payload["completion"]["current_review_proof"]["reason_code"], "current_review_proof_target_invalid")
+                self.assertTrue(payload["support"]["selected"]["diagnostics"])
+
+    def test_scope_check_proof_projection_and_support_projection_are_distinct(self) -> None:
+        code = "current_review_proof_projection_mismatch"
+        with tempfile.TemporaryDirectory() as tmpdir:
+            root = Path(tmpdir).resolve()
+            self._init_repo(root)
+            self._scope_support_fixture(root)
+            proof = {"state": "blocked", "reason_code": code, "message": "typed proof debt", "diagnostics": []}
+            good = self._scope_fault(root, proof=proof)
+            self.assertEqual(good.returncode, 0, good.stdout + good.stderr)
+            bad = self._scope_fault(root, proof=proof, append="\ndef preflight_selected_risk_lane_support(*args, **kwargs):\n    return (RiskLaneSupportDiagnostic('current_review_proof_projection_mismatch', 'typed support input failure'),)\n")
+            self.assertEqual(bad.returncode, 1, bad.stdout + bad.stderr)
+            payload = json.loads(bad.stdout)
+            self.assertEqual(payload["support"]["selected"]["state"], "invalid")
+            self.assertTrue(any("Selected risk-lane support " + code in error for error in payload["errors"]))
+
+    def test_scope_check_only_producer_mismatch_is_stale_support_debt(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            root = Path(tmpdir).resolve()
+            self._init_repo(root)
+            self._scope_support_fixture(root)
+            (root / PRIMARY_TARGET_REL).write_text("echo drift\n", encoding="utf-8")
+            stale = self._scope_payload(root)
+            self.assertEqual(stale["support"]["selected"]["state"], "stale_producer")
+            (root / PRIMARY_TARGET_REL).unlink()
+            unavailable = self._scope_payload(root, ok=False)
+            self.assertEqual(unavailable["support"]["selected"]["state"], "invalid")
+            self.assertIn("current_review_proof_producer_or_support_unavailable", [row["code"] for row in unavailable["support"]["selected"]["diagnostics"]])
+
+    def test_scope_check_selector_errors_and_inconsistent_shape_fail_closed(self) -> None:
+        for label, override in (
+            ("multiple_current", ""),
+            ("shape", "\ndef select_plan_risk_lane_snapshot(*args, **kwargs):\n    return PlanRiskLaneSelection(None, 1, {}, None, None)\n"),
+            ("lifecycle", "\ndef select_plan_risk_lane_snapshot(*args, **kwargs):\n    return PlanRiskLaneSelection(None, 1, None, 'contradictory_lifecycle', 'current and historical')\n"),
+        ):
+            with self.subTest(label=label), tempfile.TemporaryDirectory() as tmpdir:
+                root = Path(tmpdir).resolve()
+                self._init_repo(root)
+                self._materialize_bundle(root)
+                if label == "multiple_current":
+                    path = root / PLAN_REL
+                    lanes = [{"lane_id": "reviewer_code_risk", "run_id": str(index), "current": True, "target_snapshot": f"PLAN={PLAN_REL}"} for index in (1, 2)]
+                    path.write_text(path.read_text(encoding="utf-8") + "\n" + "\n".join("```json\n" + json.dumps(lane) + "\n```" for lane in lanes), encoding="utf-8")
+                result = self._scope_fault(root, append=override)
+                self.assertEqual(result.returncode, 1, result.stdout + result.stderr)
+                self.assertEqual(json.loads(result.stdout)["support"]["selected"]["state"], "invalid")
+
+    def test_scope_check_historical_support_keeps_path_hash_only_contract(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            root = Path(tmpdir).resolve()
+            self._init_repo(root)
+            self._materialize_bundle(root, materialize_review=False)
+            ref = "docs/code_reviews/assets/history/non-json.txt"
+            support = root / ref
+            support.parent.mkdir(parents=True, exist_ok=True)
+            support.write_bytes(b"historical non-JSON red evidence\n")
+            compact = {"lane_id": "reviewer_code_risk", "current": False, "full_payload_ref": ref, "full_payload_sha256": hashlib.sha256(support.read_bytes()).hexdigest()}
+            path = root / PLAN_REL
+            path.write_text(path.read_text(encoding="utf-8") + "\n```json\n" + json.dumps(compact) + "\n```\n", encoding="utf-8")
+            payload = self._scope_payload(root)
+            self.assertEqual(payload["support"]["selected"]["state"], "not_selected")
+            self.assertEqual(payload["support"]["historical"]["state"], "validated")
+            self.assertIn(ref, payload["repo_roots"][0]["bundle_paths"])
+            support.write_bytes(b"changed history")
+            self.assertEqual(self._scope_payload(root, ok=False)["support"]["historical"]["state"], "invalid")
+            support.unlink()
+            self._scope_payload(root, ok=False)
+
+    def test_scope_check_missing_tampered_or_unsafe_inputs_fail_closed(self) -> None:
+        for label in ("missing", "symlink", "metadata", "untracked_receipt", "outside_support", "deletion", "review_target_collision"):
+            with self.subTest(label=label), tempfile.TemporaryDirectory() as tmpdir:
+                root = Path(tmpdir).resolve()
+                self._init_repo(root)
+                self._materialize_bundle(
+                    root,
+                    extra_targets=[REVIEW_REL] if label == "review_target_collision" else None,
+                    materialize_review=False,
+                )
+                if label == "missing":
+                    (root / PRIMARY_TARGET_REL).unlink()
+                elif label == "symlink":
+                    target = root / PRIMARY_TARGET_REL
+                    target.rename(root / "actual-target")
+                    target.symlink_to(root / "actual-target")
+                elif label == "metadata":
+                    (root / DRAFT_REL).write_text('# Draft\n```json\n{"targets": []}\n```\n', encoding="utf-8")
+                elif label == "untracked_receipt":
+                    receipt = root / "docs/reviews/durable.json"
+                    receipt.parent.mkdir(parents=True)
+                    receipt.write_text("{}\n", encoding="utf-8")
+                    path = root / PLAN_REL
+                    path.write_text(path.read_text(encoding="utf-8") + "\nDurable receipt: `docs/reviews/durable.json`\n", encoding="utf-8")
+                elif label == "outside_support":
+                    path = root / PLAN_REL
+                    path.write_text(path.read_text(encoding="utf-8") + '\n```json\n' + json.dumps({"lane_id": "reviewer_code_risk", "current": False, "full_payload_ref": "../outside.txt", "full_payload_sha256": "a" * 64}) + '\n```\n', encoding="utf-8")
+                elif label == "deletion":
+                    self._rewrite_deleted_path_entries(root, [{"path": "docs/untracked-deletion.md", "kind": "doc"}])
+                payload = self._scope_payload(root, ok=False)
+                if label == "review_target_collision":
+                    self.assertIn("missing-path", payload["path_problems"][REVIEW_REL])
+
+    def test_scope_check_unknown_transport_and_input_changed_fail_closed(self) -> None:
+        cases = [
+            {"state": "blocked", "reason_code": code, "message": "scope input fault", "diagnostics": []}
+            for code in (None, "unknown_code", "current_review_proof_input_changed", "current_review_proof_transport_invalid")
+        ]
+        cases += [
+            {"state": "UNKNOWN", "reason_code": None, "message": "bad state", "diagnostics": []},
+            {"state": "planned", "reason_code": None, "message": "nonblocked primary", "diagnostics": [{"code": "unknown_secondary", "message": "must block independently of state"}]},
+            {"state": "blocked", "reason_code": "current_review_proof_projection_mismatch", "message": "allowed primary", "diagnostics": [{"code": "unknown_secondary", "message": "must block"}]},
+            {"state": "blocked", "reason_code": "current_review_proof_target_invalid", "message": "allowed primary", "diagnostics": [{"code": "current_review_proof_input_changed", "message": "must block"}]},
+            {"state": "blocked", "reason_code": "current_review_proof_target_invalid", "message": "shape fault", "diagnostics": [{}]},
+        ]
+        with tempfile.TemporaryDirectory() as tmpdir:
+            root = Path(tmpdir).resolve()
+            self._init_repo(root)
+            self._materialize_bundle(root)
+            for proof in cases:
+                with self.subTest(proof=proof):
+                    result = self._scope_fault(root, proof=proof)
+                    self.assertEqual(result.returncode, 1, result.stdout + result.stderr)
+                    self.assertFalse(json.loads(result.stdout)["scope_ok"])
+            result = self._scope_fault(root, append="\ndef preflight_current_review_proof(*args, **kwargs):\n    raise ValueError('synthetic transport failure')\n")
+            self.assertNotEqual(result.returncode, 0)
+            self.assertIn("Unable to read canonical current review proof", result.stderr)
+            self.assertEqual(result.stdout, "")
+
+    def test_scope_check_malformed_output_headers_do_not_grant_completion(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            root = Path(tmpdir).resolve()
+            self._init_repo(root)
+            _compact, support, _ref = self._scope_support_fixture(root)
+            base = self._same_file_review_text(status="✅ OK", target_snapshot=str(support["target_snapshot"]["target"]))
+            cases = {
+                "invalid_target": base.replace("**Target:** ", "**Target:** prefix ", 1),
+                "duplicate_target": base.replace("\n**Target:**", "\n**Target:** BUNDLE=current\n**Target:**", 1),
+                "unfinished_status": base.replace("**Status:** ✅ OK", "**Status:** draft", 1),
+            }
+            for label, text in cases.items():
+                with self.subTest(case=label):
+                    (root / REVIEW_REL).write_text(text, encoding="utf-8")
+                    self._scope_payload(root)
+                    result = self._run_bundle(root, "--check")
+                    self.assertNotEqual(result.returncode, 0, result.stdout + result.stderr)
+            spec_cases = {
+                "invalid_spec": ("**Spec:** invalid\n", "invalid_review_spec"),
+                "duplicate_spec": (f"**Spec:** {PLAN_REL}\n**Spec:** {PLAN_REL}\n", "duplicate_review_header_field"),
+            }
+            for label, (headers, expected_code) in spec_cases.items():
+                with self.subTest(case=label):
+                    text = base.replace("\n**Target:**", "\n" + headers + "**Target:**", 1)
+                    (root / REVIEW_REL).write_text(text, encoding="utf-8")
+                    self._scope_payload(root)
+                    artifact = REVIEW_ARTIFACT_LINT.review_artifact_from_text(root, root / REVIEW_REL, text)
+                    findings = REVIEW_ARTIFACT_LINT.lint_review_artifacts(
+                        [artifact], project_root=root, origin_plan=root / PLAN_REL, require_dual_lane_origin=True,
+                    )
+                    self.assertIn(expected_code, [finding.code for finding in findings], findings)
+
+    def test_scope_check_current_staged_range_and_legacy_inventory(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            root = Path(tmpdir).resolve()
+            self._init_repo(root)
+            self._materialize_bundle(root)
+            for target in (f"PLAN={PLAN_REL}", "BUNDLE=staged", "RANGE=abc1234..def5678 (EXCLUDE_DOCS=0)"):
+                (root / REVIEW_REL).write_text(self._same_file_review_text(status="✅ OK", target_snapshot=target), encoding="utf-8")
+                payload = self._scope_payload(root)
+                self.assertIn(PRIMARY_TARGET_REL, payload["repo_roots"][0]["bundle_paths"])
+                self.assertEqual(payload["support"]["selected"]["state"], "not_selected")
+            self._scope_support_fixture(root)
+            self.assertEqual(self._scope_payload(root)["support"]["selected"]["state"], "validated")
+
+    def test_scope_check_strict_na_candidate_and_materialized_parent(self) -> None:
+        for materialized in (False, True):
+            with self.subTest(materialized=materialized), tempfile.TemporaryDirectory() as tmpdir:
+                root = Path(tmpdir).resolve()
+                self._init_repo(root)
+                fixture = self._write_strict_na_parent_fixture(root, materialized=materialized)
+                self._commit_all(root, "N-A scope fixture")
+                payload = self._scope_payload(root, plan_rel=str(fixture["parent_rel"]))
+                paths = payload["repo_roots"][0]["bundle_paths"]
+                self.assertNotIn(str(Path(fixture["parent_rel"]).with_name(Path(fixture["parent_rel"]).stem + "__code_draft.md")), paths)
+                if materialized:
+                    self.assertTrue(set(fixture["children"]).issubset(paths))
+                    child = root / str(fixture["children"][0])
+                    child.unlink()
+                    self._scope_payload(root, ok=False, plan_rel=str(fixture["parent_rel"]))
+                else:
+                    self.assertFalse(set(fixture["children"]) & set(paths))
+
+    def test_scope_check_incompatible_flags_fail_before_side_effects(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            root = Path(tmpdir).resolve()
+            self._init_repo(root)
+            self._materialize_bundle(root)
+            self._commit_all(root, "flags fixture")
+            before = self._scope_observation(root)
+            for option in ("--recovery-plan absent.md", "--docs-closeout-json absent.json", "--preflight-json absent.json", "--message-file absent.txt", "--message-auto"):
+                result = self._run_shell(root, f"planveyor_plan_bundle --scope-check {option} {PLAN_REL}")
+                self.assertEqual(result.returncode, 1, result.stdout + result.stderr)
+                self.assertIn("unavailable for --scope-check", result.stderr)
+                self.assertEqual(result.stdout, "")
+                self.assertEqual(self._scope_observation(root), before)
+
+    def test_scope_check_preserves_files_index_refs_and_receipts(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            root = Path(tmpdir).resolve()
+            self._init_repo(root)
+            self._scope_support_fixture(root)
+            self._commit_all(root, "readonly fixture")
+            before = self._scope_observation(root)
+            self._scope_payload(root)
+            self.assertEqual(self._scope_observation(root), before)
+            (root / PRIMARY_TARGET_REL).unlink()
+            before = self._scope_observation(root)
+            self._scope_payload(root, ok=False)
+            self.assertEqual(self._scope_observation(root), before)
+
+    def test_scope_check_preserves_strict_modes_and_rejected_closeout(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            root = Path(tmpdir).resolve()
+            self._init_repo(root)
+            self._materialize_bundle(root, status="❌ S1 blocker(ы)")
+            self._commit_all(root, "red fixture")
+            before = self._scope_observation(root)
+            self._scope_payload(root)
+            for mode in ("--preflight", "--check", "--stage", "--commit-ready"):
+                self.assertNotEqual(self._run_bundle(root, mode).returncode, 0)
+            self.assertEqual(self._scope_observation(root), before)
+            review_sha = self._materialize_rejected_fixture(root)
+            state_before = self._scope_observation(root)
+            rejected_scope = self._scope_payload(root, plan_rel=REJECTED_PLAN_REL)
+            self.assertNotIn("terminal_disposition", rejected_scope)
+            self.assertEqual(self._scope_observation(root), state_before)
+            closeout = self._run_bundle(root, "--closeout-json", plan_rel=REJECTED_PLAN_REL)
+            self.assertEqual(closeout.returncode, 0, closeout.stdout + closeout.stderr)
+            self.assertEqual(json.loads(closeout.stdout)["review_bundle_sha256"], review_sha)
+            self.assertFalse(json.loads(closeout.stdout)["delivery_green"])
+
     def _assert_accepted_red_public_keys(
         self,
         payload: dict[str, object],

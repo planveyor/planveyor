@@ -5514,7 +5514,7 @@ _planveyor_help_cmd_usage() {
     planveyor_decomposition_seed_promote) echo "planveyor_decomposition_seed_promote <NEW_PLAN_PATH> [OLD_PLAN_PATH]" ;;
     planveyor_decomposition_collab) echo "planveyor_decomposition_collab [PLAN_PATH]" ;;
     planveyor_decomposition_collab_tui) echo "planveyor_decomposition_collab_tui [PLAN_PATH] [--no-alt-screen]" ;;
-    planveyor_plan_bundle) echo "planveyor_plan_bundle [--print|--check|--preflight|--stage|--commit-ready|--commit-exact|--closeout-json|--capture-rejected|--verify-rejected|--cleanup-rejected] <PLAN_PATH>; --commit-exact --preflight-json <path|-> (--message-auto|--message-file <path>)" ;;
+    planveyor_plan_bundle) echo "planveyor_plan_bundle [--print|--check|--preflight|--scope-check|--stage|--commit-ready|--commit-exact|--closeout-json|--capture-rejected|--verify-rejected|--cleanup-rejected] <PLAN_PATH>; --commit-exact --preflight-json <path|-> (--message-auto|--message-file <path>)" ;;
     planveyor_plan_closeout_preflight) echo "planveyor_plan_closeout_preflight [--docs-closeout-json <path|->] [--json] <PLAN_PATH>" ;;
     planveyor_plan_list) echo "planveyor_plan_list [--include-non-executable] [TERMS...]" ;;
     planveyor_plan_list_status) echo "planveyor_plan_list_status <STATUS_FILTER> [--include-non-executable] [TERMS...]" ;;
@@ -7199,7 +7199,7 @@ planveyor_help() {
     echo ""
     echo "# plans"
     echo "planveyor_plan_set <PLAN_PATH>"
-    echo "planveyor_plan_bundle [--print|--check|--preflight|--stage|--commit-ready|--commit-exact|--closeout-json|--capture-rejected|--verify-rejected|--cleanup-rejected] <PLAN_PATH>; --commit-exact --preflight-json <path|-> (--message-auto|--message-file <path>)"
+    echo "planveyor_plan_bundle [--print|--check|--preflight|--scope-check|--stage|--commit-ready|--commit-exact|--closeout-json|--capture-rejected|--verify-rejected|--cleanup-rejected] <PLAN_PATH>; --commit-exact --preflight-json <path|-> (--message-auto|--message-file <path>)"
     echo "planveyor_plan_closeout_preflight [--docs-closeout-json <path|->] [--json] <PLAN_PATH>"
     echo "planveyor_plan_provenance_context [HELPER_ARGS...]"
     echo "planveyor_plan_provenance_stamp <PLAN_PATH> [HELPER_ARGS...]"
@@ -12770,6 +12770,7 @@ planveyor_plan_bundle() {
     --print) mode="print"; shift ;;
     --check) mode="check"; shift ;;
     --preflight) mode="preflight"; shift ;;
+    --scope-check) mode="scope-check"; shift ;;
     --stage) mode="stage"; shift ;;
     --commit-ready) mode="commit-ready"; shift ;;
     --commit-exact) mode="commit-exact"; shift ;;
@@ -12799,7 +12800,7 @@ planveyor_plan_bundle() {
       --docs-closeout-json)
         shift
         [[ -n "${1:-}" ]] || {
-          echo "Usage: planveyor_plan_bundle [--print|--check|--preflight|--stage|--commit-ready|--commit-exact|--closeout-json|--capture-rejected|--verify-rejected|--cleanup-rejected] <PLAN_PATH>" >&2
+          echo "Usage: planveyor_plan_bundle [--print|--check|--preflight|--scope-check|--stage|--commit-ready|--commit-exact|--closeout-json|--capture-rejected|--verify-rejected|--cleanup-rejected] <PLAN_PATH>" >&2
           return 1
         }
         docs_closeout_json="$1"
@@ -12825,12 +12826,12 @@ planveyor_plan_bundle() {
         (( message_auto_count += 1 ))
         ;;
       -*)
-        echo "Usage: planveyor_plan_bundle [--print|--check|--preflight|--stage|--commit-ready|--commit-exact|--closeout-json|--capture-rejected|--verify-rejected|--cleanup-rejected] <PLAN_PATH>" >&2
+        echo "Usage: planveyor_plan_bundle [--print|--check|--preflight|--scope-check|--stage|--commit-ready|--commit-exact|--closeout-json|--capture-rejected|--verify-rejected|--cleanup-rejected] <PLAN_PATH>" >&2
         return 1
         ;;
       *)
         [[ -z "$plan_path" ]] || {
-          echo "Usage: planveyor_plan_bundle [--print|--check|--preflight|--stage|--commit-ready|--commit-exact|--closeout-json|--capture-rejected|--verify-rejected|--cleanup-rejected] <PLAN_PATH>" >&2
+          echo "Usage: planveyor_plan_bundle [--print|--check|--preflight|--scope-check|--stage|--commit-ready|--commit-exact|--closeout-json|--capture-rejected|--verify-rejected|--cleanup-rejected] <PLAN_PATH>" >&2
           return 1
         }
         plan_path="$1"
@@ -12839,9 +12840,14 @@ planveyor_plan_bundle() {
     shift
   done
   [[ -n "${plan_path//[[:space:]]/}" ]] || {
-    echo "Usage: planveyor_plan_bundle [--print|--check|--preflight|--stage|--commit-ready|--commit-exact|--closeout-json|--capture-rejected|--verify-rejected|--cleanup-rejected] <PLAN_PATH>" >&2
+    echo "Usage: planveyor_plan_bundle [--print|--check|--preflight|--scope-check|--stage|--commit-ready|--commit-exact|--closeout-json|--capture-rejected|--verify-rejected|--cleanup-rejected] <PLAN_PATH>" >&2
     return 1
   }
+
+  if [[ "$mode" == "scope-check" && ( -n "$recovery_plan" || -n "$docs_closeout_json" || -n "$preflight_json" || "$message_file_count" -ne 0 || "$message_auto_count" -ne 0 ) ]]; then
+    echo "recovery/closeout/preflight/message options are unavailable for --scope-check" >&2
+    return 1
+  fi
 
   local root="$(_planveyor_project_root)" || return $?
   local plan_fs="$plan_path"
@@ -13274,6 +13280,10 @@ def resolve_path(raw: str, *, strip: bool = True) -> Path:
     if strip:
         raw = raw.strip().strip("`")
     path = Path(raw)
+    if mode == "scope-check":
+        lexical_path = path if path.is_absolute() else root / path
+        if any(part.is_symlink() for part in (lexical_path, *lexical_path.parents)):
+            errors.append(f"Unsafe symlink bundle input: {raw}")
     return path.resolve() if path.is_absolute() else (root / raw).resolve()
 
 
@@ -13405,6 +13415,10 @@ strict_na_candidate = (
     )
 )
 errors = []
+if mode == "scope-check":
+    lexical_plan = Path(plan_fs_arg).absolute()
+    if any(part.is_symlink() for part in (lexical_plan, *lexical_plan.parents)):
+        errors.append("Unsafe symlink origin plan input")
 machine_authority_readback_blocked = machine_authority_readback.state in {"invalid", "missing"}
 if machine_authority_readback_blocked:
     errors.append(
@@ -13449,8 +13463,81 @@ try:
 except json.JSONDecodeError as exc:
     current_review_proof = None
     errors.append(f"Canonical current review proof transport is invalid: {exc}")
+scope_selected_support = {"state": "not_selected", "error_code": None, "message": None, "diagnostics": []}
+if mode == "scope-check":
+    # These input authorities must run independently of the proof reader's
+    # early output-debt returns. Never use the adapter's filtered projection.
+    selection = plan_lint.select_plan_risk_lane_snapshot(plan_fs)
+    scope_selected_support["error_code"] = selection.error_code
+    scope_selected_support["message"] = selection.message
+    if selection.error_code is not None:
+        scope_selected_support["state"] = "invalid"
+        errors.append(f"Risk-lane selector {selection.error_code}: {selection.message}")
+    elif selection.snapshot is None and selection.payload is None:
+        pass  # No selection is explicitly unvalidated, even with no diagnostics.
+    elif not isinstance(selection.snapshot, str) or not selection.snapshot or not isinstance(selection.payload, dict):
+        scope_selected_support["state"] = "invalid"
+        errors.append("Risk-lane selector selection_shape_invalid: snapshot/payload must be present together")
+    else:
+        diagnostics = plan_lint.preflight_selected_risk_lane_support(plan_fs, selection, project_root=root)
+        scope_selected_support["diagnostics"] = [
+            {"code": diagnostic.code, "message": diagnostic.message} for diagnostic in diagnostics
+        ]
+        invalid_diagnostics = [
+            diagnostic for diagnostic in diagnostics
+            if diagnostic.code != "current_review_proof_producer_mismatch"
+        ]
+        if invalid_diagnostics:
+            scope_selected_support["state"] = "invalid"
+            errors.extend(
+                f"Selected risk-lane support {diagnostic.code}: {diagnostic.message}"
+                for diagnostic in invalid_diagnostics
+            )
+        else:
+            scope_selected_support["state"] = "stale_producer" if diagnostics else "validated"
+
 if not isinstance(current_review_proof, dict):
     errors.append("Canonical current review proof must be a JSON object")
+elif mode == "scope-check":
+    proof_debt_codes = {
+        "current_review_proof_target_ambiguous",
+        "current_review_proof_target_invalid",
+        "missing_plan_resident_risk_lane",
+        "current_review_proof_compact_snapshot_invalid",
+        "current_review_proof_projection_mismatch",
+        "current_review_proof_producer_mismatch",
+    }
+    proof_state = current_review_proof.get("state")
+    proof_code = current_review_proof.get("reason_code")
+    proof_diagnostics = current_review_proof.get("diagnostics")
+    if (
+        proof_state not in {"planned", "not_current", "current_green", "blocked"}
+        or not isinstance(current_review_proof.get("message"), str)
+        or not isinstance(proof_diagnostics, list)
+        or any(
+            not isinstance(diagnostic, dict)
+            or set(diagnostic) != {"code", "message"}
+            or not isinstance(diagnostic.get("code"), str)
+            or not isinstance(diagnostic.get("message"), str)
+            for diagnostic in (proof_diagnostics if isinstance(proof_diagnostics, list) else [])
+        )
+        or (proof_state != "blocked" and proof_code is not None)
+    ):
+        errors.append("Canonical current review proof shape_invalid: unknown state or malformed fields")
+    else:
+        # Secondary diagnostics remain input failures in every proof state,
+        # including planned/not_current with a null primary reason.
+        errors.extend(
+            f"Canonical current review proof diagnostic {diagnostic['code']}: {diagnostic['message']}"
+            for diagnostic in proof_diagnostics if diagnostic["code"] not in proof_debt_codes
+        )
+        if proof_state == "blocked" and (
+            not isinstance(proof_code, str)
+            or proof_code not in proof_debt_codes
+            or scope_selected_support["state"] == "invalid"
+            or not risk_support_manifest_clean
+        ):
+            errors.append(f"Canonical current review proof {proof_code}: {current_review_proof.get('message')}")
 elif current_review_proof.get("state") == "blocked":
     reason_code = current_review_proof.get("reason_code") or "current_review_proof_blocked"
     message = current_review_proof.get("message") or "Canonical current review proof is blocked."
@@ -13528,7 +13615,7 @@ def strict_na_risk_support_is_allowed(support_ref: str) -> bool:
     return bool(re.fullmatch(r"docs/reviews/[A-Za-z0-9_.-]+\.json", support_rel)) and support_path.is_file()
 
 
-if risk_support_manifest_clean and isinstance(risk_support_records, list):
+if (risk_support_manifest_clean or mode == "scope-check") and isinstance(risk_support_records, list):
     for record in risk_support_records:
         if not isinstance(record, dict):
             risk_support_manifest_clean = False
@@ -13605,7 +13692,7 @@ if code_draft_fs is not None:
 
 if strict_na_parent:
     if child_state.state != "queue_ready" or not child_state.canonical_planning_child_paths:
-        if not (strict_na_candidate and mode in {"print", "preflight"}):
+        if not (strict_na_candidate and mode in {"print", "preflight", "scope-check"}):
             errors.append(f"decomposition_children_missing: {child_state.reason}")
     else:
         for child_rel in child_state.canonical_planning_child_paths:
@@ -13759,10 +13846,13 @@ for item in entries.values():
     item["repo_root"] = repo_root_for(path)
     item["repo_rel"] = repo_rel(path, item["repo_root"]) if item["repo_root"] else None
     item["problems"] = []
+    if mode == "scope-check" and item["exists"] and not path.is_file():
+        item["problems"].append("non-regular-path")
     item["planned_missing_review_artifact"] = (
-        (mode == "preflight" or (mode == "print" and strict_na_candidate))
+        (mode in {"preflight", "scope-check"} or (mode == "print" and strict_na_candidate))
         and not item["exists"]
         and "review_artifact" in item["sources"]
+        and (mode != "scope-check" or set(item["sources"]) == {"review_artifact"})
     )
     item["missing_declared_review_artifact_receipt"] = None
     if not item["exists"] and "review_artifact" in item["sources"] and not item["planned_missing_review_artifact"]:
@@ -13845,7 +13935,7 @@ for item in entries.values():
             "mark the reference transient/debug-only/not checked in, or remove the stale durable reference."
         )
     review_closeout = review_closeout_by_repo_rel.get(item["repo_rel"]) if item["repo_rel"] else None
-    if review_closeout is not None and review_closeout.state in {"current_red", "needs_reviewer_rerun", "stale_red_after_fix"}:
+    if mode != "scope-check" and review_closeout is not None and review_closeout.state in {"current_red", "needs_reviewer_rerun", "stale_red_after_fix"}:
         display = item["repo_rel"] if item["repo_rel"] else str(item["path"])
         closeout_problem_by_state = {
             "current_red": "current-review-red",
@@ -13860,6 +13950,62 @@ for item in entries.values():
         )
     groups.setdefault(group_key, []).append(item)
     problem_count += len(item["problems"])
+
+if mode == "scope-check":
+    # Project only diagnostic fields, never a closeout/route/commit envelope.
+    payload = {
+        "schema": "planveyor_plan_bundle_scope.v1",
+        "plan": plan_display,
+        "scope_ok": not bool(errors or problem_count),
+        "errors": list(errors),
+        "path_problems": OrderedDict(),
+        "repo_roots": [],
+        "support": {
+            "historical": {
+                "state": "validated" if risk_support_manifest_clean else "invalid",
+                "diagnostics": risk_support_manifest.get("diagnostics", []) if isinstance(risk_support_manifest, dict) else [],
+            },
+            "selected": scope_selected_support,
+        },
+        "completion": {
+            "current_review_proof": {
+                **{
+                    key: current_review_proof.get(key) if isinstance(current_review_proof, dict)
+                    and isinstance(current_review_proof.get(key), str) else None
+                    for key in ("state", "reason_code", "message")
+                },
+                "diagnostics": [
+                    {key: diagnostic.get(key) if isinstance(diagnostic.get(key), str) else None
+                     for key in ("code", "message")}
+                    for diagnostic in current_review_proof.get("diagnostics", [])
+                    if isinstance(diagnostic, dict)
+                ] if isinstance(current_review_proof, dict)
+                and isinstance(current_review_proof.get("diagnostics"), list) else [],
+            },
+            "review_artifacts": [],
+        },
+    }
+    for group_key, items in groups.items():
+        problems = OrderedDict(
+            (item["repo_rel"] or str(item["path"]), list(item["problems"]))
+            for item in items if item["problems"]
+        )
+        payload["path_problems"].update(problems)
+        payload["repo_roots"].append({
+            "repo_root": None if group_key == "<no-git-root>" else group_key,
+            "bundle_paths": sorted({item["repo_rel"] for item in items if item["repo_rel"]}),
+            "path_problems": problems,
+        })
+    for review_path in review_artifact_abs:
+        review_root = repo_root_for(review_path)
+        closeout = review_closeout_by_repo_rel.get(repo_rel(review_path, review_root)) if review_root else None
+        payload["completion"]["review_artifacts"].append({
+            "path": str(review_path.relative_to(root)) if review_path.is_relative_to(root) else str(review_path),
+            "state": closeout.state if closeout is not None else "planned",
+            "reason": closeout.reason if closeout is not None else "Declared first review is not materialized.",
+        })
+    print(json.dumps(payload, ensure_ascii=False, indent=2))
+    sys.exit(0 if payload["scope_ok"] else 1)
 
 if mode == "closeout-json":
     payload = OrderedDict()

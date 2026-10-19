@@ -2960,7 +2960,10 @@ def preflight_selected_risk_lane_support(
     """Validate immutable support for one lifecycle-valid tentative selection.
 
     The raw selector intentionally remains lifecycle-only.  This read-only
-    boundary is called only by the selector CLI and final review-artifact lint.
+    boundary is called by the selector CLI, final review-artifact lint and
+    exact-bundle scope inspection. Scope callers use this raw diagnostic tuple
+    independently of current-proof completion diagnostics; historical manifest
+    collection remains path/bytes/hash-only.
     """
 
     if selection.error_code or selection.snapshot is None or selection.payload is None:
@@ -6627,7 +6630,10 @@ def validate_exact_bundle_preflight(
     severity = "ERROR" if enforced else "WARN"
     prefix = "Planner exact-bundle preflight failed" if enforced else "Planner exact-bundle seed warning"
     suffix = (
-        "Run `source scripts/planveyor.zsh && planveyor_plan_bundle --preflight <PLAN_PATH>` before `Ready for Coder`."
+        "For the first executable handoff run `planveyor_plan_bundle --preflight <PLAN_PATH>` through the external facade. "
+        "Genuine refinement with a materialized live review uses `planveyor_plan_bundle --scope-check <PLAN_PATH>` "
+        "for inventory only; contract/lint/machine-authority/handoff gates, semantic lint/derived handoff digest "
+        "and same-contract skip-Planner remain unchanged. Scope does not grant green/route/commit; final --check stays strict."
         if enforced
         else "This is advisory seed hygiene before `Planner finalize`; Planner hard gate remains fail-closed before `Ready for Coder`."
     )

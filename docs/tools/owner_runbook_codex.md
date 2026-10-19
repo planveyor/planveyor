@@ -126,10 +126,12 @@ For an executable plan, check the exact bundle before the final handoff if the i
 ./bin/planveyor --project /absolute/path/to/consumer \
   planveyor_plan_bundle --preflight docs/plans/YYYYMMDD_HHMM_topic.md
 ./bin/planveyor --project /absolute/path/to/consumer \
+  planveyor_plan_bundle --scope-check docs/plans/YYYYMMDD_HHMM_topic.md
+./bin/planveyor --project /absolute/path/to/consumer \
   planveyor_plan_bundle --check docs/plans/YYYYMMDD_HHMM_topic.md
 ```
 
-`--preflight` checks the proposed bundle before review. `--check` evaluates the completed bundle. Neither of them replaces target tests, a review of the current diff, or the required semantic acceptance artifact.
+The first executable Planner handoff requires strict `--preflight`. Reviewer uses `--scope-check` before the diff; genuine Planner refinement with a materialized live review uses it only for inventory and integrity alongside every existing contract, lint, machine-authority and handoff gate. Semantic lint, the derived handoff digest, same-contract skip-Planner and fingerprint status windows stay unchanged. `--scope-check` emits one `planveyor_plan_bundle_scope.v1` JSON document; rc0 means only `scope_ok=true`, and ordinary scope failure returns rc1. Planned absence and red/stale output remain completion debt, and `not_selected` is unvalidated. Scope grants no route, green verdict or commit permission. Final lint and strict `--check` still evaluate the completed review.
 
 ## Queue discipline
 

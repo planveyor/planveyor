@@ -80,7 +80,7 @@
       - `staged bundle`, если plan держит explicit bundle и in-scope paths уже staged;
       - `current bundle`, если plan держит explicit bundle, но in-scope paths живут в working tree;
       - иначе `staged` (если есть staged изменения), иначе `current` (working tree).
-    - Если plan держит explicit bundle, сначала прогоняй `planveyor_plan_bundle --check <PLAN_PATH>` и при необходимости `planveyor_plan_bundle --print <PLAN_PATH>` как inspectable scope sanity-check; helper не заменяет review diff, а ограничивает его explicit путями.
+    - Если plan держит explicit bundle, до diff прогоняй `planveyor_plan_bundle --scope-check <PLAN_PATH>` и используй exact inventory из JSON. rc0/`scope_ok` подтверждают input integrity, а не completion/green/role/commit permission; `not_selected` не validated. Planned absence и materialized red/stale review остаются completion debt. После фактического review обязательны прежние strict final lint и `planveyor_plan_bundle --check <PLAN_PATH>`.
     - Если same file смешивает in-scope и unrelated hunks так, что agreed deliverable больше не восстанавливается из bundle, это scope contamination / plan drift: фиксируй blocker/Q&A, а не требуй clean repo как универсальный precondition.
     - Коммит — опционально (если Owner хочет “заморозить diff” в ручном режиме).
     - Diff-команды (read-only):

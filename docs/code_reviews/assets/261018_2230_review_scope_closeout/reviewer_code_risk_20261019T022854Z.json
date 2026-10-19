@@ -1,0 +1,484 @@
+{
+  "run_id": "risk-20261019T022854Z-review-scope-closeout-rerun",
+  "lane_id": "reviewer_code_risk",
+  "runner_id": "codex-native-collab",
+  "session_key": "/root/reviewer_code_risk_sol_xhigh_v2",
+  "sid": "unknown",
+  "profile": "unknown",
+  "model": "gpt-6.1-sol",
+  "reasoning_effort": "ultra",
+  "prompt_file": "docs/tools/prompts/reviewer_status_driven.md",
+  "target_ref": "BUNDLE=current",
+  "coverage_domains": [
+    "correctness",
+    "tests quality",
+    "security/privacy",
+    "subprocess/timeouts",
+    "performance",
+    "observability",
+    "integrations",
+    "failure semantics"
+  ],
+  "findings": [],
+  "lane_status": "no_findings",
+  "no_findings_reason": "Risk-owned причина прежнего risk:R1 устранена в current source: planned allowance для scope-check разрешён только output-only sources; merged target/review source сохраняет missing-path. Existing collision subcase требует rc1/scope_ok=false и exact missing-path, отдельный positive planned-absence case сохранён. Independently read current45=31 fresh013+14 retained; новый run tests/probes не повторяет. Новых risk defects в двухфайловом repair и неизменном exact32 inventory не найдено; canonical #B1 acceptance остаётся Contracts-owned.",
+  "source_refs": [
+    "scripts/planveyor.zsh:13851",
+    "scripts/planveyor.zsh:13855",
+    "scripts/planveyor.zsh:13898",
+    "scripts/test_planveyor_plan_bundle.py:322",
+    "scripts/test_planveyor_plan_bundle.py:327",
+    "scripts/test_planveyor_plan_bundle.py:351",
+    "docs/plans/261018_2230_review_scope_closeout.md:725",
+    "docs/code_reviews/261018_2230_review_scope_closeout.md:49"
+  ],
+  "delta": "Только scripts/planveyor.zsh и scripts/test_planveyor_plan_bundle.py изменились относительно authenticated pre-fix Risk producer; remaining30 target file records и exact32 paths byte-identical. Old strict modes сохраняют прежний predicate.",
+  "outcome": "Current target имеет zero Risk findings. Final review/header/status и canonical B1 record не изменены этим Risk run; same-file independent Contracts synthesis и все deferred strict completion gates ещё обязательны.",
+  "limits": [
+    "Received coordinator decisions010/015/017/018 — task-control, не Owner quotes/helper authority. FROZEN operational HEAD822e3e62; SOURCE writable targets/support/evidence; candidate scope-check frozen helper-ом не запускался.",
+    "Fresh FROZEN producer rc0/exact32 и own oracle rc0: admitted/clean Q&A/guard=false/valid N-A ref. Old review producer mismatch — truthful unfinished review; postponed только completion-only preflight/check/print до same-file rewrite по015. Strict selected-support gate не отложен.",
+    "Current45 доказательство прочитано/reused:31 fresh013+14 unchanged retained; no new test/probe/full-suite/adoption/SQL/activation claim.",
+    "Same native handle/configured role model gpt-6.1-sol/ultra; independent live SID/profile unavailable=unknown. Baseline six-session audit остаётся baseline_only, не final continuity.",
+    "Risk plan_evidence_only: no final review/header/status/Contracts/P-F mutation. Old immutable support и actual historical CENSOR receipts сохраняются byte-for-byte."
+  ],
+  "current": true,
+  "written_at": "2026-10-19T02:28:54Z",
+  "target_snapshot": {
+  "bundle_sha256": "fda9c1d81a486536517d048775af540207fdf1fba0bb05ab3492106c537bfd0d",
+  "code_draft": "docs/code_drafts/261018_2230_review_scope_closeout__code_draft.md",
+  "files": [
+    {
+      "git_mode": "100644",
+      "path": "copier_template/.agents/skills/planveyor-plan-draft/SKILL.md",
+      "sha256": "24d479702b69e6e08ace3dfe326134b7cb2f34cb354278d040147a5471f2c8c7",
+      "size_bytes": 12479
+    },
+    {
+      "git_mode": "100644",
+      "path": "copier_template/docs/code_drafts/_template.md",
+      "sha256": "6169198b8bbeb08f0744b973016ef3dde6edcc60450e334ed2771819fa239d7a",
+      "size_bytes": 21835
+    },
+    {
+      "git_mode": "100644",
+      "path": "copier_template/docs/plans/README.md",
+      "sha256": "0f36905018a87c8ee0d89bcdd7ddc4a73bac02aebd9f516b19e754d7d3402b61",
+      "size_bytes": 225239
+    },
+    {
+      "git_mode": "100644",
+      "path": "copier_template/docs/plans/_template.md",
+      "sha256": "e9cba9a994e9dad6a9dccab1793c3e154db75ca70e9da64ed7de97199ef47424",
+      "size_bytes": 62741
+    },
+    {
+      "git_mode": "100644",
+      "path": "copier_template/docs/playbooks/review_docs_staged_or_commit.md",
+      "sha256": "63a0368aeddd9ad4d27d34b1681b2b33d289aedc616914aa7df115e9911ece44",
+      "size_bytes": 8542
+    },
+    {
+      "git_mode": "100644",
+      "path": "copier_template/docs/playbooks/review_staged_or_commit.md",
+      "sha256": "a29680632678a0e4d6d5fac99fda5d2940b58233c936aaf3d074377bfcf2aa51",
+      "size_bytes": 10250
+    },
+    {
+      "git_mode": "100644",
+      "path": "copier_template/docs/roles/architect.md",
+      "sha256": "b84e778341cfa915087796aa6f18877469b00ef53ae4ccffc5081291d24d880c",
+      "size_bytes": 44794
+    },
+    {
+      "git_mode": "100644",
+      "path": "copier_template/docs/roles/planner.md",
+      "sha256": "5c5cab2109d3b54d8ad008cea075f4139530b35b368c5bcc685558f9c2defadf",
+      "size_bytes": 32792
+    },
+    {
+      "git_mode": "100644",
+      "path": "copier_template/docs/roles/reviewer.md",
+      "sha256": "2165203eaea66808f991a28e9826575f96299c6931fb385e20bff39a6c29ca66",
+      "size_bytes": 44196
+    },
+    {
+      "git_mode": "100644",
+      "path": "copier_template/docs/tools/prompts/architect_status_driven.md",
+      "sha256": "e1d4a27dcc2eb4270ddce1d46bea9a5b188a85cb4eca92282828d261d7ac5c44",
+      "size_bytes": 82338
+    },
+    {
+      "git_mode": "100644",
+      "path": "copier_template/docs/tools/prompts/planner_status_driven.md",
+      "sha256": "95aec0d95cd227e2cd511c3bf4dfea8833bd3e4dfc3db24a10beb8f56d9c26ef",
+      "size_bytes": 63091
+    },
+    {
+      "git_mode": "100644",
+      "path": "copier_template/docs/tools/prompts/reviewer_status_driven.md",
+      "sha256": "9b09c4b747a859841cc81d294b42843619034a435e41c738842a6f1f2d8d51fe",
+      "size_bytes": 105773
+    },
+    {
+      "git_mode": "100644",
+      "path": "docs/code_drafts/_template.md",
+      "sha256": "6169198b8bbeb08f0744b973016ef3dde6edcc60450e334ed2771819fa239d7a",
+      "size_bytes": 21835
+    },
+    {
+      "git_mode": "100644",
+      "path": "docs/code_reviews/README.md",
+      "sha256": "6f5efd7dcf915a8218e78bfe990b5c9f536fd2206f9c5b51dccab8fae3be199c",
+      "size_bytes": 14836
+    },
+    {
+      "git_mode": "100644",
+      "path": "docs/doc_reviews/README.md",
+      "sha256": "21974f6f8a22ff5e3be9aabe3735403742accfff45370756d7311fdaba68c7a1",
+      "size_bytes": 14031
+    },
+    {
+      "git_mode": "100644",
+      "path": "docs/plans/README.md",
+      "sha256": "0f36905018a87c8ee0d89bcdd7ddc4a73bac02aebd9f516b19e754d7d3402b61",
+      "size_bytes": 225239
+    },
+    {
+      "git_mode": "100644",
+      "path": "docs/plans/_template.md",
+      "sha256": "e9cba9a994e9dad6a9dccab1793c3e154db75ca70e9da64ed7de97199ef47424",
+      "size_bytes": 62741
+    },
+    {
+      "git_mode": "100644",
+      "path": "docs/playbooks/review_docs_staged_or_commit.md",
+      "sha256": "63a0368aeddd9ad4d27d34b1681b2b33d289aedc616914aa7df115e9911ece44",
+      "size_bytes": 8542
+    },
+    {
+      "git_mode": "100644",
+      "path": "docs/playbooks/review_staged_or_commit.md",
+      "sha256": "a29680632678a0e4d6d5fac99fda5d2940b58233c936aaf3d074377bfcf2aa51",
+      "size_bytes": 10250
+    },
+    {
+      "git_mode": "100644",
+      "path": "docs/roles/architect.md",
+      "sha256": "b84e778341cfa915087796aa6f18877469b00ef53ae4ccffc5081291d24d880c",
+      "size_bytes": 44794
+    },
+    {
+      "git_mode": "100644",
+      "path": "docs/roles/planner.md",
+      "sha256": "5c5cab2109d3b54d8ad008cea075f4139530b35b368c5bcc685558f9c2defadf",
+      "size_bytes": 32792
+    },
+    {
+      "git_mode": "100644",
+      "path": "docs/roles/reviewer.md",
+      "sha256": "2165203eaea66808f991a28e9826575f96299c6931fb385e20bff39a6c29ca66",
+      "size_bytes": 44196
+    },
+    {
+      "git_mode": "100644",
+      "path": "docs/tools/owner_runbook_codex.md",
+      "sha256": "2685f36f96ebeff256df209dc0d6a3f187625c60e244f38aad4fac974ccd0e60",
+      "size_bytes": 16925
+    },
+    {
+      "git_mode": "100644",
+      "path": "docs/tools/prompts/architect_status_driven.md",
+      "sha256": "e1d4a27dcc2eb4270ddce1d46bea9a5b188a85cb4eca92282828d261d7ac5c44",
+      "size_bytes": 82338
+    },
+    {
+      "git_mode": "100644",
+      "path": "docs/tools/prompts/planner_status_driven.md",
+      "sha256": "95aec0d95cd227e2cd511c3bf4dfea8833bd3e4dfc3db24a10beb8f56d9c26ef",
+      "size_bytes": 63091
+    },
+    {
+      "git_mode": "100644",
+      "path": "docs/tools/prompts/reviewer_status_driven.md",
+      "sha256": "9b09c4b747a859841cc81d294b42843619034a435e41c738842a6f1f2d8d51fe",
+      "size_bytes": 105773
+    },
+    {
+      "git_mode": "100644",
+      "path": "scripts/plan_lint.py",
+      "sha256": "a8408bdfb4b8cd6b1578ab4478735d479ecfb3316588f8bcb6d536168121e10e",
+      "size_bytes": 595058
+    },
+    {
+      "git_mode": "100644",
+      "path": "scripts/planveyor.zsh",
+      "sha256": "19704a2fdcb840d1f5da684d65bc8b04d8820a6eb24cb496baffa4279fea45f7",
+      "size_bytes": 825532
+    },
+    {
+      "git_mode": "100644",
+      "path": "scripts/test_build_role_bundles.py",
+      "sha256": "a619288d2341ea3cbfb554438193b55352c4b65a1a716ca3442031548bcc4bc1",
+      "size_bytes": 31067
+    },
+    {
+      "git_mode": "100644",
+      "path": "scripts/test_planveyor_plan_bundle.py",
+      "sha256": "1c064a7dd9128ba04b9d22a160ec83cfa19014f8217c9513dbb4bb9f5b30b345",
+      "size_bytes": 391134
+    },
+    {
+      "git_mode": "100644",
+      "path": "scripts/test_sibling_contract_docs.py",
+      "sha256": "cbabcd10576332ff6f16613b0622a27c9d839e2046b7aebd56f45af7699bea20",
+      "size_bytes": 61780
+    },
+    {
+      "git_mode": "100644",
+      "path": "skills/planveyor-plan-draft/SKILL.md",
+      "sha256": "24d479702b69e6e08ace3dfe326134b7cb2f34cb354278d040147a5471f2c8c7",
+      "size_bytes": 12479
+    }
+  ],
+  "hash_basis": "sha256 over canonical JSON (ensure_ascii=False, sort_keys=True, separators=(',', ':')) of hash_basis_payload; targets come from the primary code_draft_meta.targets, are normalized to repo-relative POSIX paths, sorted by path, and each file authenticates its bytes plus normalized git_mode (100755 iff the owner-execute bit is set, otherwise 100644)",
+  "hash_basis_payload": {
+    "algorithm": "sha256",
+    "files": [
+      {
+        "git_mode": "100644",
+        "path": "copier_template/.agents/skills/planveyor-plan-draft/SKILL.md",
+        "sha256": "24d479702b69e6e08ace3dfe326134b7cb2f34cb354278d040147a5471f2c8c7",
+        "size_bytes": 12479
+      },
+      {
+        "git_mode": "100644",
+        "path": "copier_template/docs/code_drafts/_template.md",
+        "sha256": "6169198b8bbeb08f0744b973016ef3dde6edcc60450e334ed2771819fa239d7a",
+        "size_bytes": 21835
+      },
+      {
+        "git_mode": "100644",
+        "path": "copier_template/docs/plans/README.md",
+        "sha256": "0f36905018a87c8ee0d89bcdd7ddc4a73bac02aebd9f516b19e754d7d3402b61",
+        "size_bytes": 225239
+      },
+      {
+        "git_mode": "100644",
+        "path": "copier_template/docs/plans/_template.md",
+        "sha256": "e9cba9a994e9dad6a9dccab1793c3e154db75ca70e9da64ed7de97199ef47424",
+        "size_bytes": 62741
+      },
+      {
+        "git_mode": "100644",
+        "path": "copier_template/docs/playbooks/review_docs_staged_or_commit.md",
+        "sha256": "63a0368aeddd9ad4d27d34b1681b2b33d289aedc616914aa7df115e9911ece44",
+        "size_bytes": 8542
+      },
+      {
+        "git_mode": "100644",
+        "path": "copier_template/docs/playbooks/review_staged_or_commit.md",
+        "sha256": "a29680632678a0e4d6d5fac99fda5d2940b58233c936aaf3d074377bfcf2aa51",
+        "size_bytes": 10250
+      },
+      {
+        "git_mode": "100644",
+        "path": "copier_template/docs/roles/architect.md",
+        "sha256": "b84e778341cfa915087796aa6f18877469b00ef53ae4ccffc5081291d24d880c",
+        "size_bytes": 44794
+      },
+      {
+        "git_mode": "100644",
+        "path": "copier_template/docs/roles/planner.md",
+        "sha256": "5c5cab2109d3b54d8ad008cea075f4139530b35b368c5bcc685558f9c2defadf",
+        "size_bytes": 32792
+      },
+      {
+        "git_mode": "100644",
+        "path": "copier_template/docs/roles/reviewer.md",
+        "sha256": "2165203eaea66808f991a28e9826575f96299c6931fb385e20bff39a6c29ca66",
+        "size_bytes": 44196
+      },
+      {
+        "git_mode": "100644",
+        "path": "copier_template/docs/tools/prompts/architect_status_driven.md",
+        "sha256": "e1d4a27dcc2eb4270ddce1d46bea9a5b188a85cb4eca92282828d261d7ac5c44",
+        "size_bytes": 82338
+      },
+      {
+        "git_mode": "100644",
+        "path": "copier_template/docs/tools/prompts/planner_status_driven.md",
+        "sha256": "95aec0d95cd227e2cd511c3bf4dfea8833bd3e4dfc3db24a10beb8f56d9c26ef",
+        "size_bytes": 63091
+      },
+      {
+        "git_mode": "100644",
+        "path": "copier_template/docs/tools/prompts/reviewer_status_driven.md",
+        "sha256": "9b09c4b747a859841cc81d294b42843619034a435e41c738842a6f1f2d8d51fe",
+        "size_bytes": 105773
+      },
+      {
+        "git_mode": "100644",
+        "path": "docs/code_drafts/_template.md",
+        "sha256": "6169198b8bbeb08f0744b973016ef3dde6edcc60450e334ed2771819fa239d7a",
+        "size_bytes": 21835
+      },
+      {
+        "git_mode": "100644",
+        "path": "docs/code_reviews/README.md",
+        "sha256": "6f5efd7dcf915a8218e78bfe990b5c9f536fd2206f9c5b51dccab8fae3be199c",
+        "size_bytes": 14836
+      },
+      {
+        "git_mode": "100644",
+        "path": "docs/doc_reviews/README.md",
+        "sha256": "21974f6f8a22ff5e3be9aabe3735403742accfff45370756d7311fdaba68c7a1",
+        "size_bytes": 14031
+      },
+      {
+        "git_mode": "100644",
+        "path": "docs/plans/README.md",
+        "sha256": "0f36905018a87c8ee0d89bcdd7ddc4a73bac02aebd9f516b19e754d7d3402b61",
+        "size_bytes": 225239
+      },
+      {
+        "git_mode": "100644",
+        "path": "docs/plans/_template.md",
+        "sha256": "e9cba9a994e9dad6a9dccab1793c3e154db75ca70e9da64ed7de97199ef47424",
+        "size_bytes": 62741
+      },
+      {
+        "git_mode": "100644",
+        "path": "docs/playbooks/review_docs_staged_or_commit.md",
+        "sha256": "63a0368aeddd9ad4d27d34b1681b2b33d289aedc616914aa7df115e9911ece44",
+        "size_bytes": 8542
+      },
+      {
+        "git_mode": "100644",
+        "path": "docs/playbooks/review_staged_or_commit.md",
+        "sha256": "a29680632678a0e4d6d5fac99fda5d2940b58233c936aaf3d074377bfcf2aa51",
+        "size_bytes": 10250
+      },
+      {
+        "git_mode": "100644",
+        "path": "docs/roles/architect.md",
+        "sha256": "b84e778341cfa915087796aa6f18877469b00ef53ae4ccffc5081291d24d880c",
+        "size_bytes": 44794
+      },
+      {
+        "git_mode": "100644",
+        "path": "docs/roles/planner.md",
+        "sha256": "5c5cab2109d3b54d8ad008cea075f4139530b35b368c5bcc685558f9c2defadf",
+        "size_bytes": 32792
+      },
+      {
+        "git_mode": "100644",
+        "path": "docs/roles/reviewer.md",
+        "sha256": "2165203eaea66808f991a28e9826575f96299c6931fb385e20bff39a6c29ca66",
+        "size_bytes": 44196
+      },
+      {
+        "git_mode": "100644",
+        "path": "docs/tools/owner_runbook_codex.md",
+        "sha256": "2685f36f96ebeff256df209dc0d6a3f187625c60e244f38aad4fac974ccd0e60",
+        "size_bytes": 16925
+      },
+      {
+        "git_mode": "100644",
+        "path": "docs/tools/prompts/architect_status_driven.md",
+        "sha256": "e1d4a27dcc2eb4270ddce1d46bea9a5b188a85cb4eca92282828d261d7ac5c44",
+        "size_bytes": 82338
+      },
+      {
+        "git_mode": "100644",
+        "path": "docs/tools/prompts/planner_status_driven.md",
+        "sha256": "95aec0d95cd227e2cd511c3bf4dfea8833bd3e4dfc3db24a10beb8f56d9c26ef",
+        "size_bytes": 63091
+      },
+      {
+        "git_mode": "100644",
+        "path": "docs/tools/prompts/reviewer_status_driven.md",
+        "sha256": "9b09c4b747a859841cc81d294b42843619034a435e41c738842a6f1f2d8d51fe",
+        "size_bytes": 105773
+      },
+      {
+        "git_mode": "100644",
+        "path": "scripts/plan_lint.py",
+        "sha256": "a8408bdfb4b8cd6b1578ab4478735d479ecfb3316588f8bcb6d536168121e10e",
+        "size_bytes": 595058
+      },
+      {
+        "git_mode": "100644",
+        "path": "scripts/planveyor.zsh",
+        "sha256": "19704a2fdcb840d1f5da684d65bc8b04d8820a6eb24cb496baffa4279fea45f7",
+        "size_bytes": 825532
+      },
+      {
+        "git_mode": "100644",
+        "path": "scripts/test_build_role_bundles.py",
+        "sha256": "a619288d2341ea3cbfb554438193b55352c4b65a1a716ca3442031548bcc4bc1",
+        "size_bytes": 31067
+      },
+      {
+        "git_mode": "100644",
+        "path": "scripts/test_planveyor_plan_bundle.py",
+        "sha256": "1c064a7dd9128ba04b9d22a160ec83cfa19014f8217c9513dbb4bb9f5b30b345",
+        "size_bytes": 391134
+      },
+      {
+        "git_mode": "100644",
+        "path": "scripts/test_sibling_contract_docs.py",
+        "sha256": "cbabcd10576332ff6f16613b0622a27c9d839e2046b7aebd56f45af7699bea20",
+        "size_bytes": 61780
+      },
+      {
+        "git_mode": "100644",
+        "path": "skills/planveyor-plan-draft/SKILL.md",
+        "sha256": "24d479702b69e6e08ace3dfe326134b7cb2f34cb354278d040147a5471f2c8c7",
+        "size_bytes": 12479
+      }
+    ],
+    "schema_version": "review_target_snapshot.hash_basis.v2"
+  },
+  "plan": "docs/plans/261018_2230_review_scope_closeout.md",
+  "schema_version": "review_target_snapshot.v2",
+  "target": "BUNDLE=current bundle_sha256=fda9c1d81a486536517d048775af540207fdf1fba0bb05ab3492106c537bfd0d",
+  "target_paths": [
+    "copier_template/.agents/skills/planveyor-plan-draft/SKILL.md",
+    "copier_template/docs/code_drafts/_template.md",
+    "copier_template/docs/plans/README.md",
+    "copier_template/docs/plans/_template.md",
+    "copier_template/docs/playbooks/review_docs_staged_or_commit.md",
+    "copier_template/docs/playbooks/review_staged_or_commit.md",
+    "copier_template/docs/roles/architect.md",
+    "copier_template/docs/roles/planner.md",
+    "copier_template/docs/roles/reviewer.md",
+    "copier_template/docs/tools/prompts/architect_status_driven.md",
+    "copier_template/docs/tools/prompts/planner_status_driven.md",
+    "copier_template/docs/tools/prompts/reviewer_status_driven.md",
+    "docs/code_drafts/_template.md",
+    "docs/code_reviews/README.md",
+    "docs/doc_reviews/README.md",
+    "docs/plans/README.md",
+    "docs/plans/_template.md",
+    "docs/playbooks/review_docs_staged_or_commit.md",
+    "docs/playbooks/review_staged_or_commit.md",
+    "docs/roles/architect.md",
+    "docs/roles/planner.md",
+    "docs/roles/reviewer.md",
+    "docs/tools/owner_runbook_codex.md",
+    "docs/tools/prompts/architect_status_driven.md",
+    "docs/tools/prompts/planner_status_driven.md",
+    "docs/tools/prompts/reviewer_status_driven.md",
+    "scripts/plan_lint.py",
+    "scripts/planveyor.zsh",
+    "scripts/test_build_role_bundles.py",
+    "scripts/test_planveyor_plan_bundle.py",
+    "scripts/test_sibling_contract_docs.py",
+    "skills/planveyor-plan-draft/SKILL.md"
+  ],
+  "target_snapshot": {
+    "bundle_sha256": "fda9c1d81a486536517d048775af540207fdf1fba0bb05ab3492106c537bfd0d",
+    "target": "BUNDLE=current"
+  }
+}
+}

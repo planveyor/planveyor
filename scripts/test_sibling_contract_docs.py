@@ -224,6 +224,48 @@ ENGINE_GOLDEN_REFERENCE_FILES = (
 
 
 class SiblingContractDocsTest(unittest.TestCase):
+    def test_review_scope_callers_keep_phase_specific_gate_contract(self) -> None:
+        reviewer_paths = (
+            "docs/roles/reviewer.md", "docs/tools/prompts/reviewer_status_driven.md",
+            "docs/playbooks/review_staged_or_commit.md", "docs/playbooks/review_docs_staged_or_commit.md",
+            "docs/code_reviews/README.md", "docs/doc_reviews/README.md",
+        )
+        planner_paths = (
+            "docs/roles/planner.md", "docs/tools/prompts/planner_status_driven.md",
+            "docs/roles/architect.md", "docs/tools/prompts/architect_status_driven.md",
+            "docs/plans/README.md", "docs/plans/_template.md", "docs/code_drafts/_template.md",
+            "skills/planveyor-plan-draft/SKILL.md",
+        )
+        for rel in (*reviewer_paths, *planner_paths):
+            with self.subTest(path=rel):
+                text = (ROOT / rel).read_text(encoding="utf-8")
+                self.assertIn("planveyor_plan_bundle --scope-check", text)
+                self.assertIn("--check", text)
+                self.assertRegex(text, r"(?i)strict|строг")
+                self.assertRegex(text, r"(?i)inventory|integrity")
+                if rel in planner_paths:
+                    self.assertIn("--preflight", text)
+                    self.assertIn("materialized", text)
+                    self.assertRegex(text, r"(?i)semantic lint")
+                    self.assertRegex(text, r"(?i)handoff digest")
+                copier = TEMPLATE_ROOT / rel
+                if rel.startswith("skills/"):
+                    copier = TEMPLATE_ROOT / ".agents" / rel
+                if copier.is_file():
+                    self.assertEqual(copier.read_bytes(), (ROOT / rel).read_bytes())
+        for rel in ("docs/playbooks/review_staged_or_commit.md", "docs/playbooks/review_docs_staged_or_commit.md"):
+            text = (ROOT / rel).read_text(encoding="utf-8")
+            process = text.split("## Процесс", 1)[1]
+            scope = process.index("--scope-check")
+            self.assertLess(scope, process.index("--check", scope))
+        guidance = (ROOT / "scripts/plan_lint.py").read_text(encoding="utf-8")
+        self.assertIn("first executable handoff", guidance)
+        self.assertIn("Genuine refinement", guidance)
+        self.assertNotIn("Run `source scripts/planveyor.zsh && planveyor_plan_bundle --preflight", guidance)
+        architect = (ROOT / "docs/tools/prompts/architect_status_driven.md").read_text(encoding="utf-8")
+        self.assertIn("--as-status Done", architect)
+        self.assertIn("closeout_pending", architect)
+
     def test_sibling_tui_template_and_f12_keep_mode_and_row_contract(self) -> None:
         import followups_index_rebuild
 

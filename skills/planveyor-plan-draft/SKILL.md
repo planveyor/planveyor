@@ -71,7 +71,7 @@ Public root corpus не задаёт application stack, test harness или UI d
   planveyor_plan_bundle --preflight docs/plans/YYMMDD_HHMM_topic.md
 ```
 
-`--preflight` advisory для early Architect/Planner draft и hard gate перед `Ready for Coder`. Если target is Git-backed, также выполните `git diff --check` для changed plan/code-draft paths. Для созданных или изменённых plan и code draft выполните declared documentation check выбранного project.
+`--preflight` advisory для early draft и strict hard gate первого executable handoff перед `Ready for Coder`. Genuine refinement при materialized live review использует `planveyor_plan_bundle --scope-check <PLAN_PATH>` через ту же facade только для inventory/integrity со всеми прежними contract/lint/machine-authority/handoff gates. Semantic lint/derived handoff digest, same-contract skip-Planner и fingerprint status window не меняются; scope rc0 не даёт green/route/commit, strict final `--check` обязателен после review. Для Git-backed target выполните `git diff --check` и declared documentation check changed plan/code draft.
 
 Интерпретируйте результат точно: planned review artifact до Reviewer допустим как `PLANNED`; missing/stale target перед Coder — blocker.
 

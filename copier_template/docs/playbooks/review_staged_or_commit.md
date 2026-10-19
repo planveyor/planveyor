@@ -53,7 +53,7 @@ review explicit plan bundle. Dirty files вне bundle не являются blo
 1. Получи diff:
    - `current`/`working`/`changed`: `git diff HEAD --patch --find-renames --find-copies --stat`;
    - `staged`: `git diff --staged --patch --find-renames --find-copies --stat`;
-   - `current bundle`/`staged bundle`: сначала `planveyor_plan_bundle --check <PLAN_PATH>`, затем соответствующий diff с explicit bundle paths;
+   - `current bundle`/`staged bundle`: сначала `planveyor_plan_bundle --scope-check <PLAN_PATH>`, затем соответствующий diff с exact bundle paths из JSON. rc0/`scope_ok` подтверждают только inventory/integrity; planned absence и materialized red/stale review остаются completion debt, `not_selected` не validated. После review обязательны strict final lint и `planveyor_plan_bundle --check <PLAN_PATH>`; scope не разрешает green/handoff/commit;
    - literal hash: `git show --patch --find-renames --find-copies --stat <COMMIT>`.
 2. Зафиксируй short target id: first seven hash characters либо `current`,
    `staged`, `current_bundle` или `staged_bundle`; время artifact —

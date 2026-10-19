@@ -180,6 +180,54 @@ class BuildRoleBundlesSliceTests(unittest.TestCase):
 
 
 class BuildRoleBundlesProfileContentBridgeTests(unittest.TestCase):
+    def test_review_scope_sources_have_current_generated_references(self) -> None:
+        tooling_root = Path(__file__).resolve().parent.parent
+        with tempfile.TemporaryDirectory() as tmpdir:
+            repo_root = Path(tmpdir).resolve() / "repo"
+            repo_root.mkdir()
+            standalone_git_root(repo_root)
+            _write(repo_root / "AGENTS.md", "# AGENTS\n")
+            for profile in ("default", "planveyor"):
+                for role in ("architect", "planner", "reviewer"):
+                    with self.subTest(profile=profile, role=role):
+                        prompt = tooling_root / f"docs/tools/prompts/{role}_init.md"
+                        context = MODULE._build_context(
+                            role, repo_root=repo_root, tooling_root=tooling_root,
+                            repo_profile_id=profile, content_profile_id=profile,
+                            prompt_path=prompt, out_dir=repo_root / "generated",
+                        )
+                        data = MODULE._bundle_xml_bytes(context)
+                        bundle = ET.fromstring(data)
+                        refs = {ref.attrib["path"]: ref.attrib["sha256"] for ref in bundle.findall("./source_refs/source_ref")}
+                        self.assertEqual(set(refs), {
+                            "AGENTS.md", f"docs/roles/{role}.md", f"docs/tools/prompts/{role}_init.md",
+                            "docs/playbooks/docs_architecture.md",
+                        })
+                        self.assertIn("--scope-check", context.role_doc_text)
+                        for rel in (f"docs/roles/{role}.md", f"docs/tools/prompts/{role}_init.md"):
+                            self.assertEqual(refs[rel], MODULE._sha256_file(tooling_root / rel))
+                        # Existing slices stay bounded. Check exactly the items
+                        # that this generator renders, without requiring full
+                        # prompt duplication or activating a native runtime.
+                        rendered = bundle.find("./bundle_payload/bootstrap_slice[@id='init_prompt']")
+                        self.assertIsNotNone(rendered)
+                        expected = MODULE._collect_markdown_items(context.prompt_text, max_items=10)
+                        self.assertEqual(
+                            [item.text for item in rendered.findall("item")],
+                            [MODULE._sanitize_item_text(item, repo_root=repo_root, tooling_root=tooling_root) for item in expected],
+                        )
+                        section = MODULE._extract_section(context.role_doc_text, ("Границы роли (жёстко)",))
+                        self.assertIsNotNone(section)
+                        expected_role = MODULE._collect_markdown_items(section[1], max_items=12)
+                        role_slice = bundle.find("./bundle_payload/bootstrap_slice[@id='role_contract']")
+                        self.assertIsNotNone(role_slice)
+                        self.assertEqual(
+                            [item.text for item in role_slice.findall("item")],
+                            [MODULE._sanitize_item_text(item, repo_root=repo_root, tooling_root=tooling_root) for item in expected_role],
+                        )
+                        if any("--scope-check" in item for item in (*expected, *expected_role)):
+                            self.assertIn("--scope-check", " ".join(bundle.itertext()))
+
     def test_prompt_manifest_carries_exactly_one_effective_content_profile(self) -> None:
         tooling_root = Path(__file__).resolve().parent.parent
 

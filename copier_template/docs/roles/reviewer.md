@@ -61,7 +61,7 @@ transport или harness details не становятся default wording.
 - Если plan явно включает post-review selective staging, используй bundle как scope limiter:
   - authoritative implementation/doc file set = `code_draft_meta.targets`;
   - final explicit bundle = `code_draft_meta.targets` + `PLAN_PATH` + code draft + `## Review artifacts` + explicit asset refs;
-  - helper `planveyor_plan_bundle --print|--check <PLAN_PATH>` нужен для sanity-check bundle, а не для требования clean repo.
+  - до diff helper `planveyor_plan_bundle --scope-check <PLAN_PATH>` проверяет только exact inventory/integrity; rc0/`scope_ok` не дают green, handoff или commit. Planned absence и materialized red/stale output остаются completion debt; `not_selected` не validated. После завершения review остаются strict final lint и `planveyor_plan_bundle --check <PLAN_PATH>`; clean repo вне bundle не требуется.
 - Reviewer gate для `## Documentation impact / provenance`: actual diff, `code_draft_meta.targets` и carrier должны совпадать. Missing carrier, stale `Synchronous doc/registry targets`, unplanned docs diff или противоречие между carrier и exact bundle = plan gap/blocker; memory-finalize не заменяет upfront carrier.
 - Если same file содержит unrelated hunks и из-за этого exact deliverable больше не восстанавливается из agreed bundle, это scope contamination / plan drift: фиксируй blocker или Q&A, а не требуй “чистое репо” как универсальный precondition.
 - Для UI-задач один и тот же review artifact живёт через `Reviewer code review` -> `Reviewer visual review`: это канонический split-phase artifact, а не повод заводить второй “partial/frozen review” процесс.
