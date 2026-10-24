@@ -1,0 +1,158 @@
+{
+  "run_id": "reviewer_code_risk:manifest-reviewer-p1:20261023T234520Z",
+  "lane_id": "reviewer_code_risk",
+  "runner_id": "codex",
+  "session_key": "reviewer_code_risk",
+  "sid": "01a168f4-1161-7fe1-bbbe-ab325f813dff",
+  "profile": "native_collab",
+  "model": "gpt-6.1-sol",
+  "reasoning_effort": "ultra",
+  "prompt_file": "$PLANVEYOR_RUNTIME_ROOT/docs/tools/prompts/reviewer_status_driven.md",
+  "target_ref": "BUNDLE=current",
+  "coverage_domains": [
+    "correctness",
+    "tests quality",
+    "security/privacy",
+    "subprocess/timeouts",
+    "races/locks/atomicity",
+    "data/migrations",
+    "performance",
+    "observability",
+    "integrations",
+    "supply chain",
+    "failure semantics"
+  ],
+  "findings": [],
+  "lane_status": "no_findings",
+  "no_findings_reason": "В exact manifest diff не найдено подтверждённых risk findings: добавлены только accepted 12 assignments, baseline и две notes; собственные P0–P5 подтвердили canonical exact-once 3512, raw negatives 2/2, exact_delta, неизменные profiles/weights и 130 protected files. Исторические веса не названы текущим timing proof.",
+  "limits": [
+    "Проверены metadata/import/discovery и exact manifest delta; TestCase bodies, все 14 execution shards и full suite не запускались.",
+    "Current review host остаётся planned; contracts lane, aggregate verdict, AC5/AC6 и semantic/documentary closeout этой lane не завершены.",
+    "profile=native_collab описывает observed public session_meta.source.subagent.thread_spawn; именованный Codex configuration profile: N/A (не предоставлен и не подтверждён).",
+    "Command-local caps соблюдены; elapsed/cost telemetry не сбрасывает historical failures/costs. Signal capability/all-descendant stop не проверялись.",
+    "Data/migrations, access/runtime security, new subprocess/supply-chain semantics: N/A (sole data manifest assignments; соответствующие protected code/config/lock files неизменны)."
+  ],
+  "written_at": "2026-10-23T23:45:20.011535Z",
+  "current": true,
+  "proof": {
+    "prefix": "manifest-reviewer-p1",
+    "raw_child_rc": [
+      0,
+      0,
+      2,
+      2,
+      0,
+      0
+    ],
+    "native_exit_code": [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+    ],
+    "journal_elapsed_seconds": [
+      1,
+      0,
+      0,
+      0,
+      2,
+      0
+    ],
+    "journal_resolution_seconds": 1,
+    "native_command_seconds": [
+      1.095453583,
+      0.129235333,
+      0.0763985,
+      0.07968725,
+      1.955003667,
+      0.169682542
+    ],
+    "native_command_total_seconds": 3.505460875,
+    "pass_native_launch_to_terminal_seconds": 43.337,
+    "pass_native_launch_to_full4_read_seconds": 67.182,
+    "canonical_tests": 3512,
+    "manifest_sha256": "bb18fa43385c3d9bcb97eb3ada28302030e09e4ff37848519cc0d869d942c260",
+    "protected_file_count": 130,
+    "exact_delta": true,
+    "profiles_weights_unchanged": true,
+    "protected_unchanged": true,
+    "full4_refs": [
+      ".tmp/manifest-gates-261023/manifest-reviewer-p1-p0.cmd",
+      ".tmp/manifest-gates-261023/manifest-reviewer-p1-p0.out",
+      ".tmp/manifest-gates-261023/manifest-reviewer-p1-p0.err",
+      ".tmp/manifest-gates-261023/manifest-reviewer-p1-p0.rc",
+      ".tmp/manifest-gates-261023/manifest-reviewer-p1-p1.cmd",
+      ".tmp/manifest-gates-261023/manifest-reviewer-p1-p1.out",
+      ".tmp/manifest-gates-261023/manifest-reviewer-p1-p1.err",
+      ".tmp/manifest-gates-261023/manifest-reviewer-p1-p1.rc",
+      ".tmp/manifest-gates-261023/manifest-reviewer-p1-p2.cmd",
+      ".tmp/manifest-gates-261023/manifest-reviewer-p1-p2.out",
+      ".tmp/manifest-gates-261023/manifest-reviewer-p1-p2.err",
+      ".tmp/manifest-gates-261023/manifest-reviewer-p1-p2.rc",
+      ".tmp/manifest-gates-261023/manifest-reviewer-p1-p3.cmd",
+      ".tmp/manifest-gates-261023/manifest-reviewer-p1-p3.out",
+      ".tmp/manifest-gates-261023/manifest-reviewer-p1-p3.err",
+      ".tmp/manifest-gates-261023/manifest-reviewer-p1-p3.rc",
+      ".tmp/manifest-gates-261023/manifest-reviewer-p1-p4.cmd",
+      ".tmp/manifest-gates-261023/manifest-reviewer-p1-p4.out",
+      ".tmp/manifest-gates-261023/manifest-reviewer-p1-p4.err",
+      ".tmp/manifest-gates-261023/manifest-reviewer-p1-p4.rc",
+      ".tmp/manifest-gates-261023/manifest-reviewer-p1-p5.cmd",
+      ".tmp/manifest-gates-261023/manifest-reviewer-p1-p5.out",
+      ".tmp/manifest-gates-261023/manifest-reviewer-p1-p5.err",
+      ".tmp/manifest-gates-261023/manifest-reviewer-p1-p5.rc"
+    ],
+    "producer_stdout_sha256": "a2f7504d209725455ec2b2c040c1c39f8ac9302401c6c15dcc1a67d49451b3c9"
+  },
+  "source_refs": [
+    "scripts/test_shards.json:1",
+    "scripts/test_shards.json:123",
+    "scripts/test_shards.json:143",
+    "scripts/test_shards.json:187",
+    "scripts/test_shards.json:209",
+    "scripts/test_shards.json:360",
+    "scripts/test_shards.json:412",
+    "scripts/run_test_shard.py:129",
+    "scripts/run_test_shard.py:318",
+    "scripts/test_shards.schema.json:121",
+    "docs/code_drafts/261023_0037_test_manifest_exact_once__code_draft.md:71"
+  ]
+,
+  "target_snapshot": {
+  "bundle_sha256": "0048c69f83108f83944c8a9a837541f7d79635f88e606ffdf93722aa41c8413e",
+  "code_draft": "docs/code_drafts/261023_0037_test_manifest_exact_once__code_draft.md",
+  "files": [
+    {
+      "git_mode": "100644",
+      "path": "scripts/test_shards.json",
+      "sha256": "bb18fa43385c3d9bcb97eb3ada28302030e09e4ff37848519cc0d869d942c260",
+      "size_bytes": 29613
+    }
+  ],
+  "hash_basis": "sha256 over canonical JSON (ensure_ascii=False, sort_keys=True, separators=(',', ':')) of hash_basis_payload; targets come from the primary code_draft_meta.targets, are normalized to repo-relative POSIX paths, sorted by path, and each file authenticates its bytes plus normalized git_mode (100755 iff the owner-execute bit is set, otherwise 100644)",
+  "hash_basis_payload": {
+    "algorithm": "sha256",
+    "files": [
+      {
+        "git_mode": "100644",
+        "path": "scripts/test_shards.json",
+        "sha256": "bb18fa43385c3d9bcb97eb3ada28302030e09e4ff37848519cc0d869d942c260",
+        "size_bytes": 29613
+      }
+    ],
+    "schema_version": "review_target_snapshot.hash_basis.v2"
+  },
+  "plan": "docs/plans/261023_0037_test_manifest_exact_once.md",
+  "schema_version": "review_target_snapshot.v2",
+  "target": "BUNDLE=current bundle_sha256=0048c69f83108f83944c8a9a837541f7d79635f88e606ffdf93722aa41c8413e",
+  "target_paths": [
+    "scripts/test_shards.json"
+  ],
+  "target_snapshot": {
+    "bundle_sha256": "0048c69f83108f83944c8a9a837541f7d79635f88e606ffdf93722aa41c8413e",
+    "target": "BUNDLE=current"
+  }
+}
+}

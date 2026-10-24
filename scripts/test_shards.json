@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "baseline_head": "ded862d817b91282b2a8f36196b0b31c12d56f23",
+  "baseline_head": "e9baf7c22e49ae948a8647568e40ac5344796359",
   "zero_test_modules": [
     "test_contract_authority_support"
   ],
@@ -122,6 +122,7 @@
             "test_contract_authority_shell.ContractAuthorityShellIntegrationTests.test_api_guard_rejects_unsupported_api_for_pinned_and_unattested_sources",
             "test_contract_authority_shell.ContractAuthorityShellIntegrationTests.test_api_one_range_rejects_pinned_and_unattested_sources",
             "test_contract_authority_shell.ContractAuthorityShellIntegrationTests.test_clean_first_source_pins_and_same_source_is_idempotent",
+            "test_contract_authority_shell.ContractAuthorityShellIntegrationTests.test_cold_explicit_plan_cycle_uses_existing_fake_client_and_no_pointer_or_init",
             "test_contract_authority_shell.ContractAuthorityShellIntegrationTests.test_dirty_or_non_git_initial_source_stays_unattested_after_runtime_becomes_clean",
             "test_contract_authority_shell.ContractAuthorityShellIntegrationTests.test_fake_and_exported_readonly_source_assertions_are_rejected",
             "test_contract_authority_shell.ContractAuthorityShellIntegrationTests.test_initially_unattested_legacy_shell_remains_usable_and_unpinned_after_clean_commit",
@@ -138,6 +139,10 @@
             "test_contract_authority_shell.ContractAuthorityShellIntegrationTests.test_stale_timestamp_valid_context_bytecode_cannot_change_shell_effect_context",
             "test_contract_authority_shell.ContractAuthorityShellIntegrationTests.test_target_mutation_after_declared_read_reaches_effect_with_current_content"
           ]
+        },
+        {
+          "module": "test_sibling_runbook",
+          "class": "GeneralPICorrectionRunbookTests"
         },
         {
           "module": "test_sibling_runbook",
@@ -179,6 +184,10 @@
         {
           "module": "test_process_improvements"
         }
+      ],
+      "notes": [
+        "Composition updated at e9baf7c22e49ae948a8647568e40ac5344796359: 12 previously unassigned tests added; 19 source-fix tests remain covered by whole-module selectors.",
+        "Added method costs are unknown; historical weights and two NativeSibling fixture groups are unchanged; no current timing balance or CI upper bound is claimed."
       ]
     },
     {
@@ -197,6 +206,7 @@
             "test_contract_authority_shell.ContractAuthorityShellIntegrationTests.test_first_source_under_nounset_keeps_module_loading_and_source_state",
             "test_contract_authority_shell.ContractAuthorityShellIntegrationTests.test_parent_context_requires_exact_caller_local_readonly_scalars",
             "test_contract_authority_shell.ContractAuthorityShellIntegrationTests.test_preseeded_or_missing_interpreter_cache_rejects_before_bridge",
+            "test_contract_authority_shell.ContractAuthorityShellIntegrationTests.test_public_candidate_format_correction_all_roles_and_bounded_outcomes",
             "test_contract_authority_shell.ContractAuthorityShellIntegrationTests.test_public_continuation_checkpoint_revalidates_fresh_bundle_and_replays_without_write",
             "test_contract_authority_shell.ContractAuthorityShellIntegrationTests.test_public_pi_blocked_recovery_requires_recorded_after_map_and_repairs_derived",
             "test_contract_authority_shell.ContractAuthorityShellIntegrationTests.test_public_pi_composition_clean_noop",
@@ -346,7 +356,10 @@
             "test_sibling_runbook.NativeSiblingCommitPolicyTests.test_ambient_selector_does_not_supply_direct_manager_bootstrap_authority",
             "test_sibling_runbook.NativeSiblingCommitPolicyTests.test_direct_manager_resume_after_human_run_uses_fresh_native_policy",
             "test_sibling_runbook.NativeSiblingCommitPolicyTests.test_missing_mutable_and_invalid_sibling_selectors_refuse_before_child_or_answers",
-            "test_sibling_runbook.NativeSiblingCommitPolicyTests.test_role_prompt_body_invalid_sibling_frame_returns_3_before_prompt_file_and_header"
+            "test_sibling_runbook.NativeSiblingCommitPolicyTests.test_role_prompt_body_invalid_sibling_frame_returns_3_before_prompt_file_and_header",
+            "test_sibling_runbook.NativeSiblingCommitPolicyTests.test_tui_resolver_nested_and_explicit_second_checkout",
+            "test_sibling_runbook.NativeSiblingCommitPolicyTests.test_tui_markerless_legacy_refuses_before_session_effects",
+            "test_sibling_runbook.NativeSiblingCommitPolicyTests.test_tui_invalid_plan_session_and_foreign_receipts_are_effect_free"
           ]
         },
         {
@@ -395,7 +408,12 @@
           "ids": [
             "test_sibling_runbook.NativeSiblingCommitPolicyTests.test_actual_architect_cold_init_and_reused_resume_get_current_human_policy",
             "test_sibling_runbook.NativeSiblingCommitPolicyTests.test_actual_manager_bootstrap_resume_and_explicit_cycle_keep_current_policy",
-            "test_sibling_runbook.NativeSiblingCommitPolicyTests.test_direct_native_after_human_call_ignores_ambient_selector_and_history"
+            "test_sibling_runbook.NativeSiblingCommitPolicyTests.test_direct_native_after_human_call_ignores_ambient_selector_and_history",
+            "test_sibling_runbook.NativeSiblingCommitPolicyTests.test_tui_engaged_missing_session_bootstraps_only_through_facade",
+            "test_sibling_runbook.NativeSiblingCommitPolicyTests.test_tui_reuses_receipt_and_refreshes_current_plan_payload",
+            "test_sibling_runbook.NativeSiblingCommitPolicyTests.test_tui_process_exit_and_missing_saved_session_use_existing_checker",
+            "test_sibling_runbook.NativeSiblingCommitPolicyTests.test_tui_cmd_architect_and_direct_policy_sequence_ignores_ambient",
+            "test_sibling_runbook.NativeSiblingCommitPolicyTests.test_tui_client_error_and_runtime_drift_preserve_native_outcome"
           ]
         },
         {
