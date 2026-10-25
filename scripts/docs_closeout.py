@@ -177,7 +177,8 @@ FOLLOWUPS_CONTINUATION_PROOF_KEYS = {
     "receipt_content_sha256", "receipt_sha256", "receipt_object_identity", "receipt_object",
     "cycle_directory_identity", "transaction_host_identity", "followup_files",
     "baseline_process_improvement_files", "baseline_dirty_process_improvement_paths",
-    "collector_proof", "collector_states", "collector_inputs", "general_pi_checkpoint", "docs_delta", "terminal_admission",
+    "collector_proof", "collector_states", "collector_inputs", "general_pi_checkpoint",
+    "general_pi_format_corrections", "docs_delta", "terminal_admission",
 }
 FOLLOWUPS_BOOTSTRAP_ADMISSION_STATES = {"ready", "blocked"}
 FOLLOWUPS_BOOTSTRAP_ADMISSION_REASONS = {
@@ -923,6 +924,16 @@ def _validate_followups_continuation_admission(payload: dict[str, Any], errors: 
                         str(payload.get("plan_ref")), item["role"], admission["capture_cycle_id"]).as_posix()):
                 _schema_error(errors, path, "canonical collector receipt identity is malformed")
         try:
+            correction_receipt = {
+                "plan_ref": admission["plan_ref"],
+                "capture_cycle_id": admission["capture_cycle_id"],
+                "receipt_revision": revision,
+                "plan_sha256": identity["plan_sha256"],
+                "transaction_host_identity": proof["transaction_host_identity"],
+            }
+            if proof["general_pi_format_corrections"] is not None:
+                correction_receipt[followups_capture.PI_FORMAT_CORRECTIONS_KEY] = proof["general_pi_format_corrections"]
+            corrections = followups_capture._validate_general_pi_format_corrections(correction_receipt)
             if set(collectors) != {"input_receipts", "before_process_improvement_files", "after_process_improvement_files", "process_improvement_path_results"}:
                 raise ValueError("incomplete collector object proof")
             before = followups_capture._validate_pi_object_map(collectors["before_process_improvement_files"],
@@ -948,7 +959,7 @@ def _validate_followups_continuation_admission(payload: dict[str, Any], errors: 
                 if (revision != marker["prior_receipt_revision"] + 1 or marker["input_receipts"] != inputs
                         or marker["before_process_improvement_files"] != before):
                     raise ValueError("checkpoint replay proof differs")
-            elif revision != 1:
+            elif revision != 1 + len(corrections or {}):
                 raise ValueError("pre-checkpoint revision differs")
         except (followups_capture.CaptureError, ValueError, KeyError, TypeError):
             _schema_error(errors, path, "object/delta/checkpoint proof is malformed or stale")
@@ -3268,6 +3279,7 @@ def classify_followups_continuation_admission(
                     "collector_states": {item["role"]: item["capture_state"] for item in collectors["role_receipts"]},
                     "collector_inputs": {item["role"]: item["input_sha256"] for item in collectors["role_receipts"]},
                     "general_pi_checkpoint": marker,
+                    "general_pi_format_corrections": receipt.get(followups_capture.PI_FORMAT_CORRECTIONS_KEY),
                     "docs_delta": {"paths": docs_snapshot[0], "protected_paths": protected, "owned_pi_paths": owned_pi},
                     "terminal_admission": {"manager_mode": mode, "owner_qna_state": oracle.owner_qna_readback_state,
                         "review_state": review.state, "bundle_ok": True, "bundle_errors": [], "closeout_kind": semantic_fields[2]},

@@ -7079,7 +7079,12 @@ class DocsCloseoutFormatCorrectionTests(unittest.TestCase):
                     text=proof.clean, followups_capture_cycle_id=cycle)
             continuation = proof.payload(root, fixture, module, cycle)
             self.assertEqual(continuation["followups_continuation_admission"]["state"], "ready")
-            cap.checkpoint_general_pi(root, fixture.plan_ref, cycle)
+            self.assertEqual((continuation["schema_state"], continuation["schema_errors"]), ("ok", []))
+            with mock.patch.object(cap, "_fresh_continuation_bundle_payload", return_value=fixture._bundle()):
+                cap.checkpoint_general_pi(root, fixture.plan_ref, cycle, docs_closeout_payload=continuation)
+            checkpointed = json.loads(fixture._receipt_path(root, cycle).read_bytes())
+            self.assertEqual(checkpointed["receipt_revision"], 3)
+            self.assertEqual(checkpointed["general_pi_checkpoint"]["prior_receipt_revision"], 2)
             for role in cap.REQUIRED_ROLES:
                 cap.prepare_role(root, fixture.plan_ref, cycle, role)
                 raw = json.dumps({"role": role, "proposed_rows": [], "role_no_items_reason": "No new fixture followups."}).encode()
@@ -7089,6 +7094,103 @@ class DocsCloseoutFormatCorrectionTests(unittest.TestCase):
             final = proof.payload(root, fixture, module, cycle)
             self.assertEqual((final["schema_state"], final["state"], final["final_docs_commit"]), ("ok", "completed", "no_op"), final)
             self.assertEqual(final["general_pi_format_correction_admission"]["state"], "not_applicable")
+
+    def test_continuation_schema_validates_correction_records_and_exact_revision(self):
+        try:
+            from scripts.test_followups_capture import GeneralPIFormatCorrectionTests
+        except ModuleNotFoundError:
+            from test_followups_capture import GeneralPIFormatCorrectionTests
+        proof = GeneralPIFormatCorrectionTests()
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory).resolve()
+            fixture, module, cap, cycle = proof.continuation_fixture(root, 2)
+            payload = proof.payload(root, fixture, module, cycle)
+            self.assertEqual((payload["schema_state"], payload["schema_errors"]), ("ok", []))
+            variants = {
+                "map_list": ([], []),
+                "map_unknown_role": ([], {"Unknown": {}}),
+                "record_list": (["Coder"], []),
+                "role": (["Coder", "role"], "Reviewer"),
+                "plan": (["Coder", "plan_ref"], "docs/plans/foreign.md"),
+                "cycle": (["Coder", "capture_cycle_id"], str(uuid.uuid4())),
+                "project": (["Coder", "project_root"], "/foreign"),
+                "source_sha": (["Coder", "source_identity", "source_plan_sha256"], "0" * 64),
+                "source_plan": (["Coder", "source_identity", "plan_ref"], "docs/plans/foreign.md"),
+                "source_commit": (["Coder", "source_identity", "source_terminal_commit_oid"], "invalid"),
+                "source_blob": (["Coder", "source_identity", "source_plan_blob_oid"], "invalid"),
+                "attempts_bool": (["Coder", "attempts_reserved"], True),
+                "attempts_count": (["Coder", "attempts_reserved"], 2),
+                "reserved_bool": (["Coder", "reserved_revision"], True),
+                "reserved_low": (["Coder", "reserved_revision"], 1),
+                "reserved_gap": (["Coder", "reserved_revision"], 4),
+                "reservation_id": (["Coder", "reservation_id"], "invalid"),
+                "original_missing": (["Coder", "original_receipt_utf8"], None),
+                "original_surrogate": (["Coder", "original_receipt_utf8"], "\ud800"),
+                "original_invalid_json": (["Coder", "original_receipt_utf8"], "{"),
+                "original_hash": (["Coder", "original_receipt_sha256"], "0" * 64),
+                "original_object": (["Coder", "original_receipt_object", "st_size"], 0),
+                "original_identity": (["Coder", "original_receipt_identity"], [True] * 6),
+                "original_path": (["Coder", "original_receipt_path"], "foreign.json"),
+            }
+            for variant in (*variants, "missing_snapshot", "unknown_proof", "missing_record_key",
+                            "unknown_record_key", "source_unknown", "duplicate_id", "duplicate_revision",
+                            "original_untyped", "original_nonblocked", "original_effect",
+                            "revision_bool", "revision_zero", "revision_string", "revision_low", "revision_high"):
+                with self.subTest(variant=variant):
+                    candidate = json.loads(json.dumps(payload))
+                    ready = candidate["followups_continuation_admission"]["proof"]
+                    records = ready["general_pi_format_corrections"]
+                    if variant in variants:
+                        path, value = variants[variant]
+                        target = ready; key = "general_pi_format_corrections"
+                        for item in path:
+                            target = target[key]; key = item
+                        target[key] = value
+                    elif variant == "missing_snapshot": ready.pop("general_pi_format_corrections")
+                    elif variant == "unknown_proof": ready["unknown"] = 0
+                    elif variant == "missing_record_key": records["Coder"].pop("role")
+                    elif variant == "unknown_record_key": records["Coder"]["unknown"] = 0
+                    elif variant == "source_unknown": records["Coder"]["source_identity"]["unknown"] = 0
+                    elif variant == "duplicate_id": records["Coder"]["reservation_id"] = records["Architect"]["reservation_id"]
+                    elif variant == "duplicate_revision": records["Coder"]["reserved_revision"] = records["Architect"]["reserved_revision"]
+                    elif variant.startswith("revision_"):
+                        ready["receipt_revision"] = {"revision_bool": True, "revision_zero": 0,
+                            "revision_string": "3", "revision_low": 2, "revision_high": 4}[variant]
+                    else:
+                        record = records["Coder"]
+                        original = json.loads(record["original_receipt_utf8"])
+                        if variant == "original_untyped": original.pop("error_type")
+                        elif variant == "original_nonblocked": original["capture_state"] = "clean_noop"
+                        else: original["after_process_improvement_files"] = {"foreign": {}}
+                        raw = json.dumps(original).encode()
+                        record["original_receipt_utf8"] = raw.decode()
+                        record["original_receipt_sha256"] = hashlib.sha256(raw).hexdigest()
+                        record["original_receipt_object"] = {"sha256": hashlib.sha256(raw).hexdigest(),
+                            "file_type": "regular", "st_size": len(raw)}
+                    self.assertEqual(candidate["followups_continuation_admission"]["state"], "ready")
+                    result = module.finalize_docs_closeout_payload(candidate)
+                    self.assertEqual((result["schema_state"], result["state"]), ("blocked", "blocked"), variant)
+                    self.assertTrue(result["schema_errors"], variant)
+
+    def test_continuation_schema_is_pure_for_corrected_payload(self):
+        try:
+            from scripts.test_followups_capture import GeneralPIFormatCorrectionTests
+        except ModuleNotFoundError:
+            from test_followups_capture import GeneralPIFormatCorrectionTests
+        proof = GeneralPIFormatCorrectionTests()
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory).resolve()
+            fixture, module, _cap, cycle = proof.continuation_fixture(root, 2)
+            payload = proof.payload(root, fixture, module, cycle)
+            with mock.patch("builtins.open", side_effect=AssertionError("schema FS read")), \
+                    mock.patch.object(Path, "open", side_effect=AssertionError("schema Path read")), \
+                    mock.patch.object(os, "open", side_effect=AssertionError("schema open")), \
+                    mock.patch.object(os, "stat", side_effect=AssertionError("schema stat")), \
+                    mock.patch.object(os, "lstat", side_effect=AssertionError("schema lstat")), \
+                    mock.patch.object(subprocess, "run", side_effect=AssertionError("schema Git run")), \
+                    mock.patch.object(subprocess, "Popen", side_effect=AssertionError("schema Git process")):
+                result = module.validate_docs_closeout_payload(payload)
+            self.assertEqual((result["schema_state"], result["schema_errors"]), ("ok", []))
 
 
 class DocsCloseoutContinuationAdmissionTests(unittest.TestCase):
@@ -7162,6 +7264,27 @@ class DocsCloseoutContinuationAdmissionTests(unittest.TestCase):
                 if materialized:
                     self.assertIn("materialized", states.values())
                     self.assertIn("already_tracked", states.values())
+
+    def test_zero_correction_snapshot_preserves_absent_and_empty_carriers(self) -> None:
+        for historical in (False, True):
+            with self.subTest(historical=historical), tempfile.TemporaryDirectory() as directory:
+                root = Path(directory).resolve(); cycle = self._fixture(root)
+                if historical:
+                    self._edit_receipt(root, cycle, lambda receipt: receipt.pop(MODULE.followups_capture.PI_FORMAT_CORRECTIONS_KEY))
+                payload = MODULE.classify_docs_closeout(root=root, plan_ref=self.plan_ref,
+                    bundle_payload=self._bundle(), followups_capture_cycle_id=cycle)
+                self.assertEqual((payload["schema_state"], payload["schema_errors"]), ("ok", []))
+                proof = payload["followups_continuation_admission"]["proof"]
+                self.assertEqual(proof["general_pi_format_corrections"], None if historical else {})
+                for revision in (0, True, 2, 3, "1"):
+                    candidate = json.loads(json.dumps(payload))
+                    candidate["followups_continuation_admission"]["proof"]["receipt_revision"] = revision
+                    self.assertEqual(MODULE.validate_docs_closeout_payload(candidate)["schema_state"], "blocked")
+                with mock.patch.object(MODULE.followups_capture, "_fresh_continuation_bundle_payload", return_value=self._bundle()):
+                    MODULE.followups_capture.checkpoint_general_pi(root, self.plan_ref, cycle, docs_closeout_payload=payload)
+                receipt = json.loads(self._receipt_path(root, cycle).read_bytes())
+                self.assertEqual(receipt["receipt_revision"], 2)
+                self.assertEqual(receipt["general_pi_checkpoint"]["prior_receipt_revision"], 1)
 
     def _receipt_path(self, root: Path, cycle: str) -> Path:
         return root / ".tmp/followups_capture" / Path(self.plan_ref).stem / cycle / MODULE.followups_capture.RECEIPT_NAME

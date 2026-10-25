@@ -1901,7 +1901,8 @@ class BareEntrypointsDoctorTests(unittest.TestCase):
             self.assertFalse(stats_marker.exists(), result.stdout)
             self.assertFalse(sync_marker.exists(), result.stdout)
     def test_codex_home_adapter_rejects_invalid_paths_and_missing_cli_without_mutation(self) -> None:
-        with tempfile.TemporaryDirectory(prefix="planveyor_codex_home_adapter_") as tmpdir:
+        with AuthorityFixture() as runtime_fixture, \
+                tempfile.TemporaryDirectory(prefix="planveyor_codex_home_adapter_") as tmpdir:
             fixture = Path(tmpdir)
             home = fixture / "home"
             target = fixture / "consumer-codex"
@@ -1924,9 +1925,8 @@ class BareEntrypointsDoctorTests(unittest.TestCase):
             surfaces_before = snapshot_surfaces()
             fake_bin = fixture / "bin"
             fake_bin.mkdir()
-            fake_bin.joinpath(
-                f"python{sys.version_info.major}.{sys.version_info.minor}"
-            ).symlink_to(sys.executable)
+            for name in ("python3", f"python{sys.version_info.major}.{sys.version_info.minor}"):
+                fake_bin.joinpath(name).symlink_to(sys.executable)
             env = {
                 "HOME": str(home),
                 "ZDOTDIR": str(fixture / "zdotdir"),
@@ -1941,11 +1941,11 @@ class BareEntrypointsDoctorTests(unittest.TestCase):
             def run_adapter(
                 candidate: str, command: str = "_planveyor_codex_home_ensure"
             ) -> subprocess.CompletedProcess[str]:
-                child_env = os.environ.copy()
+                child_env = runtime_fixture.environment()
                 child_env.update(
                     {
                         "PYBIN": sys.executable,
-                        "PLANVEYOR_ROOT": str(REPO_ROOT),
+                        "PLANVEYOR_ROOT": str(runtime_fixture.runtime_root),
                         "PLANVEYOR_CODEX_HOME": candidate,
                         **env,
                         "TMPDIR": str(child_tmp),
@@ -1957,9 +1957,10 @@ class BareEntrypointsDoctorTests(unittest.TestCase):
                         "/bin/zsh",
                         "-dfc",
                         f'print -r -- "$TMPDIR|$TMPPREFIX" > {shlex.quote(str(child_observation))}; '
-                        f"source {shlex.quote(str(PLANVEYOR_SCRIPT))} && {command}",
+                        + runtime_fixture.shell_loader()
+                        + f"planveyor_source_runtime {shlex.quote(str(runtime_fixture.runtime_root / 'scripts/planveyor.zsh'))} && {command}",
                     ],
-                    cwd=REPO_ROOT,
+                    cwd=runtime_fixture.target_root,
                     text=True,
                     capture_output=True,
                     env=child_env,
@@ -1973,7 +1974,7 @@ class BareEntrypointsDoctorTests(unittest.TestCase):
                     "Codex home must be an absolute path",
                 ),
                 "inside_product": (
-                    str(REPO_ROOT / "scripts"),
+                    str(runtime_fixture.runtime_root / "scripts"),
                     "Codex home must be an absolute path",
                 ),
             }
@@ -2798,18 +2799,31 @@ _planveyor_codex() {
                     "planveyor_plan_bundle --check docs/plans/YYYYMMDD_HHMM_topic.md",
                     text,
                 )
+                self.assertIn(
+                    "planveyor_plan_bundle --scope-check docs/plans/YYYYMMDD_HHMM_topic.md",
+                    text,
+                )
+                self.assertIn("`scope_ok=true`", text)
         self.assertIn(
-            "`--preflight` checks the proposed bundle before review. `--check` evaluates "
-            "the completed bundle. Neither of them replaces target tests, a review of the "
-            "current diff, or the required semantic acceptance artifact.",
+            "The first executable Planner handoff requires strict `--preflight`.",
             OWNER_RUNBOOK.read_text(encoding="utf-8"),
         )
         self.assertIn(
-            "`--preflight` проверяет предложенный набор файлов до ревью. `--check` оценивает "
-            "готовый набор. Ни один из них не заменяет тесты целевого проекта, ревью текущего "
-            "diff или обязательный артефакт приёмки по смыслу.",
+            "требует строгой предварительной проверки `--preflight`.",
             OWNER_RUNBOOK_RU.read_text(encoding="utf-8"),
         )
+        for runbook, inventory, permission, final in (
+            (OWNER_RUNBOOK, "only for inventory and integrity", "Scope grants no route, green verdict or commit permission.",
+             "Final lint and strict `--check` still evaluate the completed review."),
+            (OWNER_RUNBOOK_RU, "только для состава и целостности набора",
+             "Проверка состава набора не даёт ни маршрута, ни зелёного вердикта, ни разрешения на коммит.",
+             "Готовое ревью по-прежнему оценивают финальный линтер и строгий `--check`."),
+        ):
+            with self.subTest(runbook=runbook.name):
+                text = runbook.read_text(encoding="utf-8")
+                self.assertIn(inventory, text)
+                self.assertIn(permission, text)
+                self.assertIn(final, text)
 
     def test_terminal_capture_options_are_forwarded_without_shell_reinterpretation(self) -> None:
         with temporary_git_root(prefix="planveyor_terminal_forwarding_") as tmpdir:
@@ -3613,27 +3627,29 @@ _planveyor_codex() {
         self.assertIn("ERROR: docs/continuity/role.md:2: Duplicate level-2 heading", result.stdout)
 
     def test_canceled_family_is_absent_from_public_commands_and_help(self) -> None:
-        # Exercise the existing facade after its physical Git root/HEAD preflight.
-        self.assertEqual(Path(subprocess.check_output(
-            ["git", "rev-parse", "--show-toplevel"], cwd=REPO_ROOT, text=True,
-        ).strip()).resolve(), REPO_ROOT.resolve())
-        subprocess.run(["git", "rev-parse", "--verify", "HEAD^{commit}"], cwd=REPO_ROOT, check=True, capture_output=True)
-        help_result = subprocess.run(
-            [str(REPO_ROOT / "bin/planveyor"), "planveyor_help", "--all"],
-            cwd=REPO_ROOT, text=True, capture_output=True, check=False,
-        )
-        self.assertEqual(help_result.returncode, 0, help_result.stderr)
-        for command in ("planveyor_followups_todo_harvest", "planveyor_ledger_lint_all"):
-            with self.subTest(command=command):
-                self.assertNotIn(command, help_result.stdout)
-                result = subprocess.run(
-                    [str(REPO_ROOT / "bin/planveyor"), command],
-                    cwd=REPO_ROOT, text=True, capture_output=True, check=False,
-                )
-                self.assertNotEqual(result.returncode, 0)
-                self.assertIn(command, result.stderr)
-        for helper in ("followups_todo_harvest.py", "todo_stage_followups_check.py"):
-            self.assertFalse((REPO_ROOT / "scripts" / helper).exists())
+        # Attest current candidate bytes in the existing disposable fixture;
+        # the source checkout may contain the uncommitted fix under test.
+        with AuthorityFixture() as fixture:
+            entry = write(fixture.runtime_root, "bin/planveyor",
+                (REPO_ROOT / "bin/planveyor").read_bytes(), executable=True)
+            commit_all(fixture.runtime_root, "public child entry")
+            environment = fixture.environment()
+            help_result = subprocess.run(
+                [str(entry), "--project", str(fixture.target_root), "planveyor_help", "--all"],
+                cwd=fixture.target_root, env=environment, text=True, capture_output=True, check=False,
+            )
+            self.assertEqual(help_result.returncode, 0, help_result.stderr)
+            for command in ("planveyor_followups_todo_harvest", "planveyor_ledger_lint_all"):
+                with self.subTest(command=command):
+                    self.assertNotIn(command, help_result.stdout)
+                    result = subprocess.run(
+                        [str(entry), "--project", str(fixture.target_root), command],
+                        cwd=fixture.target_root, env=environment, text=True, capture_output=True, check=False,
+                    )
+                    self.assertNotEqual(result.returncode, 0)
+                    self.assertIn(command, result.stderr)
+            for helper in ("followups_todo_harvest.py", "todo_stage_followups_check.py"):
+                self.assertFalse((fixture.runtime_root / "scripts" / helper).exists())
 
     def test_selected_project_root_readers_fail_stop_before_read(self) -> None:
         readers = (

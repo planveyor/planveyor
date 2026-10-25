@@ -1,4 +1,4 @@
-<!-- i18n: pair=docs/tools/owner_runbook_codex.md pair-sha256=8484151ceaff881a74e0ab06b3d092bbd16caabddfe74eafc892c9660801e5e8 self-sha256=4d75177ad91d7f66b33fb35eaa0ba9396941c04068e675b8296a608ee315de0b -->
+<!-- i18n: pair=docs/tools/owner_runbook_codex.md pair-sha256=2685f36f96ebeff256df209dc0d6a3f187625c60e244f38aad4fac974ccd0e60 self-sha256=33ed861a08581a5d6c6596a8523fe3d9b62c18305f6388660a4c4a35e87041ff -->
 # Руководство Owner: сессии ролей Planveyor
 
 [English](owner_runbook_codex.md) · **Русский**
@@ -127,10 +127,12 @@ Planveyor сохраняет жизненный цикл, который нач�
 ./bin/planveyor --project /absolute/path/to/consumer \
   planveyor_plan_bundle --preflight docs/plans/YYYYMMDD_HHMM_topic.md
 ./bin/planveyor --project /absolute/path/to/consumer \
+  planveyor_plan_bundle --scope-check docs/plans/YYYYMMDD_HHMM_topic.md
+./bin/planveyor --project /absolute/path/to/consumer \
   planveyor_plan_bundle --check docs/plans/YYYYMMDD_HHMM_topic.md
 ```
 
-`--preflight` проверяет предложенный набор файлов до ревью. `--check` оценивает готовый набор. Ни один из них не заменяет тесты целевого проекта, ревью текущего diff или обязательный артефакт приёмки по смыслу.
+Первая исполняемая передача работы от Planner требует строгой предварительной проверки `--preflight`. Перед diff Reviewer запускает `--scope-check`. Когда Planner действительно уточняет план, а файл текущего ревью уже создан, он тоже использует эту проверку, но только для состава и целостности набора, вместе со всеми прежними проверками контракта, линтера, машиночитаемых оснований (machine authority) и передачи работы. Семантический линтер (semantic lint), производная сводка передачи работы (handoff digest), пропуск Planner при том же контракте (skip-Planner) и окна статусов по отпечатку (fingerprint status windows) не меняются. `--scope-check` выводит один JSON-документ `planveyor_plan_bundle_scope.v1`: код 0 означает только `scope_ok=true`, а обычная ошибка состава набора даёт код 1. Запланированное отсутствие файла и красный или устаревший результат остаются долгом до завершения, а `not_selected` не проверен. Проверка состава набора не даёт ни маршрута, ни зелёного вердикта, ни разрешения на коммит. Готовое ревью по-прежнему оценивают финальный линтер и строгий `--check`.
 
 ## Правила работы с очередью
 

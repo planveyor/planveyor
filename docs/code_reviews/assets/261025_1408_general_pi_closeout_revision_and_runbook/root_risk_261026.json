@@ -1,0 +1,133 @@
+{
+  "run_id": "reviewer_code_risk:root:261026:01a14ff9",
+  "lane_id": "reviewer_code_risk",
+  "runner_id": "codex",
+  "session_key": "unknown",
+  "sid": "unknown",
+  "profile": "unknown",
+  "model": "unknown",
+  "reasoning_effort": "unknown",
+  "prompt_file": "docs/tools/prompts/reviewer_status_driven.md",
+  "target_ref": "BUNDLE=current bundle_sha256=d6a7b6fc3d39f62c9e4f79f656341c9f4431c64f58b5054d6cae9f02e167454e",
+  "target_snapshot":
+{
+  "bundle_sha256": "d6a7b6fc3d39f62c9e4f79f656341c9f4431c64f58b5054d6cae9f02e167454e",
+  "code_draft": "docs/code_drafts/261025_1408_general_pi_closeout_revision_and_runbook__code_draft.md",
+  "files": [
+    {
+      "git_mode": "100644",
+      "path": "docs/tools/owner_runbook_codex.ru.md",
+      "sha256": "18132b7f239cc5a70c82e73f10f2c172e4b856035bd4127909d262c36fea246a",
+      "size_bytes": 29882
+    },
+    {
+      "git_mode": "100644",
+      "path": "scripts/docs_closeout.py",
+      "sha256": "2ae413affc3854eb8a4dc74adf2e8efcfca8de33784d844880790b182a4d39ea",
+      "size_bytes": 242106
+    },
+    {
+      "git_mode": "100644",
+      "path": "scripts/test_docs_closeout.py",
+      "sha256": "ce488e2a124660edd05602707cd29086e466c89c514d6505822dfe2a30aed975",
+      "size_bytes": 414451
+    },
+    {
+      "git_mode": "100644",
+      "path": "scripts/test_followups_capture.py",
+      "sha256": "07239b0071e7cc95c17f25cce9651d2831510cc1ad1a138f1d21ef78a320d4ac",
+      "size_bytes": 257287
+    },
+    {
+      "git_mode": "100644",
+      "path": "scripts/test_planveyor_bare_entrypoints.py",
+      "sha256": "3c59ffb52e804f4a11230222f4a7a71f69056bf1e0aaf8a719a95b886c72d98f",
+      "size_bytes": 195140
+    }
+  ],
+  "hash_basis": "sha256 over canonical JSON (ensure_ascii=False, sort_keys=True, separators=(',', ':')) of hash_basis_payload; targets come from the primary code_draft_meta.targets, are normalized to repo-relative POSIX paths, sorted by path, and each file authenticates its bytes plus normalized git_mode (100755 iff the owner-execute bit is set, otherwise 100644)",
+  "hash_basis_payload": {
+    "algorithm": "sha256",
+    "files": [
+      {
+        "git_mode": "100644",
+        "path": "docs/tools/owner_runbook_codex.ru.md",
+        "sha256": "18132b7f239cc5a70c82e73f10f2c172e4b856035bd4127909d262c36fea246a",
+        "size_bytes": 29882
+      },
+      {
+        "git_mode": "100644",
+        "path": "scripts/docs_closeout.py",
+        "sha256": "2ae413affc3854eb8a4dc74adf2e8efcfca8de33784d844880790b182a4d39ea",
+        "size_bytes": 242106
+      },
+      {
+        "git_mode": "100644",
+        "path": "scripts/test_docs_closeout.py",
+        "sha256": "ce488e2a124660edd05602707cd29086e466c89c514d6505822dfe2a30aed975",
+        "size_bytes": 414451
+      },
+      {
+        "git_mode": "100644",
+        "path": "scripts/test_followups_capture.py",
+        "sha256": "07239b0071e7cc95c17f25cce9651d2831510cc1ad1a138f1d21ef78a320d4ac",
+        "size_bytes": 257287
+      },
+      {
+        "git_mode": "100644",
+        "path": "scripts/test_planveyor_bare_entrypoints.py",
+        "sha256": "3c59ffb52e804f4a11230222f4a7a71f69056bf1e0aaf8a719a95b886c72d98f",
+        "size_bytes": 195140
+      }
+    ],
+    "schema_version": "review_target_snapshot.hash_basis.v2"
+  },
+  "plan": "docs/plans/261025_1408_general_pi_closeout_revision_and_runbook.md",
+  "schema_version": "review_target_snapshot.v2",
+  "target": "BUNDLE=current bundle_sha256=d6a7b6fc3d39f62c9e4f79f656341c9f4431c64f58b5054d6cae9f02e167454e",
+  "target_paths": [
+    "docs/tools/owner_runbook_codex.ru.md",
+    "scripts/docs_closeout.py",
+    "scripts/test_docs_closeout.py",
+    "scripts/test_followups_capture.py",
+    "scripts/test_planveyor_bare_entrypoints.py"
+  ],
+  "target_snapshot": {
+    "bundle_sha256": "d6a7b6fc3d39f62c9e4f79f656341c9f4431c64f58b5054d6cae9f02e167454e",
+    "target": "BUNDLE=current"
+  }
+},
+  "coverage_domains": [
+    "correctness",
+    "tests quality",
+    "security/privacy",
+    "subprocess/timeouts",
+    "races/locks/atomicity",
+    "data/migrations",
+    "performance",
+    "observability",
+    "integrations",
+    "supply chain",
+    "failure semantics"
+  ],
+  "findings": [],
+  "lane_status": "no_findings",
+  "no_findings_reason": "Проверены five-target diff и existing pure correction validator: схема проверяет canonical records и 1+N, consumer сохраняет fresh equality/CAS. Тесты N=0/1/2, malformed/stale deny и idempotent replay зелёные; исправленные test bodies не маскируют publication. Новых risk-дефектов в согласованном scope не обнаружено.",
+  "source_refs": [
+    "scripts/docs_closeout.py:927",
+    "scripts/followups_capture.py:4708",
+    "scripts/test_docs_closeout.py:7079",
+    "scripts/test_followups_capture.py:147",
+    "scripts/test_planveyor_bare_entrypoints.py:1903",
+    "docs/plans/261025_1408_general_pi_closeout_revision_and_runbook.md#Evidence"
+  ],
+  "delta": "Пять согласованных semantic targets; unchanged production consumer, manifest, runtime guards и EN source.",
+  "outcome": "Root завершил risk-проверку; final contracts/architecture acceptance следует отдельно в том же чате.",
+  "limits": [
+    "По прямому поручению Owner 26.10 все проверки выполняет Root этого чата последовательно; независимый второй агент/модель не участвовал.",
+    "Actual model, profile, session SID и effort не exposed; metadata unknown. Root thread 01a14ff9-c22d-75c0-bbef-3a9bb04b9bbe не выдаётся за SID отдельного Reviewer.",
+    "Полный suite, SQL и публикация не выполнялись. Historical completed checks переиспользованы с доказанной неизменностью inputs; fresh modules покрывают изменённые test bodies."
+  ],
+  "current": true,
+  "written_at": "2026-10-25T21:37:13.398188Z"
+}

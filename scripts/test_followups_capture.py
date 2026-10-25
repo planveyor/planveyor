@@ -144,6 +144,124 @@ class GeneralPIFormatCorrectionTests(unittest.TestCase):
         return module.classify_docs_closeout(root=root, plan_ref=fixture.plan_ref,
             bundle_payload=fixture._bundle(), followups_capture_cycle_id=cycle)
 
+    def continuation_fixture(self, root: Path, correction_count: int):
+        if correction_count == 0:
+            fixture, module, cycle = FollowupsContinuationCheckpointTests()._fixture(root)
+            return fixture, module, module.followups_capture, cycle
+        fixture, module, cap, cycle, _ = self.fixture(root, "Architect")
+        for position, role in enumerate(cap.REQUIRED_ROLES[:correction_count]):
+            if position:
+                with self.assertRaises(cap.process_improvements_collect.PIFormatError):
+                    cap.process_improvements_collect.collect_process_improvements(
+                        project_root=root, role=role, source_ref=fixture.plan_ref,
+                        text=self.malformed, followups_capture_cycle_id=cycle)
+            reserved, _ = self.reserve(root, fixture, module, cap, cycle, role)
+            self.corrected(root, fixture, cap, cycle, role, reserved["reservation_id"], self.clean)
+        for role in cap.REQUIRED_ROLES[correction_count:]:
+            cap.process_improvements_collect.collect_process_improvements(
+                project_root=root, role=role, source_ref=fixture.plan_ref,
+                text=self.clean, followups_capture_cycle_id=cycle)
+        return fixture, module, cap, cycle
+
+    def test_corrected_retained_continuation_checkpoint_and_replay(self):
+        for count in (0, 1, 2):
+            with self.subTest(corrections=count), tempfile.TemporaryDirectory() as directory:
+                root = Path(directory).resolve()
+                fixture, module, cap, cycle = self.continuation_fixture(root, count)
+                payload = self.payload(root, fixture, module, cycle)
+                self.assertEqual((payload["schema_state"], payload["schema_errors"]), ("ok", []))
+                proof = payload["followups_continuation_admission"]["proof"]
+                receipt_path = fixture._receipt_path(root, cycle)
+                records = json.loads(receipt_path.read_bytes())[cap.PI_FORMAT_CORRECTIONS_KEY]
+                self.assertEqual(proof["general_pi_format_corrections"], records)
+                self.assertEqual(len(records), count)
+                self.assertEqual(proof["receipt_revision"], 1 + count)
+                if count == 2:
+                    # The existing receipt contract binds path/type/content,
+                    # not the inode of an otherwise identical regular file.
+                    replacement = receipt_path.with_suffix(".replacement")
+                    replacement.write_bytes(receipt_path.read_bytes())
+                    replacement.replace(receipt_path)
+                    self.assertEqual(self.payload(root, fixture, module, cycle)
+                        ["followups_continuation_admission"], payload["followups_continuation_admission"])
+                before = fixture._objects(root)
+                with mock.patch.object(cap, "_fresh_continuation_bundle_payload", return_value=fixture._bundle()):
+                    result = cap.checkpoint_general_pi(root, fixture.plan_ref, cycle, docs_closeout_payload=payload)
+                self.assertEqual(result["reason_code"], "followup_capture_pi_general_checkpointed")
+                receipt = json.loads(receipt_path.read_bytes())
+                self.assertEqual(receipt["receipt_revision"], count + 2)
+                self.assertEqual(receipt["general_pi_checkpoint"]["prior_receipt_revision"], count + 1)
+                self.assertEqual(receipt[cap.PI_FORMAT_CORRECTIONS_KEY], records)
+                after = fixture._objects(root)
+                self.assertEqual([path for path in before if before[path] != after[path]],
+                                 [receipt_path.relative_to(root).as_posix()])
+                replay = self.payload(root, fixture, module, cycle)
+                self.assertEqual((replay["schema_state"], replay["schema_errors"]), ("ok", []))
+                with mock.patch.object(cap, "_fresh_continuation_bundle_payload", return_value=fixture._bundle()):
+                    result = cap.checkpoint_general_pi(root, fixture.plan_ref, cycle, docs_closeout_payload=replay)
+                self.assertEqual(result["reason_code"], "followup_capture_pi_general_checkpoint_already_published")
+                self.assertEqual(after, fixture._objects(root))
+
+    def test_corrected_retained_continuation_rejects_drift_without_mutation(self):
+        variants = ("missing_records", "invalid_records", "snapshot", "receipt_bytes", "receipt_object",
+                    "source", "collector", "stale_checkpoint", "duplicate_id", "revision_gap")
+        for variant in variants:
+            with self.subTest(variant=variant), tempfile.TemporaryDirectory() as directory:
+                root = Path(directory).resolve()
+                fixture, module, cap, cycle = self.continuation_fixture(root, 2)
+                payload = self.payload(root, fixture, module, cycle)
+                self.assertEqual(payload["schema_state"], "ok", payload["schema_errors"])
+                proof = payload["followups_continuation_admission"]["proof"]
+                path = fixture._receipt_path(root, cycle)
+                spent = json.loads(path.read_bytes())[cap.PI_FORMAT_CORRECTIONS_KEY]
+                if variant == "missing_records":
+                    proof.pop("general_pi_format_corrections")
+                elif variant == "invalid_records":
+                    proof["general_pi_format_corrections"] = []
+                elif variant == "snapshot":
+                    proof["general_pi_format_corrections"]["Coder"]["source_identity"]["source_terminal_commit_oid"] = "1" * 40
+                    self.assertEqual(module.validate_docs_closeout_payload(payload)["schema_state"], "ok")
+                elif variant == "receipt_bytes":
+                    fixture._edit_receipt(root, cycle, lambda receipt: receipt.update(started_at="2026-01-01T00:00:00Z"))
+                elif variant == "receipt_object":
+                    proof["receipt_object"]["st_size"] += 1
+                elif variant == "source":
+                    subprocess.run(["git", "-C", str(root), "-c", "user.name=Fixture", "-c",
+                        "user.email=fixture@example.invalid", "commit", "--allow-empty", "-qm", "source drift"],
+                        check=True, capture_output=True)
+                elif variant == "collector":
+                    leaf = root / cap.process_improvements_collect.capture_receipt_rel_path(fixture.plan_ref, "Coder", cycle)
+                    leaf.write_bytes(leaf.read_bytes() + b"\n")
+                elif variant == "stale_checkpoint":
+                    with mock.patch.object(cap, "_fresh_continuation_bundle_payload", return_value=fixture._bundle()):
+                        cap.checkpoint_general_pi(root, fixture.plan_ref, cycle, docs_closeout_payload=payload)
+                else:
+                    def corrupt(receipt):
+                        record = receipt[cap.PI_FORMAT_CORRECTIONS_KEY]["Coder"]
+                        if variant == "duplicate_id":
+                            record["reservation_id"] = receipt[cap.PI_FORMAT_CORRECTIONS_KEY]["Architect"]["reservation_id"]
+                        else:
+                            record["reserved_revision"] = 4
+                    fixture._edit_receipt(root, cycle, corrupt)
+                before = fixture._objects(root)
+                current_slots = json.loads(path.read_bytes())[cap.PI_FORMAT_CORRECTIONS_KEY]
+                with mock.patch.object(cap, "_fresh_continuation_bundle_payload", return_value=fixture._bundle()), \
+                        mock.patch.object(cap, "_publish_mutation",
+                            side_effect=AssertionError("Rejected continuation reached publication")) as publish:
+                    with self.assertRaises(cap.CaptureError) as rejected:
+                        cap.checkpoint_general_pi(root, fixture.plan_ref, cycle, docs_closeout_payload=payload)
+                    self.assertEqual(rejected.exception.reason_code,
+                        "pi_format_correction_carrier_invalid" if variant in ("duplicate_id", "revision_gap")
+                        else "followup_capture_continuation_admission_invalid")
+                    publish.assert_not_called()
+                    for role in ("Architect", "Coder"):
+                        with self.assertRaises(cap.CaptureError):
+                            cap.reserve_general_pi_correction(root, fixture.plan_ref, cycle, role, payload)
+                self.assertEqual(before, fixture._objects(root))
+                self.assertEqual(json.loads(path.read_bytes())[cap.PI_FORMAT_CORRECTIONS_KEY], current_slots)
+                self.assertEqual({role: record["attempts_reserved"] for role, record in current_slots.items()},
+                                 {role: record["attempts_reserved"] for role, record in spent.items()})
+
     def reserve(self, root, fixture, module, cap, cycle, role):
         payload = self.payload(root, fixture, module, cycle)
         self.assertEqual(payload["schema_state"], "ok", payload.get("schema_errors"))
