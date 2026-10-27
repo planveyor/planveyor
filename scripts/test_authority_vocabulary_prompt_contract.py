@@ -114,7 +114,7 @@ class AuthorityVocabularyPromptContractTest(unittest.TestCase):
         )
         self.assertLess(
             texts["planner"].index("Authority normalization before `Ready for Coder`"),
-            texts["planner"].index("- Planner-time exact-bundle preflight"),
+            texts["planner"].index("- Первый executable handoff перед `Ready for Coder` требует strict `planveyor_plan_bundle --preflight <PLAN_PATH>`"),
         )
         self.assertLess(
             texts["reviewer"].index("Authority catch rule"),
