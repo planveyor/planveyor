@@ -13,7 +13,7 @@ Choose the literal project and plan path, then read the routing truth through th
   planveyor_plan_status_oracle --json docs/plans/<plan>.md
 ```
 
-Before the handoff, run the plan lint and the target validation that the selected project and the current plan require. Only the explicit `planveyor_q_*` helpers materialize the queue state; the active plan pointer does not replace the queue truth. Before you replace or clear the queue, read its state first, then use an explicit Manager mode.
+Before the handoff, run the plan lint and the target validation that the selected project and the current plan require. Only the explicit `planveyor_q_*` helpers materialize the queue state; the active plan pointer does not replace the queue truth. Before you replace or clear the queue, read its state with `planveyor_q_show`. Pass an explicit `--for-manager-mode` to `planveyor_q_set` and `planveyor_q_append`; `planveyor_q_clear` takes no Manager mode and accepts only the optional `--json` flag.
 
 The exact bundle, the review artifact, and CENSOR remain separate evidence carriers. Positive text in a role response, a historical receipt, or a broad static scan does not close the current bundle without the matching readback.
 
@@ -60,7 +60,7 @@ ACK materializes a pointer to `docs/plans/<target-adoption>.md`, but by itself i
 
 Use `planveyor_rollout_packet_lint`, `planveyor_rollout_packet_inbox`, `planveyor_rollout_packet_adoption_plan`, `planveyor_rollout_packet_query`, and `planveyor_rollout_packet_reconcile` for readback and planning state. An upstream request is a separate carrier; the public lifecycle uses `planveyor_upstream_request_show`, `planveyor_upstream_request_import`, `planveyor_upstream_request_ack`, and `planveyor_upstream_request_query`.
 
-The report/reuse gate reads the exact range without changing a packet:
+The report/reuse gate does not change a packet, but it writes a new report under `docs/reviews/*_packetization_gate_range_*.md` and, with the default output path, marks previous reports for the same range as superseded. Blocking rows produce exit code 2. On this report path, `--range` is optional when a saved range is available; the example selects it explicitly:
 
 ```zsh
 ./bin/planveyor planveyor_post_merge_packetization_gate --range BASE..HEAD

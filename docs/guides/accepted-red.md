@@ -35,7 +35,7 @@ For an accepted-red plan, Oracle always answers `delivery_green=false`, `staging
 "$PLANVEYOR_RUNTIME_ROOT/bin/planveyor" --project "$PWD" planveyor_docs_closeout <SOURCE_PLAN> --json
 ```
 
-The `planveyor_plan_bundle` modes answer with JSON `planveyor_plan_bundle_closeout.v1` on stdout and exit code 0. On refusal they answer with JSON `planveyor_rejected_baseline_error.v1` with `state=blocked` and `reason_code` on stderr and exit code 2. `--recovery-plan` is allowed only with `--capture-rejected`; the closeout, preflight, and message options are forbidden in these modes.
+Successful rejected-baseline lifecycle operations answer with JSON `planveyor_plan_bundle_closeout.v1` on stdout and exit code 0. A refusal from the rejected-baseline helper answers with JSON `planveyor_rejected_baseline_error.v1` with `state=blocked` and `reason_code` on stderr and exit code 2. Invocation errors, such as a missing plan, `--recovery-plan` without `--capture-rejected`, or closeout, preflight, and message options in a recovery mode, print plain text on stderr and exit with code 1.
 
 1. **Verification** (`--verify-rejected`) only reads. While there is no capture, the answer is `recovery_state=capture_required` if the target bytes match the review, or `snapshot_mismatch_without_durable_ref` if they no longer match: then the rejected bytes cannot be saved.
 2. **Capture** (`--capture-rejected`) saves the rejected bytes in Git. It requires:
@@ -45,7 +45,7 @@ The `planveyor_plan_bundle` modes answer with JSON `planveyor_plan_bundle_closeo
 
    A repeated capture with an intact ref changes nothing and returns the current state. After capture: `recovery_state=cleanup_required`.
 3. **Cleanup** (`--cleanup-rejected`) returns each target to its HEAD bytes and deletes a target that is not in HEAD. It requires an intact capture, the same HEAD as at capture, a target index equal to HEAD, and targets in only two states: the rejected bytes or the HEAD bytes. So the recovery plan changes these targets only after cleanup. After cleanup: `recovery_state=completed`, `closeout_kind=accepted_red_recovered`, `bundle_ok=true`; `delivery_green` stays `false`. A repeated cleanup changes nothing.
-4. **Closeout.** For an accepted-red plan, `--closeout-json` prints the same payload instead of the usual exact-bundle one; with a broken carrier it refuses with `accepted_red_closeout_invalid_carrier`. `--stage`, `--commit-ready`, and `--commit-exact` refuse with `staging_forbidden`. `planveyor_docs_closeout` answers `completed` with `reason_code=accepted_red_recovery_completed` only after cleanup and a receipt check. Before that it answers `blocked`, usually with `accepted_red_recovery_incomplete` or an `accepted_red_*` reason. If there are no other document edits, the answer contains `final_docs_commit=no_op` with the reason `accepted_red_evidence_ref_materialized`.
+4. **Closeout.** For an accepted-red plan, `--closeout-json` prints the same payload instead of the usual exact-bundle one; with a broken carrier it refuses with `accepted_red_closeout_invalid_carrier`. `--stage`, `--commit-ready`, and `--commit-exact` refuse with `staging_forbidden` when classification succeeds and the durable capture is not invalid; otherwise they refuse with `staging_forbidden_invalid_carrier`. `planveyor_docs_closeout` answers `completed` with `reason_code=accepted_red_recovery_completed` only after cleanup and a receipt check. Before that it answers `blocked`, usually with `accepted_red_recovery_incomplete` or an `accepted_red_*` reason. If there are no other document edits, the answer contains `final_docs_commit=no_op` with the reason `accepted_red_evidence_ref_materialized`.
 
 After cleanup, the recovery plan may change the targets from its own code draft: the state `active_checkout_state=recovery_owned_overlap` is allowed. A change to another rejected target gives `drifted`, and the check refuses with `active_checkout_drift`.
 
@@ -65,20 +65,20 @@ Capture and cleanup do not change HEAD, branches, or the index; only cleanup cha
 
 - Every read checks the whole ref again: the parent chain, the manifest, the cleanup receipt, and the target blobs. A broken ref gives `durable_capture_state=invalid`; capture and cleanup on top of it refuse with `recovery_ref_invalid`.
 - The four routing files must match the copies saved at capture byte for byte. Otherwise the result is `routing_carrier_drift`: `--closeout-json` refuses, and `planveyor_docs_closeout` answers `blocked`. An edit to the successor before the docs closeout of the source also counts as drift.
-- The checks reject Git replace refs, `info/grafts`, and the variables `GIT_DIR`, `GIT_WORK_TREE`, `GIT_COMMON_DIR`, `GIT_INDEX_FILE`, `GIT_REPLACE_REF_BASE` in the helper environment.
+- If `GIT_DIR`, `GIT_WORK_TREE`, `GIT_COMMON_DIR`, or `GIT_INDEX_FILE` is present in the helper environment, parsing refuses with `not_accepted_red`. A non-empty `GIT_REPLACE_REF_BASE`, Git replace refs, or `info/grafts` makes durable-ref validation invalid: capture and cleanup refuse with `recovery_ref_invalid`, and staging refuses with `staging_forbidden_invalid_carrier`. The public facade starts its child through `env -i` and does not pass these Git variables.
 - Workarounds for historical cases (snapshot bridge and route rebind) are not set in the neutral engine: capture is possible only while the current target bytes match the review.
 
 ## Common refusals
 
 | `reason_code` | What it means | What to do |
 |---|---|---|
-| `not_accepted_red`, `routing_contract_invalid` | the accepted-red conditions do not hold, the carriers are incomplete, or the environment has Git variables | check the plan, the successor, the code draft, and the review against the first section |
+| `not_accepted_red`, `routing_contract_invalid` | the accepted-red conditions do not hold, the carriers are incomplete, or the helper environment contains `GIT_DIR`, `GIT_WORK_TREE`, `GIT_COMMON_DIR`, or `GIT_INDEX_FILE` | check the plan, the successor, the code draft, and the review against the first section; remove any listed authority override from the helper environment |
 | `recovery_plan_invalid` | the recovery plan does not fit | fix its source line, status, or code draft |
 | `rejected_target_staged` | the rejected targets are staged | remove them from the index |
 | `snapshot_mismatch` | the target bytes no longer match the review | capture is not possible; the decision belongs to the Owner |
-| `recovery_ref_cas_conflict` | HEAD moved while the ref was being written, or the ref is already taken | read `--verify-rejected`, then repeat on a stable HEAD |
+| `recovery_ref_cas_conflict` | the ref transaction failed, for example because HEAD or the ref changed after validation | read `--verify-rejected`, then repeat with a stable HEAD and ref; an intact ref found before capture is reused, and an invalid one gives `recovery_ref_invalid` |
 | `capture_required` | cleanup without capture | run capture first |
 | `head_drift` | HEAD changed after capture | run cleanup on the same HEAD as capture (`captured_parent`) |
 | `rejected_target_drift` | a target matches neither the rejected bytes nor HEAD | sort out the changes to this target |
 | `routing_carrier_drift` | a routing file changed after capture | restore its bytes from the capture commit |
-| `staging_forbidden` | an attempt to stage or commit an accepted-red plan | do not stage; close through cleanup |
+| `staging_forbidden`, `staging_forbidden_invalid_carrier` | an attempt to stage or commit an accepted-red plan; the second code means classification failed or the durable capture is invalid | do not stage; resolve the invalid carrier when reported, then close through cleanup |

@@ -1,18 +1,20 @@
-# Запуск: команды, обёртки, клиенты
+# Launch: commands, wrappers, agent harnesses
 
-Команда `planveyor sibling architect` проходит путь от терминала до сессии модели: движок выбирает проект, промпт фазы, сессию и клиент, в котором работает роль. `planveyor sibling run` делает то же для Manager, а дальше Manager ведёт роли сам.
+**English** · [Русский](runtime-launch.ru.md)
 
-## Пять звеньев одной команды
+The `planveyor sibling architect` command goes all the way from the terminal to a model session: the engine selects the project, the phase prompt, the session, and the agent harness in which the role works. `planveyor sibling run` does the same for Manager, and then Manager drives the roles itself.
 
-![Пять звеньев: фасад bin/planveyor, диспетчер planveyor_cli, planveyor_sibling, обёртка с сессией клиента, роль и файлы задачи](assets/runtime-launch-1.svg)
+## Five links of one command
 
-1. Фасад `bin/planveyor` находит копию Planveyor и проект и запускает команду в отдельном чистом процессе.
-2. Диспетчер `planveyor_cli()` передаёт команды группы `sibling` в `planveyor_sibling()`.
-3. `planveyor_sibling()` сверяет план и статус, готовит сессию и вызывает обёртку роли, здесь `planveyor_arch()`.
-4. Обёртка собирает сообщение для роли и продолжает её сессию в клиенте запуска (runner), по умолчанию в Codex.
-5. Роль работает в проекте и оставляет результат в файлах задачи: в плане, черновике кода, ревью.
+![Five links: the bin/planveyor facade, the planveyor_cli dispatcher, planveyor_sibling, the wrapper with the agent harness session, the role and the task files](assets/runtime-launch-1.svg)
 
-Модель запускают только подкоманды `architect` и `run`. Остальные подкоманды целиком выполняют Python-скрипты `scripts/sibling_runbook.py` и `scripts/sibling_closeout.py`. Порядок команд для Owner описан в [руководстве по sibling](../stack-sibling.ru.md), а весь набор показывает справка, которой не нужен проект:
+1. The `bin/planveyor` facade finds the Planveyor checkout and the project and runs the command in a separate clean process.
+2. The `planveyor_cli()` dispatcher passes the commands of the `sibling` group to `planveyor_sibling()`.
+3. `planveyor_sibling()` checks the plan and the status, prepares the session, and calls the role wrapper, here `planveyor_arch()`.
+4. The wrapper builds the message for the role and continues its session in the selected agent harness, Codex by default.
+5. The role works in the project and leaves its result in the task files: the plan, the code draft, the review.
+
+Only the `architect`, `run`, and `tui` subcommands start a model. The Python scripts `scripts/sibling_runbook.py` and `scripts/sibling_closeout.py` carry out the other subcommands entirely. The order of commands for Owner is described in the [stack sibling guide](../stack-sibling.md), and the help, which needs no project, shows the whole set; the help text is in Russian:
 
 ```sh
 planveyor sibling --help
@@ -20,18 +22,21 @@ planveyor sibling --help
 
 ```text
 usage: planveyor sibling [-h]
-                         {init,plan,architect,answer,run,close,ready,upgrade}
+                         {init,plan,architect,answer,run,tui,close,ready,upgrade}
                          ...
 
 Обычный цикл sibling: init → plan → architect/answer → run → close → ready.
 
 positional arguments:
-  {init,plan,architect,answer,run,close,ready,upgrade}
+  {init,plan,architect,answer,run,tui,close,ready,upgrade}
     init                создать sibling с вашей Git identity
     plan                выбрать или показать текущий plan
     architect           обсудить текущий plan с Architect
     answer              сохранить фактический Owner ответ
-    run                 продолжить normal Manager для текущего plan
+    run                 один ход Manager; human_explicit, закрытие через close
+                        --commit
+    tui                 открыть native Manager TUI; native_existing для
+                        текущего plan
     close               показать точный набор или явно коммитить его
     ready               прочитать реальную готовность текущего sibling
     upgrade             обновить из выбранного runtime
@@ -40,42 +45,41 @@ options:
   -h, --help            show this help message and exit
 ```
 
-«Normal Manager» в справке — Manager в режиме collab, о нём ниже.
+In the help, `run` is one turn of Manager in collab mode with the `human_explicit` policy, and `tui` is the window of the same Manager with `native_existing`; more on them below.
 
-## Фасад и выбор проекта
+## The facade and project selection
 
-Фасад не подключает движок к вашей оболочке. Он запускает дочерний `zsh -df` через `env -i`, с минимальным набором переменных окружения, поэтому функции, переменные и текущий каталог оболочки остаются прежними. Перед запуском фасад проверяет, что сам лежит в Git-копии Planveyor с коммитом в `HEAD` и что доступны `rg` и `zsh`. В коде фасадом называют и `scripts/planveyor.zsh`, точку загрузки модулей; это другой уровень.
+The facade does not load the engine into your shell. It starts a child `zsh -df` through `env -i`, with a minimal set of environment variables, so the functions, variables, and current directory of your shell stay as they were. Before the launch, the facade checks that it lies in a Git checkout of Planveyor with a commit in `HEAD` and that `rg` and `zsh` are available. In the code, `scripts/planveyor.zsh`, the module loading point, is also called the facade; this is a different level.
 
-Проект фасад выбирает так:
+The facade selects the project as follows:
 
-- `--project <абсолютный путь>` перед командой задаёт его явно;
-- без флага низкоуровневые команды `planveyor_*` работают с самим Planveyor;
-- группа `sibling`, кроме `init` и справки, берёт корень Git-репозитория текущего каталога и отказывает, если это сам Planveyor.
+- `--project <absolute path>` before the command sets it explicitly;
+- without the flag, the low-level `planveyor_*` commands work on Planveyor itself;
+- the `sibling` group, except `init` and the help, takes the root of the Git repository of the current directory and refuses if this is Planveyor itself.
 
-Поэтому низкоуровневую команду для своего проекта набирают из корня копии Planveyor с флагом:
+So you type a low-level command for your project from the root of the Planveyor checkout, with the flag:
 
 ```sh
 ./bin/planveyor --project ~/my-stack planveyor_arch_init
 ```
 
-Дальше такие команды названы по имени, а запускают их так же. Какую копию Planveyor и какой проект выбрал фасад, без запуска модели показывает `planveyor_entry_doctor`.
+From here on, such commands are given by name only, and you run them the same way. `planveyor_entry_doctor` shows which Planveyor checkout and which project the facade selected, without starting a model.
 
-Из окружения в дочерний процесс попадают:
+The facade sets `PLANVEYOR_RUNTIME_ROOT` and `PLANVEYOR_PROJECT_ROOT` to the selected Planveyor checkout and project paths. It passes the following settings from the caller's environment to the child process:
 
-- `PLANVEYOR_RUNTIME_ROOT` и `PLANVEYOR_PROJECT_ROOT` — пути движка и проекта;
-- `PLANVEYOR_CODEX_HOME` — каталог настроек Codex (Codex home). Обычный `CODEX_HOME` фасад не передаёт, и без `PLANVEYOR_CODEX_HOME` роли работают с `~/.codex`;
-- `PLANVEYOR_CLAUDE_COMMAND`, `PLANVEYOR_CLAUDE_MODEL`, `PLANVEYOR_CLAUDE_EFFORT` — настройки Claude Code;
-- `CODEX_THREAD_ID`, если он задан, — id текущего чата Codex для раздела плана `## Plan provenance / session context`.
+- `PLANVEYOR_CODEX_HOME`, the Codex settings directory (Codex home). The facade does not pass the usual `CODEX_HOME`, and without `PLANVEYOR_CODEX_HOME` the roles work with `~/.codex`;
+- `PLANVEYOR_CLAUDE_COMMAND`, `PLANVEYOR_CLAUDE_MODEL`, and `PLANVEYOR_CLAUDE_EFFORT`, the Claude Code settings;
+- `CODEX_THREAD_ID`, if it is set: the id of the current Codex chat for the `## Plan provenance / session context` plan section.
 
-Внутри процесса загружается `scripts/planveyor.zsh`, и управление получает `planveyor_cli()`. Она пускает только команды из списка разрешённых и на остальное отвечает `unsupported child command`. И она, и `planveyor_sibling()` проверяют, что их запустил фасад, а иначе отвечают `commands must run through bin/planveyor`.
+Inside the process, `scripts/planveyor.zsh` is loaded, and `planveyor_cli()` takes control. It lets through only the commands from the allowed list and answers `unsupported child command` to the rest. Both it and `planveyor_sibling()` check that the facade started them; otherwise, they answer `commands must run through bin/planveyor`.
 
-## Сессия и SID
+## Session and SID
 
-SID — id сессии клиента. Сессию заводят команды `*_init`: например, `planveyor_arch_init` запускает Codex с промптом `architect_init.md` и сохраняет SID из вывода в указатель `.planveyor.session.architect`. В указателе три части: время создания, строка `# meta:` с клиентом (`runner=codex`) и другими полями, последней строкой сам SID. Прежние значения остаются в `.planveyor.session.architect.log`, а квитанция создания лежит в `.planveyor.init_runs/`.
+A SID is the id of an agent harness session. The `*_init` commands start a session: for example, `planveyor_arch_init` starts Codex with the `architect_init.md` prompt and saves the SID from the output to the `.planveyor.session.architect` pointer. The pointer has three parts: the creation time, a `# meta:` line with the agent harness (`runner=codex`) and other fields, and the SID itself as the last line. Earlier values stay in `.planveyor.session.architect.log`, and the creation receipt lies in `.planveyor.init_runs/`.
 
-Следующие ходы обёртка отправляет в ту же сессию: Codex получает `exec … resume <SID>`, Claude Code — `--resume <SID>`. Сессия хранит диалог с ролью, но источник истины по задаче — план. Строка `PRE_STATUS_LINE` в сообщении каждого хода напоминает роли статус из плана, и при расхождении роль перечитывает план, не полагаясь на память. Команды `planveyor_arch_resume`, `planveyor_planner_resume` и такие же для других ролей открывают сессию в клиенте, чтобы поговорить с ролью вручную.
+The wrapper sends the next turns to the same session: Codex gets `exec … resume <SID>`, and Claude Code gets `--resume <SID>`. The session keeps the dialog with the role, but the source of truth for the task is the plan. The `PRE_STATUS_LINE` line in the message of every turn reminds the role of the status from the plan, and on a mismatch the role re-reads the plan instead of relying on its memory. The commands `planveyor_arch_resume`, `planveyor_planner_resume`, and the same commands for the other roles open the session in the agent harness so that you can talk to the role by hand.
 
-У ролей семь ключей сессий. Так выглядит таблица сессий в начале вывода `./bin/planveyor planveyor_help` в копии Planveyor, где сессий ещё не заводили:
+The roles have seven session keys. This is the session table at the start of the `./bin/planveyor planveyor_help` output in a Planveyor checkout where no sessions have been started yet:
 
 ```text
 ### Sessions (manual dashboard)
@@ -89,26 +93,28 @@ reviewer_code_contracts  codex
 manager                  codex
 ```
 
-Ключ `reviewer` принадлежит обёртке `planveyor_reviewer()`: она ведёт обе линии Reviewer в одной сессии. У `planveyor_reviewer_code_risk()` и `planveyor_reviewer_code_contracts()` сессии свои, и пошаговому режиму Manager нужны именно они.
+The `reviewer` key belongs to the `planveyor_reviewer()` wrapper: it runs both Reviewer lanes in one session. `planveyor_reviewer_code_risk()` and `planveyor_reviewer_code_contracts()` have their own sessions, and the custom pipeline needs exactly these.
 
-## Что делают `architect` и `run`
+## What `architect` and `run` do
 
-Обе подкоманды начинают со скрипта `sibling_runbook.py`. Он читает выбранный план из `.planveyor.planpath` и спрашивает у Oracle его статус. Для `architect` статус должен означать ход Architect: `Architect initial draft`, `Architect draft`, `Ready for Architect response`, `Architect response`, `Ready for Arch review` или `Architect arch review`. При другом статусе команда сообщает «Текущий status не принадлежит Architect; используйте planveyor sibling run.» и сессию не трогает.
+Both subcommands start with the `sibling_runbook.py` script. It reads the selected plan from `.planveyor.planpath` and asks Oracle for its status. For `architect`, the status must mean a turn of Architect: `Architect initial draft`, `Architect draft`, `Ready for Architect response`, `Architect response`, `Ready for Arch review`, or `Architect arch review`. With any other status, the command reports `Текущий status не принадлежит Architect; используйте planveyor sibling run.` (the current status does not belong to Architect; use planveyor sibling run) and does not touch the session.
 
-Затем команда готовит сессию: Architect для `architect`, Manager для `run`. Если указатель есть, она читает квитанцию сессии в `.planveyor.init_runs/by_sid/<SID>/`. Если квитанция принадлежит другому проекту или другой копии Planveyor, команда отказывает и сессию не заменяет. Если квитанции нет или она устарела, например после нового коммита в проекте, команда заводит новую сессию через `planveyor_arch_init` или `planveyor_manager_init`. Так же она поступает без указателя и тогда, когда в каталоге `sessions/` Codex home нет файла этой сессии.
+Then the command prepares the session: Architect for `architect`, Manager for `run`. If the pointer exists, the command reads the session receipt in `.planveyor.init_runs/by_sid/<SID>/`. If the receipt belongs to another project or another Planveyor checkout, the command refuses and does not replace the session. If there is no receipt or it is stale, for example after a new commit in the project, the command starts a new session through `planveyor_arch_init` or `planveyor_manager_init`. It does the same without a pointer and when the `sessions/` directory of the Codex home has no file for this session.
 
-Дальше пути расходятся:
+Then the paths split:
 
-- `architect` при статусе `Architect initial draft` вызывает `planveyor_arch_initial()` с промптом первого обсуждения `architect_draft_discussion.md`, при остальных статусах — `planveyor_arch()` с [architect_status_driven.md](../../tools/prompts/architect_status_driven.md);
-- `run` запускает Manager в режиме collab.
+- with the `Architect initial draft` status, `architect` calls `planveyor_arch_initial()` with the first-discussion prompt `architect_draft_discussion.md`; with the other statuses, it calls `planveyor_arch()` with [architect_status_driven.md](../../tools/prompts/architect_status_driven.md) (in Russian);
+- `run` starts Manager in collab mode.
 
-После хода обе команды печатают план, его статус и следующий шаг, как `planveyor sibling plan`.
+After the turn, both commands print the plan, its status, and the next step, as `planveyor sibling plan` does.
 
-## Обёртка роли
+`tui` prepares the Manager session in the same way. Before that, the script asks Oracle whether the plan admits collab mode (`--manager-mode manager-collab`) and requires that the plan has no open Owner questions. Then the command calls `planveyor_manager_collab_tui` with `native_existing`; after the window closes, it prints neither the plan nor the next step.
 
-Обёртка — функция движка, которая готовит один ход роли и запускает клиент. Свои обёртки есть у Architect (`planveyor_arch()`), Planner (`planveyor_planner()`), Coder (`planveyor_coder()`), Reviewer (`planveyor_reviewer()` и по одной на линию: `planveyor_reviewer_code_risk()`, `planveyor_reviewer_code_contracts()`) и Manager (`planveyor_manager()`). Обёртки `planveyor_arch_censor()`, `planveyor_planner_censor()` и `planveyor_coder_censor()` запускают второй проход CENSOR. В нём роль, которая сдаёт работу, ещё раз проходит по своим файлам и дописывает пропущенное, прежде чем работа уйдёт дальше; подробнее — в главе [«Роли и файлы задачи»](roles-artifacts.md).
+## The role wrapper
 
-Фрагмент `planveyor_arch()` из [role_runtime.zsh](../../../scripts/planveyor/role_runtime.zsh) после проверки контекста:
+A wrapper is an engine function that prepares one turn of a role and starts the agent harness. Architect (`planveyor_arch()`), Planner (`planveyor_planner()`), Coder (`planveyor_coder()`), Reviewer (`planveyor_reviewer()` and one per lane: `planveyor_reviewer_code_risk()`, `planveyor_reviewer_code_contracts()`), and Manager (`planveyor_manager()`) have their own wrappers. The `planveyor_arch_censor()`, `planveyor_planner_censor()`, and `planveyor_coder_censor()` wrappers start the CENSOR second pass. In it, the role that hands over the work goes through its files once more and adds what is missing before the work moves on; see the [Roles and task files](roles-artifacts.md) chapter for details.
+
+A fragment of `planveyor_arch()` from [role_runtime.zsh](../../../scripts/planveyor/role_runtime.zsh), after the context check:
 
 ```zsh
 local root=""
@@ -120,128 +126,128 @@ local sid; sid="$(planveyor_session architect)" || return 1
 _planveyor_session_authority_resume_validate architect "$sid" || return $?
 ```
 
-Обёртка берёт корень проекта, промпт фазы, путь плана из `.planveyor.planpath` и SID из указателя, затем проверяет, что сессия создана для этого проекта. Потом печатает `Plan status (pre)` и забирает ответ Owner, если он ждёт в `.planveyor.owner_answers`. Туда `planveyor sibling answer` кладёт ответ на первом обсуждении задачи и ответ на вопрос о полномочиях роли; вопрос о полномочиях роль закрывает сама. Ответ на обычный вопрос команда сразу записывает в журнал вопросов плана. Из этого складывается сообщение: `ROLE=Architect`, `PLAN_PATH`, `PRE_STATUS_LINE`, путь к Python `PYBIN`, текст промпта и ответ Owner. Обёртка отправляет его в ту же сессию Codex:
+The wrapper takes the project root, the phase prompt, the plan path from `.planveyor.planpath`, and the SID from the pointer, then checks that the session was created for this project. Then it prints `Plan status (pre)` and picks up the Owner answer if one waits in `.planveyor.owner_answers`. `planveyor sibling answer` puts there the answer given during the first discussion of the task and the answer to a question about the role's authority; the role closes a question about its authority itself. The command writes the answer to an ordinary question to the Q&A log of the plan right away. These parts make up the message: `ROLE=Architect`, `PLAN_PATH`, `PRE_STATUS_LINE`, the Python path `PYBIN`, the prompt text, and the Owner answer. The wrapper sends it to the same Codex session:
 
 ```zsh
 printf '%s\n' "$payload" | _planveyor_with_role_env architect "$pybin" _planveyor_codex exec -c 'approval_policy="never"' --sandbox workspace-write "${codex_profile_args[@]}" resume "${sid}" -
 ```
 
-Codex работает в песочнице `workspace-write` и подтверждений не спрашивает. Модель и уровень рассуждения он берёт из верхнего уровня `config.toml`; для Architect, Planner и Coder можно выбрать профиль Codex командой `planveyor_profile_set`. После хода обёртка печатает `Plan status (post)`. Статус меняет роль. `planveyor_arch()` его только показывает, а обёртки Planner и Coder откатывают передачу, если линтер плана не прошёл. Если роль поставила `Done`, обёртки Planner, Coder и Reviewer отказывают.
+Codex works in the `workspace-write` sandbox and does not ask for approvals. It takes the model and the reasoning effort from the top level of `config.toml`; for Architect, Planner, and Coder, you can choose a Codex profile with `planveyor_profile_set`. After the turn, the wrapper prints `Plan status (post)`. The role changes the status. `planveyor_arch()` only shows it, while the Planner and Coder wrappers roll back the handoff if the plan linter fails. If the role set `Done`, the Planner, Coder, and Reviewer wrappers refuse.
 
-## Промпт фазы и политика коммита
+## Phase prompt and commit policy
 
-`_planveyor_role_prompt_body <роль> <фаза>` выбирает файл по паре роль–фаза. Для Architect фаза `status_driven` даёт `architect_status_driven.md`, `draft_discussion` даёт `architect_draft_discussion.md`, `censor` даёт `architect_censor.md`. В sibling промпт читается из копии в самом проекте, в Planveyor берётся общий из `docs/tools/prompts/`. Перед текстом промпта функция выводит две строки:
+`_planveyor_role_prompt_body <role> <phase>` selects the file by the role–phase pair. For Architect, the `status_driven` phase gives `architect_status_driven.md`, `draft_discussion` gives `architect_draft_discussion.md`, and `censor` gives `architect_censor.md`. In a sibling, the prompt is read from the copy in the project itself; in Planveyor, the shared one from `docs/tools/prompts/` is taken. Before the prompt text, the function prints two lines:
 
 ```text
 COMMIT_POLICY=human_explicit
-PLANVEYOR_RUNTIME_ROOT=<путь к копии Planveyor>
+PLANVEYOR_RUNTIME_ROOT=<path to the Planveyor checkout>
 ```
 
-`COMMIT_POLICY` говорит роли, кто делает коммит. Значение `human_explicit` бывает, только когда обёртку вызвала `planveyor sibling architect` или `planveyor sibling run`; во всех остальных запусках значение `native_existing`. Функция узнаёт это по цепочке вызовов: есть ли в ней `planveyor_sibling()`. Что делают роли при каждой политике, показано в разделе [«Кто делает коммит»](review-acceptance.md#кто-делает-коммит).
+`COMMIT_POLICY` tells the role who makes the commit. The value is `human_explicit` only when `planveyor sibling architect` or `planveyor sibling run` called the wrapper; in all other launches, the value is `native_existing`. The function learns this from the call chain: whether it contains `planveyor_sibling()`. What the roles do under each policy is shown in the [Who makes the commit](review-acceptance.md#who-makes-the-commit) section.
 
-`PLANVEYOR_RUNTIME_ROOT` нужен роли, чтобы вызывать фасад той же копии Planveyor; пример — в конце главы.
+The role needs `PLANVEYOR_RUNTIME_ROOT` to call the facade of the same Planveyor checkout; there is an example at the end of the chapter.
 
-## Клиент запуска: Codex или Claude Code
+## Agent harness: Codex or Claude Code
 
-По умолчанию все роли работают в Codex. Чтобы назначить роли другой клиент, выполните `planveyor_runner_set <роль> <клиент>`: выбор сохранится в `.planveyor.runner.<роль>` в корне проекта, а `planveyor_runner <роль>` его покажет. Допустимы не все сочетания:
+By default, all roles work in Codex. To assign another agent harness to a role, run `planveyor_runner_set <role> <runner>`: the choice is saved in `.planveyor.runner.<role>` in the project root, and `planveyor_runner <role>` shows it. Not all combinations are allowed:
 
-| Роль | Клиент |
+| Role | Agent harness |
 | --- | --- |
-| Architect, Coder, Manager | только `codex` |
-| Planner, Reviewer | `codex` или `claude` |
+| Architect, Coder, Manager | `codex` only |
+| Planner, Reviewer | `codex` or `claude` |
 
-На другое сочетание команда отвечает, например, `Unsupported runner for role=coder: claude`. Обе линии Reviewer берут клиент из одного файла `.planveyor.runner.reviewer`.
+To any other combination, the command answers, for example, `Unsupported runner for role=coder: claude`. Both Reviewer lanes take the agent harness from the same `.planveyor.runner.reviewer` file.
 
-Выбор `claude` действует там, где роль запускает обёртка: при отдельном запуске роли и в пошаговом режиме Manager. Обёртка вызывает `claude -p --resume <SID> --permission-mode acceptEdits`, а команду, модель и уровень рассуждения можно задать через `PLANVEYOR_CLAUDE_COMMAND`, `PLANVEYOR_CLAUDE_MODEL` и `PLANVEYOR_CLAUDE_EFFORT`. Руководство запуска различает поддерживаемый Codex-путь sibling и существующие отдельные/custom-Claude пути: вход в Claude Code, его разрешения и модель Owner настраивает сам. В режиме collab, который запускает `planveyor sibling run`, все пять агентов ролей работают в Codex, и выбор `claude` на них не влияет.
+The `claude` choice applies where a wrapper starts the role: in a single-role launch and in the custom pipeline. The wrapper calls `claude -p --resume <SID> --permission-mode acceptEdits`, and you can set the command, the model, and the reasoning effort through `PLANVEYOR_CLAUDE_COMMAND`, `PLANVEYOR_CLAUDE_MODEL`, and `PLANVEYOR_CLAUDE_EFFORT`. The launch guide distinguishes the supported Codex path of a sibling from the existing single-role and custom-pipeline Claude paths: Owner sets up the Claude Code sign-in, its permissions, and the model. In collab mode, which `planveyor sibling run` starts, all five role agents work in Codex, and the `claude` choice does not affect them.
 
-## Режимы: одна роль, Manager collab, пошаговый Manager
+## Modes: single role, Manager collab, custom pipeline
 
-| Режим | Как запустить | Кто запускает роли | Клиент ролей | Кто коммитит |
+| Mode | How to start | Who starts the roles | Agent harness of the roles | Who commits |
 | --- | --- | --- | --- | --- |
-| Отдельная роль | `planveyor_arch_init`, затем `planveyor_arch`; так же для других ролей | Owner, по одной | Codex; Planner и Reviewer можно в Claude Code | Architect сам |
-| Режим collab в sibling | `planveyor sibling run` | Manager, агентами Codex | только Codex | Owner командой `planveyor sibling close --commit` |
-| Режим collab напрямую | `planveyor_manager_collab_tui` | Manager, агентами Codex | только Codex | Architect сам |
-| Пошаговый режим Manager | `planveyor_manager_custom_pipeline_tui` | Manager, по очереди через обёртки | как при отдельном запуске | Architect сам |
+| Single-role launch | `planveyor_arch_init`, then `planveyor_arch`; the same for the other roles | Owner, one at a time | Codex; Planner and Reviewer can use Claude Code | Architect itself |
+| TUI mode: the Manager window, in a sibling and in Planveyor itself | `planveyor_manager_init`, the approval step in `planveyor_manager_resume`, then `planveyor sibling tui` in a sibling or `planveyor_manager_collab_tui` in Planveyor itself | Manager, as nested Codex subagents | Codex only | Architect itself |
+| Manual console mode, in a sibling | `planveyor sibling run` | Manager, as Codex agents, one turn up to acceptance | Codex only | Owner, with `planveyor sibling close --commit` |
+| Manager custom pipeline | `planveyor_manager_custom_pipeline_tui` | Manager, one at a time through the wrappers | As in a single-role launch | Architect itself |
 
-### Отдельная роль
+### Single-role launch
 
-Owner сам выбирает роль по статусу плана и вызывает её обёртку через фасад. Каждый вызов — отдельный запуск клиента (`codex exec … resume` или `claude -p --resume`), и разделы `[agents.*]` в `config.toml` этому режиму не нужны. Второй проход CENSOR здесь запускают обёртками `planveyor_arch_censor`, `planveyor_planner_censor` и `planveyor_coder_censor`. Закрытие документов плана, планы анализа и декомпозиции ([«Разработка, анализ и декомпозиция»](work-contours.md)) всё равно идут через режим collab.
+Owner chooses the role by the plan status and calls its wrapper through the facade. Each call is a separate launch of the agent harness (`codex exec … resume` or `claude -p --resume`), and this mode does not need the `[agents.*]` sections in `config.toml`. Here, the CENSOR second pass is started with the `planveyor_arch_censor`, `planveyor_planner_censor`, and `planveyor_coder_censor` wrappers. The docs closeout of a plan and the analysis and decomposition plans ([Development, analysis, and decomposition](work-contours.md)) still go through collab mode.
 
 ### Manager collab
 
-В режиме collab роли работают агентами Codex внутри сессии Manager. `planveyor sibling run` вызывает `planveyor_manager_collab_cmd run <план>`, и команда один раз продолжает сессию Manager в Codex. Сообщение содержит `ROLE=Manager`, `PLAN_PATH`, `PRE_STATUS_LINE`, `PYBIN`, текст [manager_collab_pipeline.md](../../tools/prompts/manager_collab_pipeline.md) и последней строкой `MANAGER_CMD=run <план>`.
+In collab mode, the roles work as Codex agents inside the Manager session. `planveyor sibling run` calls `planveyor_manager_collab_cmd run <plan>`, and the command continues the Manager session in Codex once. The message contains `ROLE=Manager`, `PLAN_PATH`, `PRE_STATUS_LINE`, `PYBIN`, the text of [manager_collab_pipeline.md](../../tools/prompts/manager_collab_pipeline.md) (in Russian), and, as the last line, `MANAGER_CMD=run <plan>`.
 
-Тот же маршрут ролей в интерактивном окне Codex открывает `planveyor_manager_collab_tui`. Но эта команда вызвана не из `planveyor sibling`, поэтому политика будет `native_existing`, и Architect сам закоммитит точный набор файлов плана и документы. В sibling задачу ведут командой `planveyor sibling run`.
+`planveyor_manager_collab_tui` opens the same route of roles in an interactive Codex window. This is TUI mode, the main path in a sibling too ([Two ways to work on a plan](../stack-sibling.md#two-ways-to-work-on-a-plan)). The roles in it are nested subagents of the Manager session and live while the window is open. The policy is `native_existing`: Architect commits the exact bundle of the plan itself and, if the docs closeout requires it, the documents. In a sibling, the window is opened by `planveyor sibling tui`: it checks the selected plan and the Manager session and calls `planveyor_manager_collab_tui` with the same policy. Before it, start a new session with `planveyor --project "$PWD" planveyor_manager_init` and switch it to command approval requests, as in [Run the plan in TUI mode](../stack-sibling.md#run-the-plan-in-tui-mode). `planveyor sibling run` is manual console mode: one Manager turn up to the accepted Arch review, Owner makes the commits, and after a commit the next `run` starts a new Manager with new roles.
 
-Manager — главная сессия Codex на модели из верхнего уровня `config.toml`. Роли он создаёт агентами Codex вызовом `spawn_agent(..., agent_type=<тип>)`. Типов пять, Owner описывает их разделами `[agents.<тип>]` в `config.toml`; Planveyor эти разделы не создаёт и не переписывает. Раздел ссылается на файл роли (`config_file`), и модель с уровнем рассуждения задаёт этот файл.
+Manager is the main Codex session on the model from the top level of `config.toml`. It creates the roles as Codex agents with the call `spawn_agent(..., agent_type=<type>)`. There are five types; Owner describes them with `[agents.<type>]` sections in `config.toml`, and Planveyor does not create or rewrite these sections. A section refers to a role file (`config_file`), and this file sets the model and the reasoning effort.
 
-| `agent_type` | Роль | Имя агента |
+| `agent_type` | Role | Agent name |
 | --- | --- | --- |
 | `architect` | Architect | `/root/architect_sol_xhigh_v2` |
 | `planner` | Planner | `/root/planner_terra_ultra_v2` |
 | `coder` | Coder | `/root/coder_terra_ultra_v2` |
-| `reviewer_code_risk` | Reviewer, линия рисков | `/root/reviewer_code_risk_sol_xhigh_v2` |
-| `reviewer_code_contracts` | Reviewer, линия контракта | `/root/reviewer_code_contracts_sol_xhigh_v2` |
+| `reviewer_code_risk` | Reviewer, risk lane | `/root/reviewer_code_risk_sol_xhigh_v2` |
+| `reviewer_code_contracts` | Reviewer, contracts lane | `/root/reviewer_code_contracts_sol_xhigh_v2` |
 
-Имена агентов постоянные. Это адреса в дереве задач Codex с корнем `/root`, и части `sol`, `terra`, `xhigh`, `ultra` модель не задают. Настройка описана в разделе [«Настройка Codex»](../launch-and-role-modes.ru.md#настройка-codex) руководства запуска.
+The agent names are fixed. They are addresses in the Codex task tree with the root `/root`, and the parts `sol`, `terra`, `xhigh`, and `ultra` do not set the model. The setup is described in the [Codex setup](../launch-and-role-modes.md#codex-setup) section of the launch guide.
 
-Как Manager ведёт план:
+How Manager drives the plan:
 
-- Перед каждым шагом он читает статус плана через Oracle. План, статус, код, окружение и выбор клиента он не меняет.
-- Агент роли живёт весь запуск. Его имя Manager хранит в `.planveyor.collab.agent.<роль>`. Когда Codex перезапущен, Manager сначала ищет агента вызовом `list_agents` и только потом создаёт заново.
-- Работу он передаёт тому же агенту вызовом `followup_task`. Одновременно работает одна роль.
-- За один запуск Manager делает не больше 12 шагов по активному плану. На лимите он останавливается с `Next: Owner`, и Owner повторяет `planveyor sibling run`.
+- Before each step, it reads the plan status through Oracle. It does not change the plan, the status, the code, the environment, or the agent harness choice.
+- A role agent lives for the whole run. Manager keeps its name in `.planveyor.collab.agent.<role>`. After a Codex restart, Manager first looks for the agent with the `list_agents` call and only then creates it again.
+- It hands work to the same agent with the `followup_task` call. One role works at a time.
+- In one run, Manager makes no more than 12 steps on the active plan. At the limit, it stops with `Next: Owner`: in manual console mode, Owner repeats `planveyor sibling run`, and in TUI mode, Owner tells Manager in the same window to continue.
 
-Второй проход CENSOR Manager запускает, когда роль передала работу дальше. Проход делает та роль, которая сдала работу: Architect при статусе `Architect draft` или `Ready for Planner`, Planner при `Ready for Coder`, Coder при `Ready for Review`. Это отдельный `followup_task` тому же агенту с промптом CENSOR и новым `CENSOR_DISPATCH_ID`. Потом Manager проверяет запись прохода скриптом `censor_receipts_harvest.py`, и работа идёт дальше только при состоянии `complete`.
+Manager starts the CENSOR second pass when a role has handed the work on. The role that handed over the work does the pass: Architect with the `Architect draft` or `Ready for Planner` status, Planner with `Ready for Coder`, Coder with `Ready for Review`. This is a separate `followup_task` to the same agent with the CENSOR prompt and a new `CENSOR_DISPATCH_ID`. Then Manager checks the record of the pass with the `censor_receipts_harvest.py` script, and the work goes on only in the `complete` state.
 
-Для небольших правок второй проход можно пропустить, если скрипт `planveyor_q_small_slice_json` до и после хода роли подтверждает, что задача подходит под короткий маршрут. Условия описаны в разделе `Native cold-start CENSOR gate` [промпта Manager](../../tools/prompts/manager_collab_pipeline.md) и в [правилах Manager](../../roles/manager.md).
+For small changes, the second pass can be skipped if the `planveyor_q_small_slice_json` script confirms before and after the role turn that the task fits the short route. The conditions are described in step 2a, `Native cold-start CENSOR gate`, of the [Manager prompt](../../tools/prompts/manager_collab_pipeline.md) and in the [Manager rules](../../roles/manager.md).
 
-Режим merge поднимает тех же агентов, кроме Planner, и работает с диапазоном уже слитых коммитов. Его запускают `planveyor_merge_collab_cmd` или `planveyor_merge_collab_tui` (то же, что `planveyor_manager_collab_tui --merge`); он описан в главе [«Проверка после слияния»](postmerge.md). Очередь из нескольких планов (`planveyor_q_set`, `planveyor_manager_collab_tui --q`) в первой версии отложена и сквозным прогоном не проверена. `planveyor sibling run` работает с одним выбранным планом.
+Merge mode starts the same agents except Planner and works with a range of already merged commits. It is started with `planveyor_merge_collab_cmd` or `planveyor_merge_collab_tui` (the same as `planveyor_manager_collab_tui --merge`); it is described in the [Post-merge check](postmerge.md) chapter. A queue of several plans (`planveyor_q_set`, `planveyor_manager_collab_tui --q`) is deferred in the first version and has not been checked by an end-to-end run. `planveyor sibling run` works with one selected plan.
 
-### Пошаговый режим Manager (custom pipeline)
+### Manager custom pipeline
 
-В пошаговом режиме Manager агентов не создаёт: он по очереди вызывает `planveyor_custom_role_step <роль> --plan <план> --json`, и каждая роль работает через обёртку в своей сессии. Режим выбирают, когда роли нужны в собственных сессиях вместо агентов Codex, например чтобы Planner или Reviewer работали в Claude Code; разделы `[agents.*]` ему не нужны. Каждый шаг оставляет свою квитанцию запуска. Сессии заводят заранее: `planveyor_manager_init`, `planveyor_arch_init`, `planveyor_planner_init`, `planveyor_coder_init`, `planveyor_reviewer_code_risk_init` и `planveyor_reviewer_code_contracts_init`. Лимит тот же, 12 шагов. Алгоритм режима — в [manager_custom_pipeline.md](../../tools/prompts/manager_custom_pipeline.md).
+In the custom pipeline, Manager does not create agents: it calls `planveyor_custom_role_step <role> --plan <plan> --json` for one role after another, and each role works through its wrapper in its own session. You choose this mode when the roles need their own sessions instead of Codex agents, for example so that Planner or Reviewer work in Claude Code; it does not need the `[agents.*]` sections. Each step leaves its own launch receipt. The sessions are started in advance: `planveyor_manager_init`, `planveyor_arch_init`, `planveyor_planner_init`, `planveyor_coder_init`, `planveyor_reviewer_code_risk_init`, and `planveyor_reviewer_code_contracts_init`. The limit is the same, 12 steps. The algorithm of the mode is in [manager_custom_pipeline.md](../../tools/prompts/manager_custom_pipeline.md) (in Russian).
 
 ### ZCode
 
-ZCode — ещё один ИИ-клиент, но выбрать его через `planveyor_runner_set` нельзя. У него свой маршрут Manager, и работает этот маршрут только в корне Planveyor: файлы его запуска из `.zcode/` в sibling не доставляются. В sibling ZCode подходит для чата со скиллом `/planveyor-plan-draft`, а Manager запускают через фасад.
+ZCode is one more agent harness, but you cannot choose it through `planveyor_runner_set`. It has its own Manager route, and this route works only in the Planveyor root: its launch files from `.zcode/` are not delivered to a sibling. In a sibling, ZCode fits a chat with the `/planveyor-plan-draft` skill, and Manager is started through the facade.
 
-## Где что лежит
+## Where things are
 
-| Где | Что там |
+| Where | What is there |
 | --- | --- |
-| Копия Planveyor (движок) | `bin/planveyor`, `scripts/`, общие правила и промпты; модули описаны в [scripts/planveyor/README.md](../../../scripts/planveyor/README.ru.md) |
-| Проект, файлы под Git | План, черновик кода, ревью, код продукта; в sibling ещё своя копия промптов и правил ролей |
-| Проект, файлы `.planveyor.*` вне Git | Выбранный план, указатели сессий, выбор клиента, имена агентов Manager, квитанции сессий, ответ Owner для следующего хода |
-| Codex home: `PLANVEYOR_CODEX_HOME` или `~/.codex` | `config.toml` с моделью и уровнем рассуждения, пять разделов `[agents.*]` и файлы ролей, вход в Codex |
+| Planveyor checkout (runtime) | `bin/planveyor`, `scripts/`, shared rules and prompts; the modules are described in [scripts/planveyor/README.md](../../../scripts/planveyor/README.md) |
+| Project, files under Git | The plan, the code draft, the review, the product code; in a sibling, also its own copy of the prompts and role rules |
+| Project, `.planveyor.*` files outside Git | The selected plan, the session pointers, the agent harness choice, the names of the Manager agents, the session receipts, the Owner answer for the next turn |
+| Codex home: `PLANVEYOR_CODEX_HOME` or `~/.codex` | `config.toml` with the model and the reasoning effort, five `[agents.*]` sections and the role files, the Codex sign-in |
 
-Шаблон sibling исключает `.planveyor.*` из Git: это локальное состояние, и оно не должно мешать обновлению. Правил проекта в этих файлах нет. Указатель `.planveyor.planpath` выбирает план, но не решает, можно ли делать следующий шаг: это показывает Oracle по самому плану.
+The sibling template excludes `.planveyor.*` from Git: this is local state, and it must not get in the way of an upgrade. These files hold no project rules. The `.planveyor.planpath` pointer selects the plan but does not decide whether the next step may be taken: Oracle shows this from the plan itself.
 
-## Пример: следы запуска в задаче GetReorderCandidates
+## Example: launch traces in the GetReorderCandidates task
 
-Задачу GetReorderCandidates из [сквозного примера](sql-example.md) решали до команд `planveyor sibling`: роли вручную запускал оператор (см. [«Роли и файлы задачи»](roles-artifacts.md)). Звенья запуска видны и в её файлах.
+The GetReorderCandidates task from the [running example](sql-example.md) was done before the `planveyor sibling` commands existed: an operator started the roles by hand (see [Roles and task files](roles-artifacts.md)). The links of the launch are visible in its files too.
 
-В ревью у каждой линии Reviewer записано, где она работала. Строка линии рисков:
+The review records for each Reviewer lane where it worked. The risk lane line:
 
 ```text
 - Runner metadata: `runner_id=codex`, `session_key=reviewer`, `sid=<SID>`, `profile=N/A (why=not configured)`, `model=gpt-6-sol`, `reasoning_effort=ultra`.
 ```
 
-Линия работала в Codex, в сессии с ключом `reviewer`, без профиля Codex; модель и уровень рассуждения пришли из настроек Codex. У линии контракта строка такая же: обе линии вела одна сессия `reviewer`, как у обёртки `planveyor_reviewer()`. В режиме collab у них были бы два агента, `reviewer_code_risk` и `reviewer_code_contracts`.
+The lane worked in Codex, in the session with the `reviewer` key, without a Codex profile; the model and the reasoning effort came from the Codex settings. The contracts lane has the same line: one `reviewer` session ran both lanes, as the `planveyor_reviewer()` wrapper does. In collab mode, they would have had two agents, `reviewer_code_risk` and `reviewer_code_contracts`.
 
-Сами роли вызывали движок через фасад той копии Planveyor, из которой их запустили. Две команды из раздела `## Commands` плана:
+The roles themselves called the engine through the facade of the Planveyor checkout from which they were started. Two commands from the `## Commands` section of the plan:
 
 ```sh
 "$PLANVEYOR_RUNTIME_ROOT/bin/planveyor" --project "$PWD" planveyor_plan_lint docs/plans/260928_0006_get_reorder_candidates.md
 "$PLANVEYOR_RUNTIME_ROOT/bin/planveyor" --project "$PWD" planveyor_plan_status_oracle --json docs/plans/260928_0006_get_reorder_candidates.md
 ```
 
-## Частые ошибки
+## Common mistakes
 
-- Настроить модель в `[agents.planner]` и ждать её при отдельном запуске `planveyor_planner`: он берёт модель из верхнего уровня `config.toml` или из профиля `planveyor_profile_set`.
-- Выбрать для Planner клиент `claude` и ждать Claude Code от `planveyor sibling run`.
-- Открыть в sibling `planveyor_manager_collab_tui`, чтобы посмотреть на агентов вживую: Architect сам закоммитит набор и документы, без паузы на `planveyor sibling close`.
+- Setting the model in `[agents.planner]` and expecting it in a single-role launch of `planveyor_planner`: it takes the model from the top level of `config.toml` or from the `planveyor_profile_set` profile.
+- Choosing the `claude` agent harness for Planner and expecting Claude Code from `planveyor sibling run`.
+- Closing the TUI window after the implementation commit and expecting the same roles to close the documents: a new `sibling tui` or `run` does not restore the previous roles or a spent correction attempt. Stop and follow the closed-window row in [If a command stops](../stack-sibling.md#if-a-command-stops): Owner chooses the next step.
 
-Функции и тесты, о которых шла речь, — в [справочнике по коду](code-map.md#запуск-команды-обёртки-клиенты).
+The functions and tests discussed here are in the [code map](code-map.md#launch-commands-wrappers-agent-harnesses).
 
-Дальше: [«Как Planveyor меняет себя»](self-development.md).
+Next: [How Planveyor changes itself](self-development.md).

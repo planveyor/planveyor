@@ -1,77 +1,86 @@
-# Как Planveyor меняет себя
+# How Planveyor changes itself
 
-Изменения в Planveyor проходят тот же путь, что и задачи проектов: план, роли, ревью, приёмка Architect. Замечания ролей о самом процессе собираются в предложения (PI), и из них тоже вырастают такие планы.
+**English** · [Русский](self-development.ru.md)
 
-## Что меняется и где лежит
+Changes to Planveyor go the same way as project tasks: a plan, the roles, a review, Architect acceptance. The remarks of the roles about the process itself are collected into process improvements (PIs), and such plans grow out of them too.
 
-| Слой | Что задаёт | Где лежит |
+## What changes and where it lives
+
+| Layer | What it sets | Where it lives |
 | --- | --- | --- |
-| Документы ролей | Ответственность и границы роли | `docs/roles/` |
-| Промпты и плейбуки | Инструкцию шага и подробный порядок работы | `docs/tools/prompts/`, `docs/playbooks/` |
-| Скиллы | Помощь в чате, например создание плана | `skills/` |
-| Шаблоны и метаданные | Формат файлов задачи и машиночитаемые словари, например `plan_vocab.json` | `docs/*/_template*`, `docs/_meta/` |
-| Команды и обёртки | Подготовку сессии, проверки перед запуском и вызов клиента | `bin/planveyor`, `scripts/planveyor.zsh`, `scripts/planveyor/` |
-| Вспомогательные скрипты и тесты | Проверки и обработку файлов задачи | `scripts/*.py`, `scripts/test_*.py` |
-| Шаблон sibling | Файлы, которые получает новый проект | `copier_template/` |
+| Role definitions | The responsibility and limits of a role | `docs/roles/` |
+| Prompts and playbooks | The instruction for a step and the detailed order of work | `docs/tools/prompts/`, `docs/playbooks/` |
+| Skills | Help in a chat, for example creating a plan | `skills/` |
+| Templates and metadata | The format of task files and machine-readable vocabularies, for example `plan_vocab.json` | `docs/*/_template*`, `docs/_meta/` |
+| Commands and wrappers | Session preparation, checks before the launch, and the agent harness call | `bin/planveyor`, `scripts/planveyor.zsh`, `scripts/planveyor/` |
+| Helper scripts and tests | Checks and processing of task files | `scripts/*.py`, `scripts/test_*.py` |
+| Sibling template | The files that a new project receives | `copier_template/` |
 
-Промпт объясняет модели, что делать, а скрипт проверяет данные и условия. Поэтому новое правило в промпте само проверкой не станет. Новой проверке в коде, если она меняет работу роли, нужен согласованный текст в промпте.
+A prompt explains to the model what to do, and a script checks the data and the conditions. So a new rule in a prompt does not become a check by itself. A new check in the code, if it changes the work of a role, needs matching text in the prompt.
 
-Правила для таких правок:
+Rules for such changes:
 
-- Копию в `copier_template/` правят вместе с исходником в `docs/`; у скиллов исходник лежит в `skills/`, а копия в `copier_template/.agents/skills/`. Тест `test_template_copies_match_their_docs_sources_byte_for_byte` требует побайтного совпадения.
-- Производные файлы руками не правят. `build_role_bundles.py` при создании сессии собирает из документов роли и промптов её XML-контекст `.tmp/role_bundles/<роль>.xml`, а сводки предложений по процессу в `docs/process_improvements/` пересобирает сборщик предложений.
-- Общие файлы ничего не знают о стеке конкретного проекта. Команды, базы и проверки продукта sibling пишет в свои [локальные разделы](sibling-lifecycle.md#локальные-разделы); обновление движка переносит их без изменений.
+- Edit the copy in `copier_template/` together with the source in `docs/`; for skills, the source lies in `skills/` and the copy in `copier_template/.agents/skills/`. The `test_template_copies_match_their_docs_sources_byte_for_byte` test requires a byte-for-byte match.
+- Do not edit derived files by hand. When a session is created, `build_role_bundles.py` builds the XML context of the role, `.tmp/role_bundles/<role>.xml`, from the role definitions and prompts, and the PI collector rebuilds the process improvement summaries in `docs/process_improvements/`.
+- Shared files know nothing about the stack of a particular project. A sibling writes the product commands, databases, and checks into its own [local sections](sibling-lifecycle.md#local-sections); an engine upgrade carries them over unchanged.
 
-Одно изменение обычно задевает несколько слоёв сразу. Когда Manager научился явно продолжать начатый цикл закрытия документов (`planveyor_manager_collab_cmd run <план> --followups-capture-cycle-id <UUID>`), правка затронула 12 файлов: промпт Manager и его копию в `copier_template/`, руководство запуска, скрипты `docs_closeout.py` и `followups_capture.py`, обёртки в `scripts/planveyor.zsh` и `scripts/planveyor/role_runtime.zsh` и пять файлов тестов.
+One change usually touches several layers at once. When Manager learned to explicitly continue a started docs closeout cycle (`planveyor_manager_collab_cmd run <plan> --followups-capture-cycle-id <UUID>`), the change touched 12 files: the Manager prompt and its copy in `copier_template/`, the launch guide, the `docs_closeout.py` and `followups_capture.py` scripts, the wrappers in `scripts/planveyor.zsh` and `scripts/planveyor/role_runtime.zsh`, and five test files.
 
-## Изменение в самом Planveyor
+## A change in Planveyor itself
 
-Когда меняют движок, проектом служит сам Planveyor: без `--project` фасад выбирает его корень. В документах этот режим называют Self-Planveyor, а Owner здесь — сопровождающий Planveyor, который ведёт изменение. План пишут по шаблону `docs/plans/_template.md` и кладут в `docs/plans/` Planveyor. Команды `planveyor sibling` работают только с sibling, а в корне Planveyor доступны лишь их справка и `sibling init`, которая создаёт новый проект. Поэтому план выбирают и ведут низкоуровневыми командами из [руководства запуска](../launch-and-role-modes.ru.md):
+When the engine changes, Planveyor itself serves as the project: without `--project`, the facade selects its root. The documents call this mode Self-Planveyor, and Owner here is the Planveyor maintainer who drives the change. The plan is written from the `docs/plans/_template.md` template and put into `docs/plans/` of Planveyor. The `planveyor sibling` commands work only with a sibling; in the Planveyor root, only their help and `sibling init`, which creates a new project, are available. So the plan is selected and driven with the low-level commands from the [launch guide](../launch-and-role-modes.md):
 
 ```zsh
 ./bin/planveyor planveyor_plan_set docs/plans/YYMMDD_HHMM_topic.md
 ./bin/planveyor planveyor_manager_init
+./bin/planveyor planveyor_manager_resume
 ./bin/planveyor planveyor_manager_collab_tui
 ```
 
-Если план в статусе `Architect initial draft`, Manager начинает с обсуждения задачи с Architect; вопросы к Owner он задаёт в окне TUI и ждёт ответа. Политика коммита здесь `native_existing` (раздел [«Кто делает коммит»](review-acceptance.md#кто-делает-коммит)): в обычном плане разработки после приёмки Architect сам коммитит точный набор файлов плана, а потом и документы. `git push` остаётся за Owner.
+`planveyor_manager_init` creates the Manager session without approval requests. So, before the work, Owner types `/permissions` in the empty `planveyor_manager_resume` window, chooses "Ask for approval", and exits. After that, Owner approves in the window the requests of Architect to write to `.git`. Approval applies to a specific call, not to the whole task closeout: when a task was closed in Planveyor itself, the window asked separately about `planveyor_plan_bundle --stage`, `planveyor_plan_closeout_preflight`, their repeated runs, and `git commit`, and Owner answered each time with the one-time "Yes, proceed".
 
-![Изменение Planveyor проходит Architect, Planner, Coder и Reviewer; извещение для sibling входит в саму правку, в конце коммит и закрытие](assets/self-development-1.svg)
+If the commands come from a separate Planveyor checkout, pass `--project <project>` to each of them, as the [launch guide](../launch-and-role-modes.md#roles-and-entry-points) says: without it, the command takes that checkout itself as the project, from whatever directory it is called.
 
-Какие проверки запускать перед ревью, описывает [CONTRIBUTING](../../../CONTRIBUTING.ru.md); маршруты и разница между ними — в главе [«Тесты движка»](engine-tests.md).
+If the plan is in the `Architect initial draft` status, Manager starts with a discussion of the task with Architect; it asks Owner its questions in the TUI window and waits for the answer. The commit policy here is `native_existing` (the [Who makes the commit](review-acceptance.md#who-makes-the-commit) section): in an ordinary development plan, after acceptance Architect commits the exact bundle of the plan itself, and then, if the docs closeout requires it, the documents. `git push` stays with Owner.
 
-Если новая проверка требует решения шире плана, работа возвращается к Architect. Ослаблять проверку, чтобы она прошла, нельзя. Работу за границами плана записывают отложенной задачей.
+![A Planveyor change goes through Architect, Planner, Coder, and Reviewer; the contract notice for siblings is part of the change itself; at the end, the commit and the closeout](assets/self-development-1.svg)
 
-## Предложения по процессу (PI)
+[CONTRIBUTING](../../../CONTRIBUTING.md) describes which checks to run before the review; the routes and the differences between them are in the [Engine tests](engine-tests.md) chapter.
 
-Обычно PI появляется при закрытии документов (глава [«Закрытие задачи»](closeout.md)). Каждая из четырёх ролей отвечает разделом `Process improvements`: предложением или строкой `NO PROCESS IMPROVEMENTS — why: <причина>`, например с причиной `clean_run`. Общие промпты и плейбуки роль при этом не правит.
+If a new check needs a decision broader than the plan, the work returns to Architect. You must not weaken a check to make it pass. Work outside the plan scope is recorded as a follow-up.
 
-Путь записи PI:
+## Process improvements (PIs)
 
-1. Сбор. После ответа каждой роли Manager передаёт его сборщику предложений `process_improvements_collect.py`. Сборщик добавляет запись `### PI-NNN` со статусом `open` и приоритетом `P?` в файл `docs/process_improvements/YYMMDD_HHMM_topic__process_improvements_backlog.md`, названный по плану, и пересобирает три сводки: `index.md`, `deferred.md` и `promotion_surface.md`. Номера PI свои в каждом файле. Ошибка сборщика останавливает закрытие.
-2. Разбор. Architect называет файл, куда должна прийти правка (`target_canon_path`), репозиторий (`target_repo_scope`) и способ доставки (`delivery_mode`, таблица ниже). Owner меняет `P?` на `P0`, `P1` или `P2`: это срочность записи. Класс правки уже записан в `promotion_class`: `canon_update` для документов, шаблонов и плейбуков, `prompt_change` для промптов, `helper_change` для скриптов и обёрток. После разбора запись получает статус `triaged`, `deferred` (с причиной и условием возврата) или `rejected` (с причиной). Поля записывает скрипт `process_improvements_triage.py`.
-3. Привязка (в полях и скриптах — promotion). `process_improvements_promote.py` связывает запись с уже существующим исполнением, обычно с планом (`execution_kind=plan` и путь к плану в `execution_ref`). При успехе запись получает статус `promoted` и время `promoted_at`. План скрипт не создаёт: если файла нет, он отказывает, и запись остаётся `triaged`.
-4. Исполнение. План проходит обычный путь с ревью и приёмкой.
-5. Сверка. `process_improvements_reconcile.py --report` находит записи, чей план уже `Done`; с `--apply` они получают статус `handled`, ссылку `handled_ref` и время `handled_at`.
+A PI usually appears during the docs closeout (the [Task closeout](closeout.md) chapter). Each of the four roles answers with a `Process improvements` section: a proposal or the line `NO PROCESS IMPROVEMENTS — why: <reason>`, for example with the reason `clean_run`. The role does not edit the shared prompts and playbooks while doing so.
 
-| `delivery_mode` | Что происходит |
+The path of a PI record:
+
+1. Collection. After each role answers, Manager passes the answer to the PI collector `process_improvements_collect.py`. The collector adds a `### PI-NNN` record with the `open` status and the `P?` priority to the `docs/process_improvements/YYMMDD_HHMM_topic__process_improvements_backlog.md` file named after the plan, and rebuilds three summaries: `index.md`, `deferred.md`, and `promotion_surface.md`. Each file has its own PI numbers. An error of the collector stops the closeout, with one exception: after a format error in the `Process improvements` section, the same role may give one corrected answer.
+
+   Automatic general PI format correction permits one additional response from the same role only when the helper proves that the failed collection had no effect and that every uncommitted documentation change belongs to the current PI chain. Changes to ordinary documents outside that chain block correction even when those files are not protected. Another malformed response or re-entry does not replenish the spent attempt; processing stops for an Owner decision.
+2. Triage. Architect names the file where the change must land (`target_canon_path`), the repository (`target_repo_scope`), and the delivery mode (`delivery_mode`, see the table below). Owner changes `P?` to `P0`, `P1`, or `P2`: this is the urgency of the record. The change class is already recorded in `promotion_class`: `canon_update` for documents, templates, and playbooks, `prompt_change` for prompts, `helper_change` for scripts and wrappers, `routing_change` for routing and queue changes, and `followup_plan` for creating a follow-up plan. After triage, the record gets the status `triaged`, `deferred` (with a reason and a condition for coming back to it), or `rejected` (with a reason). The `process_improvements_triage.py` script writes the fields.
+3. Promotion. `process_improvements_promote.py` links the record to an already existing execution, usually a plan (`execution_kind=plan` and the plan path in `execution_ref`). On success, the record gets the `promoted` status and the `promoted_at` time. The script does not create the plan: if the file does not exist, it refuses, and the record stays `triaged`.
+4. Execution. The plan goes the usual way, with a review and acceptance.
+5. Reconciliation. `process_improvements_reconcile.py --report` finds the records whose plan is already `Done`; with `--apply`, they get the `handled` status, the `handled_ref` reference, and the `handled_at` time.
+
+| `delivery_mode` | What happens |
 | --- | --- |
-| `source_only` | Правка остаётся в текущем репозитории |
-| `source_plus_rollout` | Правка входит в правила этого репозитория, а потом пакетом едет в sibling |
-| `packet_only` | Этот репозиторий свои правила не меняет и готовит только пакет для проекта-получателя |
-| `umbrella_mixed` | Запись требует отдельной декомпозиции с зонтичным планом |
+| `source_only` | The change stays in the current repository |
+| `source_plus_rollout` | The change enters the rules of this repository and then travels to the recipient project as a packet |
+| `packet_only` | This repository does not change its own rules and prepares only a packet for the receiving project |
+| `umbrella_mixed` | The record needs a separate decomposition with an umbrella plan |
 
-Пакеты описаны в главе [«Обмен изменениями с Planveyor»](change-packets.md); сейчас sibling их не получает ([F29](../../release_backlog.md#f29)).
+Packets are described in the [Exchanging changes with Planveyor](change-packets.md) chapter; for now, a sibling does not receive them ([F29](../../release_backlog.md#f29), in Russian).
 
-Скрипты разбора, привязки и сверки роли в обычном ходе не вызывают: их запускают отдельной командой. Для привязки и сверки есть команды фасада `planveyor_process_improvements_promote` и `planveyor_process_improvements_reconcile`, для разбора — скрипт `process_improvements_triage.py`. Скрипты меняют только запись и сводки: план не создают, роли не запускают и очередь не включают. Решения по зрелым записям Architect фиксирует на шаге `plan_harvest` [проверки после слияния](postmerge.md), в разделе `Process-improvement promotion decisions`. Записи `open`, `triaged` и `promoted` — ещё не сделанная работа; `handled` ставит сверка.
+Roles do not call the triage, promotion, and reconciliation scripts in an ordinary turn: these scripts are run with a separate command. For promotion and reconciliation, there are the facade commands `planveyor_process_improvements_promote` and `planveyor_process_improvements_reconcile`; for triage, there is the `process_improvements_triage.py` script. The scripts change only the record and the summaries: they do not create a plan, start roles, or enable the queue. Architect records the decisions on mature records at the `plan_harvest` step of the [post-merge check](postmerge.md), in the `Process-improvement promotion decisions` section. Records in `open`, `triaged`, and `promoted` are work that is not done yet; reconciliation sets `handled`.
 
-Второй источник записей — запрос из sibling в Planveyor. Команда `planveyor_upstream_request_import` превращает его в такую же запись `open`, дальше идёт тот же разбор (см. [«Обмен изменениями с Planveyor»](change-packets.md)). Формат записи и правила собраны в [описании предложений по процессу](../../process_improvements/README.md).
+The second source of records is an upstream request from a sibling. The `planveyor_upstream_request_import` command turns it into the same kind of `open` record, and the same triage follows (see [Exchanging changes with Planveyor](change-packets.md)). The record format and the rules are collected in the [description of process improvements](../../process_improvements/README.md) (in Russian).
 
-У самого Planveyor три собственных предложения ждут разбора: `PI-001`, `PI-002` и `PI-003` в `docs/process_improvements/release__process_improvements_backlog.md`, все `open` с `P?`. В [обязательствах первого релиза](../../release_backlog.md) они названы PI1–PI3.
+Planveyor itself has three of its own PIs waiting for triage: `PI-001`, `PI-002`, and `PI-003` in `docs/process_improvements/release__process_improvements_backlog.md`, all `open` with `P?`. The [First-release backlog](../../release_backlog.md) calls them PI1–PI3.
 
-## Пример: запись PI-001 в SQL-проекте
+## Example: the PI-001 record in the SQL project
 
-В SQL-проекте при закрытии документов задачи GetReorderCandidates появилась запись PI-001 (глава [«Закрытие задачи»](closeout.md#как-это-было-документы-getreordercandidates)). Предложение дал Architect, Planner ответил `clean_run`, а Coder и Reviewer — `already_tracked`, потому что предложение уже записано. Номер PI-001 относится к файлу предложений проекта, с собственными предложениями Planveyor он не связан. Поля разбора, которые в той главе скрыты за «[…]», все пустые:
+In the SQL project, the PI-001 record appeared during the docs closeout of the GetReorderCandidates task (the [Task closeout](closeout.md#how-it-went-the-getreordercandidates-documents) chapter). Architect made the proposal, Planner answered `clean_run`, and Coder and Reviewer answered `already_tracked` because the proposal was already recorded. The number PI-001 belongs to the PI file of the project and is not related to the PIs of Planveyor itself. The triage fields, which that chapter hides behind “[…]”, are all empty:
 
 ```markdown
 - target_canon_path: `null`
@@ -85,26 +94,26 @@
 - handled_at: `null`
 ```
 
-Ссылка на отчёт предыдущей задачи стоит в [локальном разделе](sibling-lifecycle.md#локальные-разделы) плейбука ревью, поэтому разбор назначил бы доставку `source_only`, а правку провёл бы обычный план в самом проекте. Ошибку в общей части исправляют через запрос в Planveyor (глава [«Обмен изменениями с Planveyor»](change-packets.md)).
+The reference to the report of the previous task is in a [local section](sibling-lifecycle.md#local-sections) of the review playbook, so triage would assign the `source_only` delivery, and an ordinary plan in the project itself would carry out the change. An error in the shared part is fixed through an upstream request (the [Exchanging changes with Planveyor](change-packets.md) chapter).
 
-На последнем коммите проекта `f4f707b` запись PI-001 всё ещё `open` с `P?`. Разбора, плана исполнения и статуса `handled` в истории проекта нет, а локальный раздел по-прежнему ссылается на отчёт предыдущей задачи.
+At the latest project commit, `f4f707b`, the PI-001 record is still `open` with `P?`. The project history has no triage, no execution plan, and no `handled` status, and the local section still refers to the report of the previous task.
 
-## Как изменение доходит до sibling
+## How a change reaches the sibling
 
-Если изменение трогает общий контракт или механику, в ту же правку входит извещение (формат — в главе [«Обмен изменениями с Planveyor»](change-packets.md#извещение-что-приносит-новая-версия)). Образец из истории разработки — извещение о правке трёх промптов CENSOR: `engine_changes` в нём пуст, а `sibling_actions` просит прочитать новые промпты и сохранить локальные разделы. До проекта изменение доходит обновлением: Owner обновляет копию Planveyor и запускает `planveyor sibling upgrade`, а роли проводят план обновления. Как это устроено и как прошло в SQL-проекте, рассказано в главе [«Sibling: создание и обновление»](sibling-lifecycle.md#обновление-до-новой-версии-planveyor). SQL-проект обновляли ещё до команды `sibling upgrade`, низкоуровневой командой `planveyor_contract_upgrade`.
+If a change touches the shared contract or mechanics, the same change includes a contract notice (the format is in the [Exchanging changes with Planveyor](change-packets.md#contract-notice-what-a-new-version-brings) chapter). An example from the development history is the notice about a change of three CENSOR prompts: its `engine_changes` is empty, and its `sibling_actions` asks to read the new prompts and to keep the local sections. The change reaches the project through an upgrade: Owner updates the Planveyor checkout and runs `planveyor sibling upgrade`, and the roles run the upgrade plan. How this works and how it went in the SQL project is told in the [Sibling: creation and upgrade](sibling-lifecycle.md#upgrading-to-a-new-planveyor-version) chapter. The SQL project was upgraded before the `sibling upgrade` command existed, with the low-level `planveyor_contract_upgrade` command.
 
-## Частые ошибки и что их ловит
+## Common mistakes and what catches them
 
-| Ошибка | Что её ловит |
+| Mistake | What catches it |
 | --- | --- |
-| Поправить промпт, плейбук или скилл и забыть копию в `copier_template/` | Тест `test_template_copies_match_their_docs_sources_byte_for_byte` |
-| Потерять в промпте обязательную фразу или вернуть запрещённую | Тесты текста промптов, например в `scripts/test_censor_prompt_contract.py` и `scripts/test_planveyor_codex_agent_roles.py` |
-| Закомментировать вызов линтера документов (doc lint) в `scripts/planveyor.zsh` или унести его в другую функцию | Проверка профильного контракта `check_planveyor_profile_contract.py`, замечание `doc_lint_gate` |
-| Поправить общий промпт или плейбук при закрытии документов | `planveyor_docs_closeout` ставит причину `canon_delta_requires_process_improvement`, и коммит документов ждёт, пока находку не оформят как PI |
-| Привязать запись PI к несуществующему плану | `process_improvements_promote.py` отказывает, запись остаётся `triaged` |
-| Записать извещение без поля, с полем не того типа или с пустой либо многострочной строкой | Тест `test_current_notice_history_and_strict_notice_are_valid` в полном маршруте; у sibling обновление остановится до кандидата |
-| Изменить общий контракт без извещения | Пункт проверки перед закрытием в [docs_architecture.md](../../playbooks/docs_architecture.md); без извещения план обновления в sibling не получит ни действий, ни проверок |
+| Editing a prompt, playbook, or skill and forgetting the copy in `copier_template/` | The `test_template_copies_match_their_docs_sources_byte_for_byte` test |
+| Losing a required phrase in a prompt or bringing back a forbidden one | Tests of the prompt text, for example in `scripts/test_censor_prompt_contract.py` and `scripts/test_planveyor_codex_agent_roles.py` |
+| Commenting out the documentation linter (doc lint) call in `scripts/planveyor.zsh` or moving it to another function | The profile contract check `check_planveyor_profile_contract.py`, finding `doc_lint_gate` |
+| Editing a shared prompt or playbook during the docs closeout | `planveyor_docs_closeout` sets the reason `canon_delta_requires_process_improvement`, and the closeout does not commit such an edit. Architect records it as a PI or moves it to a separate active plan; the closeout continues once its set of files has no protected edit left |
+| Promoting a PI record to a plan that does not exist | `process_improvements_promote.py` refuses, and the record stays `triaged` |
+| Writing a contract notice with a missing field, a field of the wrong type, or an empty or multi-line string | The `test_current_notice_history_and_strict_notice_are_valid` test in the full route; in a sibling, the upgrade stops before the candidate |
+| Changing the shared contract without a contract notice | The check item before the closeout in [docs_architecture.md](../../playbooks/docs_architecture.md) (in Russian); without a notice, the upgrade plan in a sibling gets neither actions nor checks |
 
-Функции и тесты, о которых шла речь, — в [справочнике по коду](code-map.md#как-planveyor-меняет-себя).
+The functions and tests discussed here are in the [code map](code-map.md#how-planveyor-changes-itself).
 
-Дальше: [«Проверка после слияния»](postmerge.md).
+Next: [Post-merge check](postmerge.md).

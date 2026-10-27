@@ -1,8 +1,8 @@
 flowchart TB
-A["Owner выбрал новую версию движка"] --> B["Проверки проекта и извещений"]
-B --> C["Кандидат обновления: Copier и проверки"]
-C -->|"конфликт"| D["Разбор, ревью и коммит в кандидате, затем --accept-candidate"]
-D -->|"без Copier"| C
-C -->|"проверки пройдены"| E["План обновления в кандидате"]
-E --> F["Резервная копия и замена каталогов"]
-F --> G["Роли, ревью, приёмка и закрытие документов"]
+A["Owner chose a new engine version"] --> B["Project and notice checks"]
+B --> C["Upgrade candidate: Copier and checks"]
+C -->|"conflict"| D["Resolution, review, commit in candidate, then --accept-candidate"]
+D -->|"without Copier"| C
+C -->|"checks passed"| E["Upgrade plan in the candidate"]
+E --> F["Backup and directory swap"]
+F --> G["Roles, review, acceptance, and docs closeout"]

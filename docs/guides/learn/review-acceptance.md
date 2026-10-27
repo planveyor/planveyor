@@ -1,48 +1,50 @@
-# Ревью и приёмка
+# Review and acceptance
 
-Coder закончил и передал работу. Теперь её проверяет Reviewer, а принимает или возвращает Architect. Если роли запущены командами `planveyor sibling`, после приёмки коммит разрешает Owner; иначе коммитит сам Architect. Кто все эти участники, рассказано в главе [«Роли и файлы задачи»](roles-artifacts.md).
+**English** · [Русский](review-acceptance.ru.md)
 
-## Файл ревью
+Coder has finished and handed over the work. Now Reviewer checks it, and Architect accepts it or returns it. If the roles are launched with the `planveyor sibling` commands, Owner authorizes the commit after acceptance; otherwise, Architect makes the commit. Who all these participants are is told in the [Roles and task files](roles-artifacts.md) chapter.
 
-У задачи один файл ревью. Reviewer создаёт его и записывает путь в раздел плана `## Review artifacts`. Если все целевые файлы задачи (их список Planner ведёт в черновике кода) лежат в `docs/`, ревью хранится в `docs/doc_reviews/<имя плана>.md`, иначе — в `docs/code_reviews/<имя плана>.md`. Когда в точный набор файлов плана попадает первый файл вне `docs/`, путь переносят в `docs/code_reviews/`, а план, черновик и ссылку на ревью согласуют вместе. Повторное ревью после исправлений переписывает тот же файл; два файла ревью в одном плане проверка плана сочтёт ошибкой. Порядок работы — в плейбуках [ревью коммита](../../playbooks/review_staged_or_commit.md) и [ревью документов](../../playbooks/review_docs_staged_or_commit.md).
+## The review file
 
-Если ревью идёт по текущему набору файлов (`BUNDLE=current`, как в примере ниже), строка `**Target:**` в его шапке хранит контрольную сумму байтов целевых файлов (`bundle_sha256`). Вывод ревью относится к этим байтам. Стоит Coder поправить после ревью хоть один целевой файл, сумма разойдётся, и ревью придётся повторить.
+A task has one review file. Reviewer creates it and writes its path into the `## Review artifacts` section of the plan. If all target files of the task (Planner keeps their list in the code draft) lie in `docs/`, the review is stored in `docs/doc_reviews/<plan name>.md`; otherwise, in `docs/code_reviews/<plan name>.md`. When the first file outside `docs/` gets into the exact bundle of the plan, the path moves to `docs/code_reviews/`, and the plan, the draft, and the link to the review are brought in line together. A repeated review after fixes rewrites the same file; the plan check treats two review files in one plan as an error. The order of work is in the playbooks for [commit review](../../playbooks/review_staged_or_commit.md) (in Russian) and [docs review](../../playbooks/review_docs_staged_or_commit.md) (in Russian).
 
-Замечания Reviewer делит по серьёзности. Шкала одна во всех шаблонах ревью:
+If the review covers the current bundle (`BUNDLE=current`, as in the example below), the `**Target:**` line in its header holds the checksum of the bytes of the target files (`bundle_sha256`). The conclusion of the review applies to these bytes. If Coder edits even one target file after the review, the checksum will no longer match, and the review will have to be repeated.
 
-| Уровень | Что сюда относится | Что дальше |
+Reviewer sorts findings by severity. The scale is the same in all review templates:
+
+| Level | What belongs here | What comes next |
 | --- | --- | --- |
-| S1 Blocker | Нарушены контракт, данные или безопасность; результат расходится с планом; пропущена обязательная проверка; поломка интерфейса или выполнения; неверная семантика объявленного интерфейса; неверные артефакты схем | Работа возвращается: к Coder (обычно статус `In progress`), если ошибка в коде, к Planner или Architect, если пробел в плане |
-| S2 Risk | Техдолг, производительность, поддерживаемость; нет теста на важный крайний случай; слабая проверка входных данных; неполные защитные проверки | Передачу не останавливает; риск можно принять осознанно |
-| S3 Nit | Стиль, имена, мелкая чистка | Передачу не останавливает |
+| S1 Blocker | The contract, data, or security is violated; the result diverges from the plan; a required check is skipped; a visual defect or an execution failure; a declared interface has wrong semantics; schema artifacts are wrong | The work goes back: to Coder (usually the `In progress` status) if the error is in the code, to Planner or Architect if there is a gap in the plan |
+| S2 Risk | Tech debt, performance, maintainability; no test for an important edge case; weak input validation; incomplete defensive checks | Does not stop the handoff; the risk can be accepted deliberately |
+| S3 Nit | Style, naming, minor cleanup | Does not stop the handoff |
 
-Замечания S2 и S3 Reviewer дублирует в раздел плана `### Reviewer suggestions`. При приёмке Architect решает по каждому: включить в задачу или вынести в раздел плана `Follow-ups (deferred)`.
+Reviewer copies S2 and S3 findings into the `### Reviewer suggestions` section of the plan. At acceptance, Architect decides on each one: include it in the task or move it to the `Follow-ups (deferred)` section of the plan.
 
-## Две линии Reviewer
+## Two Reviewer lanes
 
-Reviewer проверяет работу двумя линиями, у каждой своя задача. При обычном запуске `planveyor sibling run` (режим collab) Manager запускает их по очереди как два агента Codex: `reviewer_code_risk` и `reviewer_code_contracts`.
+Reviewer checks the work in two lanes, each with its own job. In collab mode, whether in the Manager window (TUI mode) or in a `planveyor sibling run` launch, Manager starts them one after the other as two Codex agents: `reviewer_code_risk` and `reviewer_code_contracts`.
 
-![Линия рисков, скрипт выбора, линия контракта и приёмка Architect; что происходит при каждом ответе скрипта](assets/review-acceptance-1.svg)
+![The risk lane, the risk selector, the contracts lane, and Architect acceptance; what happens on each answer of the selector](assets/review-acceptance-1.svg)
 
-Линия рисков ищет, где результат может сломаться: корректность, тесты, безопасность и приватность, внешние процессы и тайм-ауты, гонки, данные и миграции, производительность, поведение при сбоях. Вывод она записывает в раздел плана `## Evidence`, подробности — отдельным файлом в приложения к ревью. Статус плана и итог ревью она оставляет второй линии.
+The risk lane looks for where the result can break: correctness, tests, security and privacy, external processes and timeouts, races, data and migrations, performance, behavior on failures. It writes its conclusion into the `## Evidence` section of the plan and the details as a separate file into the review assets. It leaves the plan status and the review result to the second lane.
 
-Между линиями Manager вызывает скрипт выбора записи линии рисков, `review_artifact_lint.py --select-risk-lane`. Скрипт ищет в плане текущую запись линии рисков и отвечает так:
+Between the lanes, Manager calls the risk selector, `review_artifact_lint.py --select-risk-lane`. The script looks for the current risk lane record in the plan and answers as follows:
 
-- `selected` — запись нашлась, её подробный файл прошёл проверку; скрипт возвращает номер строки в плане и идентификатор запуска;
-- `missing` — разборчивой записи линии рисков в плане нет;
-- `blocked` — запись есть, но опереться на неё нельзя: текущих записей несколько, отметки о замене старых записей противоречат друг другу или подробный файл не прошёл проверку.
+- `selected`: the record was found, and its detailed file passed the check; the script returns the line number in the plan and the run id;
+- `missing`: the plan has no readable risk lane record;
+- `blocked`: a record exists, but it cannot be relied on: there are several current records, the marks about replaced old records contradict each other, or the detailed file did not pass the check.
 
-Вторую линию Manager запускает только при `selected` и только если запись относится к тем же байтам целевых файлов. При `missing` или `blocked` ход возвращается линии рисков: она пишет новую запись, старую, если та была, помечает заменённой, и скрипт запускается снова. Manager и Owner эти записи вручную не правят.
+Manager starts the second lane only on `selected` and only if the record applies to the same bytes of the target files. On `missing` or `blocked`, the turn returns to the risk lane: it writes a new record, marks the old one, if there was one, as replaced, and the script runs again. Manager and Owner do not edit these records by hand.
 
-Линия контракта сверяет результат с планом: решения Architect, архитектуру, API и схемы, документацию, настройки и правдивость самого ревью. Запись линии рисков она находит тем же скриптом и читает сама, без пересказа Manager. Затем сводит обе линии в один файл ревью: разделы двух линий, итоговый раздел `Lane synthesis / aggregate verdict` и статус в шапке. Итоговый статус ставит только она. Если замечаний S1 нет, вопросы Reviewer закрыты, а у задачи с интерфейсом пройдена визуальная проверка, линия контракта переводит план в `Ready for Arch review`, и ход переходит к Architect.
+The contracts lane checks the result against the plan: the decisions of Architect, the architecture, APIs and schemas, the documentation, the settings, and the truthfulness of the review itself. It finds the risk lane record with the same script and reads it itself, without a retelling by Manager. Then it combines both lanes into one review file: the sections of the two lanes, the final `Lane synthesis / aggregate verdict` section, and the status in the header. Only this lane sets the final status. If there are no S1 findings, the Reviewer questions are closed, and a task with a user interface has passed the visual check, the contracts lane moves the plan to `Ready for Arch review`, and the turn passes to Architect.
 
-В режиме collab на стадии `Reviewer visual review`, где проверяют интерфейс, Manager запускает только линию контракта. Подробности — в [промпте Manager](../../tools/prompts/manager_collab_pipeline.md) и [промпте Reviewer](../../tools/prompts/reviewer_status_driven.md).
+In collab mode, at the `Reviewer visual review` stage, where the user interface is checked, Manager starts only the contracts lane. The details are in the [Manager prompt](../../tools/prompts/manager_collab_pipeline.md) and the [Reviewer prompt](../../tools/prompts/reviewer_status_driven.md) (in Russian).
 
-## Как это было: ревью GetReorderCandidates
+## How it went: the GetReorderCandidates review
 
-Задача прошла до команд `planveyor sibling` (см. [«Роли и файлы задачи»](roles-artifacts.md)): Reviewer запустил оператор, и обе линии по очереди прошла одна сессия; в режиме collab это два отдельных агента. Порядок был тот же: линия рисков, скрипт выбора, линия контракта.
+The task ran before the `planveyor sibling` commands existed (see [Roles and task files](roles-artifacts.md)): the operator launched Reviewer, and one session went through both lanes in turn; in collab mode, these are two separate agents. The order was the same: the risk lane, the risk selector, the contracts lane.
 
-Раздел линии рисков в файле ревью:
+The risk lane section in the review file, quoted as written in the project:
 
 ```markdown
 ## reviewer_code_risk
@@ -56,17 +58,17 @@ Reviewer проверяет работу двумя линиями, у кажд�
 - Limits: Reviewer не запускал SQL/setup/Extract/Publish/proof и не читал `.env.local` или raw SQL output. Первый actual RED `rc=2` остаётся историческим; current green относится к precommit HEAD и точным байтам, не к postcommit SQL или publication readiness. Историческое удаление DacFX marker напрямую не наблюдалось; названная в plan настройка — правдоподобное объяснение, не доказанная причина.
 ```
 
-Замечаний нет, и линия объясняет почему. Она проверила формулу, фильтр и порядок строк в процедуре, семь новых тестов процедуры, 40 тестов обвязки без базы и совпадение контрольных сумм 15 исполняемых файлов и настроек с квитанцией оператора — его отчётом о прогоне на dev-базе. Строка `Support` ведёт на подробный файл линии. Прогон оператора Reviewer не повторял: локальный раздел плейбука ревью позволяет принять его, если файлы и набор тестов совпадают ([«Sibling: создание и обновление»](sibling-lifecycle.md#локальные-разделы)).
+There are no findings, and the lane explains why. It checked the formula, the filter, and the row order in the procedure, the seven new procedure tests, the 40 harness tests without a database, and that the checksums of 15 executable and configuration files match the operator receipt, which is the operator's report on the run on the dev database. The `Support` line leads to the detailed file of the lane. Reviewer did not repeat the run of the operator: a local section of the review playbook allows accepting it if the files and the test set match ([Sibling: creation and upgrade](sibling-lifecycle.md#local-sections)).
 
-Линия контракта записала, что скрипт выбора нашёл эту запись:
+The contracts lane recorded that the risk selector found this record:
 
 ```markdown
 - Finalizer proof: `review_artifact_lint.py --select-risk-lane --origin-plan docs/plans/260928_0006_get_reorder_candidates.md --json` вернул `rc=0`, `state=selected`, `selected_line=272` и тот же target. […]
 ```
 
-`selected_line=272` — строка плана, с которой начинается запись линии рисков. Итог ревью — `✅ OK`, открытых замечаний S1, S2 и S3 нет.
+`selected_line=272` is the line of the plan where the risk lane record starts. The review result is `✅ OK`, with no open S1, S2, or S3 findings.
 
-Architect сначала сам сверил набор файлов и только потом принял работу. Первые две строки его раздела в том же файле ревью:
+Architect first verified the bundle itself and only then accepted the work. The first two lines of its section in the same review file:
 
 ```markdown
 ## Arch review
@@ -74,71 +76,75 @@ Architect сначала сам сверил набор файлов и толь
 - Самостоятельно открыты plan, draft, обе code lanes, SQL procedure/tests/runner, operator receipt, JUnit и immutable risk support. `planveyor_plan_bundle --print|--check` дал `rc=0`, ровно 22 paths/16 targets/1 root/0 issues; plan/doc lint и risk selector дали `rc=0`. Три asset SHA совпали с plan, 15 executable/config hashes совпали с operator receipt, десять сохранённых dependencies не отличаются от HEAD `60332b46eba26a9c09cf199184c45afe10e61f1b`.
 ```
 
-Проверки и контрольные суммы сошлись. Последний критерий приёмки, AC6, закрывался только коммитом этого набора; коммит `70526ee` тогда делал сам Architect.
+The checks and the checksums matched. The last acceptance criterion, AC6, could be closed only by the commit of this bundle; at that time, Architect made commit `70526ee` itself.
 
-Вердикт записан в прежнем виде: раздел начинается строкой `- Architect verdict: ✅ OK…`. Заголовок `## Arch review` команда `planveyor sibling close` принимает, а такую первую строку — нет: ей нужна строка `Вердикт: принято.`.
+The verdict is written in the old form: the section starts with the line `- Architect verdict: ✅ OK…`. The `planveyor sibling close` command accepts the `## Arch review` heading but not such a first line: it needs the line `Вердикт: принято.` (verdict: accepted).
 
-## Приёмка Architect
+## Architect acceptance
 
-Architect принимает работу по плану и файлу ревью, которые открывает сам. Он проходит чек-лист `### Arch review checklist` из плана: ссылка на ревью в плане одна; предложения Coder и Reviewer из раздела плана `## Suggestions log` разобраны; у задачи с интерфейсом он сам смотрит снимки экрана, хотя визуальную проверку делает Reviewer.
+Architect accepts the work based on the plan and the review file, which it opens itself. It goes through the `### Arch review checklist` from the plan: the plan has one link to the review; the suggestions of Coder and Reviewer from the `## Suggestions log` section of the plan are sorted out; for a task with a user interface, it looks at the screenshots itself, although Reviewer does the visual check.
 
-Исходы:
+Outcomes:
 
-- принять работу;
-- вернуть небольшие исправления по тому же плану: статус `Coder intake`, ход снова у Coder;
-- если план нужно переосмыслить, завести новый план, а текущий пометить `Superseded`.
+- accept the work;
+- return small fixes under the same plan: the `Coder intake` status, and the turn is with Coder again;
+- if the plan needs rethinking, start a new plan and mark the current one `Superseded`.
 
-Когда роли запущены командами `planveyor sibling` (политика `human_explicit`, о ней ниже), приёмку Architect записывает в том же файле ревью. `planveyor sibling close` засчитывает её, если:
+When the roles are launched with the `planveyor sibling` commands (the `human_explicit` policy, described below), Architect records the acceptance in the same review file. `planveyor sibling close` counts it if:
 
-- в файле ровно один раздел второго уровня с заголовком `## Архитектурное ревью` или `## Arch review`, регистр букв не важен;
-- первая непустая строка раздела вне блоков кода — ровно `Вердикт: принято.`; обоснование идёт ниже.
+- the file has exactly one second-level section with the heading `## Архитектурное ревью` or `## Arch review`; letter case does not matter;
+- the first non-empty line of the section outside code blocks is exactly `Вердикт: принято.`; the reasoning goes below it.
 
-«ОК», «Вердикт: принято условно…» или «Вердикт: принято. Требуется исправление…» приёмкой не считаются. Если ревью устарело, у Owner остался вопрос или в ревью есть S1, Architect работу не принимает.
+`ОК`, `Вердикт: принято условно…` (verdict: accepted conditionally…), or `Вердикт: принято. Требуется исправление…` (verdict: accepted. A fix is required…) do not count as acceptance. If the review is stale, Owner still has a question, or the review has an S1, Architect does not accept the work.
 
-У плана типа `review-only`, отдельного заказа на ревью, статус `Ready for Arch review` значит, что отчёт готов к разбору; замечания S1 в нём допустимы. Так оформляют, например, ревью диапазона коммитов после слияния, см. главу [«Проверка после слияния»](postmerge.md).
+For a plan of the `review-only` type, a separate review order, the `Ready for Arch review` status means that the report is ready for analysis; S1 findings are allowed in it. This is how, for example, a range review of commits after a merge is set up; see the [Post-merge check](postmerge.md) chapter.
 
-## Кто делает коммит
+## Who makes the commit
 
-Что Architect делает после приёмки, зависит от политики коммита. Её задаёт команда, которой запущены роли:
+What Architect does after acceptance depends on the commit policy. The command that launched the roles sets it:
 
-| Как запущены роли | Политика | Что делает Architect после приёмки | Кто делает коммит |
+| How the roles are launched | Policy | What Architect does after acceptance | Who makes the commit |
 | --- | --- | --- | --- |
-| `planveyor sibling architect` или `planveyor sibling run` | `human_explicit` | Пишет `Вердикт: принято.`, оставляет статус `Architect arch review` и останавливается | Owner, командой `planveyor sibling close --commit` |
-| Любой другой запуск: отдельная команда роли (`planveyor_arch`) или Manager напрямую (`planveyor_manager_collab_tui`) | `native_existing` | Сам проверяет набор файлов, ставит `Done` и локально коммитит изменённые файлы набора | Architect |
+| Manual console mode: `planveyor sibling architect` or `planveyor sibling run` | `human_explicit` | Writes `Вердикт: принято.`, leaves the `Architect arch review` status, and stops | Owner, with `planveyor sibling close --commit` |
+| TUI mode (`planveyor sibling tui` or `planveyor_manager_collab_tui`) and any other launch, for example a single-role command (`planveyor_arch`) | `native_existing` | Checks the bundle itself, sets `Done`, and commits the changed files of the bundle locally | Architect |
 
-`git push` в обоих случаях делает Owner: роли его не выполняют, команды Planveyor тоже. Как устроен запуск ролей, рассказывает глава [«Запуск: команды, обёртки, клиенты»](runtime-launch.md).
+In TUI mode, the role sandbox keeps `.git` read-only, so Architect asks for elevated permission to write to `.git`, and Owner approves each request in the Manager window with the one-time "Yes, proceed". Approval applies to a specific call, not to the whole closeout. The description is based on how the engine works. The corresponding route has been checked by live passes in Planveyor itself.
 
-Команда пишет политику в шапку задания роли строкой `COMMIT_POLICY=human_explicit` или `COMMIT_POLICY=native_existing`, а ролям, которых запускает Manager, он передаёт это поле в каждом сообщении. Роль берёт значение только из текущего задания. Переменная окружения `PLANVEYOR_SIBLING_COMMIT_POLICY` политику не задаёт: прямой запуск роли с ней всё равно получит `native_existing`.
+In both cases, Owner runs `git push`: the roles do not run it, and neither do the Planveyor commands. How role launch works is told in the [Launch: commands, wrappers, agent harnesses](runtime-launch.md) chapter.
 
-## Что делает Owner
+The command writes the policy into the header of the role task as the line `COMMIT_POLICY=human_explicit` or `COMMIT_POLICY=native_existing`, and Manager passes this field in every message to the roles it starts. A role takes the value only from the current task. The `PLANVEYOR_SIBLING_COMMIT_POLICY` environment variable does not set the policy: a direct role launch with it still gets `native_existing`.
+
+## What Owner does
+
+In TUI mode, Owner drives the plan in the Manager window and approves there the requests of Architect to write to `.git`. You can look at the bundle with `planveyor sibling close` in another terminal: it only shows the state. Below is manual console mode:
 
 ```sh
-planveyor sibling run              # Manager доводит работу до приёмки
-planveyor sibling close            # проверить приёмку и посмотреть набор файлов
-planveyor sibling close --commit   # разрешить коммит
+planveyor sibling run              # Manager drives the work to acceptance
+planveyor sibling close            # check the acceptance and look at the bundle
+planveyor sibling close --commit   # authorize the commit
 ```
 
-`planveyor sibling close` сначала проверяет приёмку. При отказе команда ничего не меняет и называет следующий шаг:
+`planveyor sibling close` checks the acceptance first. On a refusal, the command changes nothing and names the next step:
 
-| Что сообщает `close` | Что сделать |
+| What `close` reports | What to do |
 | --- | --- |
-| План ещё не принят Architect | `planveyor sibling run` |
-| Остались вопросы Owner | `planveyor sibling answer`, затем `architect` или `run` — та команда, которая просила решение |
-| Текущее ревью не принято: устарело или в нём есть блокирующее замечание | `planveyor sibling run`: работа вернётся к роли, которая должна исправить |
-| В плане не один файл ревью, в файле не один раздел приёмки или первая строка раздела не `Вердикт: принято.` | `planveyor sibling architect` |
-| Набор уже закоммичен, а план ещё на приёмке | `planveyor sibling architect` |
-| Набор файлов не прошёл проверку | `planveyor sibling run` |
-| Переход в `Done` не прошёл проверку плана | Исправить то, что назвала проверка; например, открытые пункты `## Post-merge gate` (глава [«Закрытие задачи»](closeout.md)) |
-| В индексе есть файлы вне набора | Закоммитить их отдельно или убрать из индекса, затем повторить `close` |
-| Файлы, индекс или ревью изменились во время `close --commit` | Повторить `close`, затем `close --commit` |
+| The plan is not accepted by Architect yet | `planveyor sibling run` |
+| Owner questions remain | `planveyor sibling answer`, then `architect` or `run`, whichever command asked for the decision |
+| The current review is not accepted: it is stale or has a blocking finding | `planveyor sibling run`: the work goes back to the role that must fix it |
+| The plan does not have exactly one review file, the file does not have exactly one acceptance section, or the first line of the section is not `Вердикт: принято.` | `planveyor sibling architect` |
+| The bundle is already committed, but the plan is still at acceptance | `planveyor sibling architect` |
+| The bundle did not pass the check | `planveyor sibling run` |
+| The move to `Done` did not pass the plan check | Fix what the check named; for example, open items of `## Post-merge gate` (the [Task closeout](closeout.md) chapter) |
+| The index has files outside the bundle | Commit them separately or remove them from the index, then repeat `close` |
+| Files, the index, or the review changed during `close --commit` | Repeat `close`, then `close --commit` |
 
-Что происходит после успешного `close --commit`, описано в главе [«Закрытие задачи»](closeout.md). Порядок команд целиком — в [руководстве по sibling](../stack-sibling.ru.md#коммит-и-закрытие-документов).
+What happens after a successful `close --commit` is described in the [Task closeout](closeout.md) chapter. The full order of commands is in the [stack sibling guide](../stack-sibling.md#commit-and-docs-closeout).
 
-## Частые ошибки
+## Common mistakes
 
-- Owner дописывает `Вердикт: принято.` за Architect, чтобы `close` прошёл. Эту строку пишет только Architect.
-- Owner принимает статус `Ready for Arch review` за приёмку. Приёмка — строка `Вердикт: принято.` в ревью.
+- Owner adds `Вердикт: принято.` for Architect so that `close` passes. Only Architect writes this line.
+- Owner takes the `Ready for Arch review` status for acceptance. Acceptance is the `Вердикт: принято.` line in the review.
 
-Функции и тесты, о которых шла речь, — в [справочнике по коду](code-map.md#ревью-и-приёмка).
+The functions and tests mentioned here are in the [code map](code-map.md#review-and-acceptance).
 
-Дальше: [«Закрытие задачи»](closeout.md).
+Next: [Task closeout](closeout.md).

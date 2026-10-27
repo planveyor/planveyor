@@ -17,7 +17,7 @@ Without `--project`, a command works on Planveyor itself. For a consumer reposit
 
 The selected consumer must already own its declared contract and bootstrap. `--project` selects only the consumer context: it does not create a contract, a plan, a SID, an interpreter, authentication, or provider readiness.
 
-The facade starts a clean child process in the selected project root. Relative paths in the command resolve inside this project. The parent shell does not change, so each new call needs its own `--project` prefix again. `bin/planveyor` starts the child through `env -i` and `zsh -df`, so an inherited `CODEX_HOME` and the variables of another tooling environment do not reach it. Owner may explicitly pass a canonical external `PLANVEYOR_CODEX_HOME`; `HOME`, authentication, client state, and `PLANVEYOR_STATE_ROOT` stay outside the product tree.
+The facade starts a clean child process in the selected project root. Relative paths in the command resolve inside this project. The parent shell does not change, so each new call needs its own `--project` prefix again. `bin/planveyor` starts the child through `env -i` and `zsh -df`: it drops an inherited `CODEX_HOME` and undeclared tooling variables, but explicitly passes a non-empty `CODEX_THREAD_ID` for plan provenance. Owner may explicitly pass a canonical external `PLANVEYOR_CODEX_HOME`. The facade checks that `PLANVEYOR_CODEX_HOME` and `PLANVEYOR_STATE_ROOT` are outside the product tree; for `HOME`, it requires only an absolute existing directory. Keep authentication and client state outside the product tree.
 
 Ignored process artifacts stay in the selected project root: the selectors `.planveyor.planpath` and `.planveyor.session.*`, the collab records `.planveyor.collab.*`, the init receipts `.planveyor.init_runs/`, and the temporary `.tmp/`. They are not credentials, but you must preserve them separately when you copy or rewrite the project history.
 
@@ -33,7 +33,7 @@ This is a local runtime/project readback, not a readiness gate: it does not prov
 
 ### Supported environment
 
-The first version supports one environment: macOS and an activated Python 3.12 environment with Copier 9.18.2 and PyYAML as pinned in `requirements-dev.lock` (for example, a conda environment named `planveyor`). Activate it before role or validation work: the facade and its helpers take `python3` from the `PATH` of this environment, and a project-local `.planveyor.pybin` does not select the executable. Planveyor does not install or repair dependencies; when a prerequisite is missing, the command stops with a message that says exactly what is needed. The source identity loader technically accepts Python 3.10–3.12, but the supported path is the environment above. A configured agent harness and its usual external authentication are needed by a live command that invokes that harness; Codex and Codex authentication apply only to Codex paths. Doctor, runtime info, and help do not check them. Authentication stays in the usual environment of the client you use; Planveyor does not copy account data, tokens, or local configuration into the repository.
+The first version supports one environment: macOS and an activated Python 3.12 environment with Copier 9.18.2 and PyYAML as pinned in `requirements-dev.lock` (for example, a conda environment named `planveyor`). Activate it before role or validation work. The facade selects the first compatible Python 3.10–3.12 found through `PATH`, checking `python3`, `python`, `python3.12`, `python3.11`, then `python3.10`; its helpers use that selected interpreter. A project-local `.planveyor.pybin` does not select the executable. Planveyor does not install or repair dependencies; when a prerequisite is missing, the command stops with a message that says exactly what is needed. The source identity loader technically accepts Python 3.10–3.12, but the supported path is the environment above. A configured agent harness and its usual external authentication are needed by a live command that invokes that harness; Codex and Codex authentication apply only to Codex paths. Doctor, runtime info, and help do not check them. Authentication stays in the usual environment of the client you use; Planveyor does not copy account data, tokens, or local configuration into the repository.
 
 Role work has two more conditions. Codex runs the shell commands of roles in a login shell, which reads your shell profile and may put another Python first in `PATH`. Planveyor passes its own interpreter to the roles in `PYBIN`, so its helpers are not affected. Project scripts, such as the harness of a sibling, may still call a bare `python3`, so Python 3.12 must come first in `PATH` of a login shell too. `TMPDIR` must name an existing directory outside any Git work tree; with `TMPDIR` inside a work tree, the engine tests that need a project root without Git are skipped. Check both before the first role launch:
 
@@ -75,7 +75,7 @@ In the candidate, resolve the actual conflicts, the `.rej` files, and the change
 ./bin/planveyor --project /absolute/path/to/sibling planveyor_contract_upgrade --source-commit <new-full-40-hex> --accept-candidate
 ```
 
-Before the next upgrade, check the local plan and commit it together with the other accepted changes of the sibling. Doctor reports a mismatch between the runtime and contract commits; this does not forbid an upgrade of a compatible old API 5 contract to the current commit. A removed or renamed managed path needs a separate migration and stops the command before Copier.
+Before the next upgrade, check the local plan and commit it together with the other accepted changes of the sibling. Doctor reports a mismatch between the runtime and contract commits; this does not forbid an upgrade of a compatible old API 5 contract to the current commit. Before Copier update, upgrade refuses a range that both removes and adds managed paths, a removed path whose bytes or permissions differ from the old render, a removed path with a protected local section, or a managed path missing from the sibling. A pure deletion of an unchanged, unprotected file can reach Copier and stop with a candidate; review and commit that candidate, then retry with `--accept-candidate`.
 
 ## Example: Self-Planveyor
 
@@ -96,7 +96,7 @@ Without `--project`, the child-only facade selects the physical root of Planveyo
    ./bin/planveyor planveyor_planpath
    ```
 
-   `planveyor_plan_set` saves the raw path to the root-local `.planveyor.planpath` and to the local log `.planveyor.planpath.log`. This records process ownership of the plan choice; it is not a technical role-authorization gate. First pass the existing path to a successful Oracle check, then save the pointer. A later `planveyor_planpath` only reads the last saved non-empty line; it does not check that the path exists and does not materialize a queue or a lifecycle. When the pointer is missing, it suggests `planveyor_plan_set <PLAN_PATH>`; an empty pointer and an unreadable pointer remain separate local failures.
+   `planveyor_plan_set` saves the raw path to the root-local `.planveyor.planpath` and to the local log `.planveyor.planpath.log`. This records process ownership of the plan choice; it is not a technical role-authorization gate. First pass the existing path to a successful Oracle check, then save the pointer. A later `planveyor_planpath` only reads the last saved non-empty line; it does not check that the path exists and does not materialize a queue or a lifecycle. When the pointer is missing, it suggests `planveyor_plan_set <PLAN_PATH>`; an empty pointer returns `Empty file: <path>` with code 1. An unreadable regular pointer also reaches this message after the shell's read error, with no separate helper diagnostic.
 
 3. Manager initialization is a separate step:
 
@@ -105,6 +105,8 @@ Without `--project`, the child-only facade selects the physical root of Planveyo
    ```
 
    This command creates the Manager session. When the Manager SID is missing, recovery points to the same `planveyor_manager_init`. Interpreter preparation, the read-only Oracle check, the plan choice, and the pointer readback do not by themselves prove Manager-to-role execution.
+
+   Before the TUI, switch the session to command approval requests: run `./bin/planveyor planveyor_manager_resume`, type `/permissions`, choose "Ask for approval", and exit, as in [How Planveyor changes itself](learn/self-development.md#a-change-in-planveyor-itself).
 
 4. The normal native/collab TUI starts without `--q`:
 
@@ -135,7 +137,7 @@ Authentication and the optional `PLANVEYOR_CODEX_HOME` stay in the external envi
 
 ## Roles and entry points
 
-A role reads the current explicit plan, the related contract documents, and its own prompt. The general order of work: Architect → Planner → Coder → Reviewer → Architect acceptance → closeout. With `COMMIT_POLICY=native_existing`, Architect performs the closeout; in `planveyor sibling architect` and `run`, `COMMIT_POLICY=human_explicit` applies, and a separate `planveyor sibling close --commit` performs the closeout after a preview. The plan remains the source of truth for the status and the next allowed step.
+A role reads the current explicit plan, the related contract documents, and its own prompt. The general order of work: Architect → Planner → Coder → Reviewer → Architect acceptance → closeout. With `COMMIT_POLICY=native_existing`, Architect performs the closeout; in `planveyor sibling architect` and `run`, `COMMIT_POLICY=human_explicit` applies, and a separate `planveyor sibling close --commit` performs the closeout after a preview. Manager in the TUI runs with `native_existing`, both through `planveyor_manager_collab_tui` and, in a sibling, through `planveyor sibling tui`, which calls it. The plan remains the source of truth for the status and the next allowed step.
 
 | Task | Command |
 | --- | --- |
@@ -145,6 +147,10 @@ A role reads the current explicit plan, the related contract documents, and its 
 | Open the custom pipeline TUI | `./bin/planveyor planveyor_manager_custom_pipeline_tui --no-alt-screen` |
 | Run the custom queue one-shot | `./bin/planveyor planveyor_manager_custom_pipeline_cmd run Q` |
 | Resume the Manager session | `./bin/planveyor planveyor_manager_resume` |
+
+The table shows the commands for the Planveyor root, where the engine and the project are one checkout. If the commands come from one Planveyor checkout and the project is another checkout, pass `--project <project>` to every command, in Self-Planveyor too: without it, a low-level command takes the engine itself as the project, from whatever directory it is called.
+
+In a sibling, the same Manager window is TUI mode, the main path of the [stack sibling guide](stack-sibling.md#two-ways-to-work-on-a-plan). Pass the sibling to the low-level commands with `--project`, run `planveyor_manager_init`, switch the session to command approval requests as the guide describes, and then open the window with `planveyor sibling tui`; do not change files or the index between these steps. `planveyor sibling tui` checks the selected plan and the session and calls `planveyor_manager_collab_tui`. The roles are nested subagents of the Manager session and keep their memory while the window is open. After a commit, `planveyor sibling run` and `planveyor sibling tui` start a new Manager with new roles themselves; `tui` creates the new session without command approval requests, so first create the new session yourself and switch it to command approval requests. Started directly, `planveyor_manager_collab_tui` and `planveyor_manager_collab_cmd` refuse with `receipt_authority_mismatch`, and the work continues only with a new session. In the Planveyor root, the session is not bound to HEAD, and the earlier session can be continued. The separate `planveyor sibling …` commands are manual console mode of the same guide.
 
 To resume an individual role, use the explicit command from `planveyor_help`, for example `planveyor_arch_resume`, `planveyor_planner_resume`, `planveyor_coder_resume`, `planveyor_reviewer_resume`, `planveyor_reviewer_code_risk_resume`, or `planveyor_reviewer_code_contracts_resume`.
 
@@ -165,7 +171,7 @@ planveyor_reviewer_code_contracts_init
 
 ## Codex setup
 
-The supported sibling route (`planveyor sibling architect` and `planveyor sibling run`) uses Codex CLI; `run` starts five native Codex subagents. Planveyor starts Codex with the home from `PLANVEYOR_CODEX_HOME`, or with `~/.codex` when the variable is not set, and takes the settings from `config.toml` in that directory. In a trusted project, Codex also applies the project `.codex/` directory; see [Project `.codex/` directory](#project-codex-directory). Planveyor itself does not create or change these files: you configure everything described below.
+Both supported sibling modes use Codex CLI: TUI mode (`planveyor sibling tui`, which calls `planveyor_manager_collab_tui`) and manual console mode (`planveyor sibling architect` and `planveyor sibling run`). In TUI mode and in `run`, Manager starts five native Codex subagents. Planveyor starts Codex with the home from `PLANVEYOR_CODEX_HOME`, or with `~/.codex` when the variable is not set, and takes the settings from `config.toml` in that directory. In a trusted project, Codex also applies the project `.codex/` directory; see [Project `.codex/` directory](#project-codex-directory). Planveyor itself does not create or change these files: you configure everything described below.
 
 Single-role launches and the custom pipeline keep the existing runner choice: Planner and both Reviewer lanes allow `claude`; Architect, Coder, and Manager allow `codex`. The choice is set with `planveyor_runner_set <role> <runner>`; both Reviewer lanes use the choice of the `reviewer` role. Claude needs the installed CLI and its usual external authentication; `PLANVEYOR_CLAUDE_COMMAND`, `PLANVEYOR_CLAUDE_MODEL`, and `PLANVEYOR_CLAUDE_EFFORT` set the command, the model, and the effort. This choice does not change the Codex subagents of collab and does not add a Claude transport to `sibling run`.
 
@@ -182,7 +188,7 @@ Set the effort explicitly: `gpt-6.1-sol` defaults to `low`. This mode does not n
 
 ### Manager collab: `[agents.*]` roles
 
-Owner needs Manager collab (`planveyor_manager_collab_tui`, `planveyor_manager_collab_cmd`) even when running the roles by hand: it runs the docs closeout of a plan and the decomposition and analysis waves. Manager itself is the main Codex session on the model from the top level of `config.toml`. It starts the roles as Codex subagents: `spawn_agent(..., agent_type=<type>)`. Codex looks for the type among the `[agents.<name>]` roles of the config; besides them, it knows only the built-in `default`, `worker`, and `explorer`, and it answers any other name with the error `unknown agent_type`. So `config.toml` needs five roles with exactly these names:
+Owner needs Manager collab (`planveyor_manager_collab_tui`, `planveyor_manager_collab_cmd`) even when running the roles by hand: it runs the docs closeout of a plan and the decomposition and analysis waves. Manager itself is the main Codex session on the model from the top level of `config.toml`. It starts the roles as Codex subagents: `spawn_agent(..., agent_type=<type>)`. The Manager prompt requests the following five `agent_type` values; register them as `[agents.<name>]` roles in your Codex configuration before running this route:
 
 | `agent_type` | Whom Manager starts |
 |---|---|
@@ -243,7 +249,7 @@ description = "Codex explorer agent"
 config_file = "agents/explorer.toml"
 ```
 
-The role file `agents/architect.toml` sits next to `config.toml`; the other seven are the same, with their own `name` and `description`:
+The role file `agents/architect.toml` sits in the `agents/` subdirectory beside `config.toml`; the other seven files use the same format, with their own `name` and `description`:
 
 ```toml
 name = "architect"
@@ -259,7 +265,7 @@ The default recommendation is GPT-6.1 Sol (`gpt-6.1-sol`) with the `ultra` or `m
 | Session | Model and effort |
 | --- | --- |
 | Architect in `planveyor sibling architect`; single-role launches and the custom pipeline with the `codex` runner | The top level of `config.toml` |
-| Manager in `planveyor sibling run` and in other Manager collab launches | The top level of `config.toml` |
+| Manager in TUI mode, in `planveyor sibling run`, and in other Manager collab launches | The top level of `config.toml` |
 | The five roles that Manager starts | Their `[agents.<agent_type>]` role files |
 | The built-in agents that the roles start | The `[agents.default]`, `[agents.worker]`, and `[agents.explorer]` role files |
 | The `$planveyor-plan-draft` skill | The model of your chat |
@@ -283,7 +289,7 @@ Planveyor does not create this directory.
 
 The role name does not prove the model. Codex writes each session to a `rollout-*.jsonl` file under `sessions/` in its Codex home. The `session_meta` record holds the launch directory, the source, and the role of an agent. The `turn_context` records hold the model and the effort of each turn. These are local files of Codex itself, so the check needs no other tools.
 
-Before the first role launch, such as `planveyor sibling architect` or `run`, mark the time:
+Before the first role launch, such as `planveyor sibling architect`, `run`, or the Manager window, mark the time:
 
 ```zsh
 touch "$TMPDIR/planveyor-models.start"
@@ -334,7 +340,7 @@ Manager creates the subagents under fixed names: `/root/architect_sol_xhigh_v2`,
 
 ### Caveat: the Codex environment reaches the roles
 
-Manager and the roles work in your Codex home with all of its configuration. Codex adds the global `AGENTS.md` from this directory (`~/.codex/AGENTS.md`) to every session, next to the project `AGENTS.md`. If memory (`memories`) is enabled in Codex, Manager reads it from `~/.codex/memories`. User skills from `~/.agents/skills` are visible with any Codex home. Rules and memory written for other projects can change how the roles behave.
+Manager and the roles use the selected Codex home (`PLANVEYOR_CODEX_HOME`, or `~/.codex` when it is unset). Global instructions, enabled memory, and user skills affected role context in observed Codex runs; their discovery is Codex behavior, not a guarantee checked by Planveyor. Inspect the selected home and user skills before launch: rules and memory written for other projects can change how the roles behave.
 
 To separate them, set up a separate Codex home for Planveyor: create a directory outside the Planveyor checkout, sign in to Codex with it (`CODEX_HOME=<directory> codex login`), put a `config.toml` there based on the example above, and export the path as `PLANVEYOR_CODEX_HOME` in the shell from which you call the facade. Network access for the roles is then enabled in the config of this directory.
 

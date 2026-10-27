@@ -91,7 +91,7 @@ python_executable=/path/to/envs/planveyor/bin/python3.12
 child_shell=planveyor-child-shell.v1
 ```
 
-Check that `python_executable` points to the environment from step 3. `planveyor_help` lists the commands and shows the runner of each role, that is, its agent harness. `make verify` runs the fast route of the [verification suite](../tools/verify_suite.md): read-only integrity checks of the checkout. It ends with `VERDICT: GREEN` when they pass.
+Check that `python_executable` points to the environment from step 3. `planveyor_help` lists the commands and shows the runner of each role, that is, its agent harness. `make verify` runs the fast route of the [verification suite](../tools/verify_suite.md): read-only integrity checks of the checkout. Its output includes `VERDICT: GREEN` when they pass.
 
 These checks show that the facade starts, finds the checkout and the Python of your environment, and that the checkout passes the integrity checks. They do not check an agent harness, its sign-in, or a role launch: only the commands that start roles need them.
 

@@ -22,8 +22,9 @@ For a consumer project, pass it explicitly:
 ./bin/planveyor --project /absolute/path/to/consumer <planveyor_function> [args…]
 ~~~
 
-Do not source an implementation shell file. One call makes no lasting change to
-cwd, credentials, or local state.
+Do not source an implementation shell file. The facade leaves the parent
+shell's cwd and environment unchanged; command-defined file and state changes
+can persist after the child exits.
 
 ## Quick diagnostics
 
@@ -56,7 +57,7 @@ evidence in the plan or review artifact; Manager does not replace this step.
 
 ~~~bash
 ./bin/planveyor planveyor_merge_range_stats_json BASE HEAD
-./bin/planveyor planveyor_review_range_init --range BASE..HEAD
+./bin/planveyor planveyor_review_range_init BASE HEAD
 git diff --check BASE..HEAD
 rg -n "^<<<<<<< |^======= |^>>>>>>> " .
 ~~~
@@ -70,7 +71,7 @@ current target facts. If there is no lane, use `N/A` with a reason.
 ~~~bash
 rg -n "<anchor-token>" docs
 ./bin/planveyor planveyor_docs_index_build all
-./bin/planveyor planveyor_docs_retrieve --corpus canon "<anchor-token>"
+./bin/planveyor planveyor_docs_retrieve canon "<anchor-token>"
 ./bin/planveyor planveyor_docs_context_check --corpus plans --format text
 ~~~
 

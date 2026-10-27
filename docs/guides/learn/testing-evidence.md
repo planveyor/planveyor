@@ -1,52 +1,54 @@
-# Тесты и доказательства: чему можно доверять
+# Tests and evidence: what you can trust
 
-Пока задача идёт от плана к коммиту, её проверяют несколько раз: скрипты Planveyor, тесты, живой прогон на dev-среде, Reviewer и Architect. У каждой проверки свой предел. Дальше это показано на задаче `GetReorderCandidates`: SQL-процедура находит товары, которые пора пополнить. Отдельно разобрано, когда зелёный результат перестаёт действовать.
+**English** · [Русский](testing-evidence.ru.md)
 
-## Какие бывают проверки
+While a task goes from the plan to the commit, it is checked several times: by Planveyor scripts, tests, a live run in the dev environment, Reviewer, and Architect. Each check has its own limit. Below, this is shown on the `GetReorderCandidates` task: an SQL procedure finds the products to reorder. A separate part covers when a green result stops being valid.
 
-Кроме ролей в проверках участвует обвязка — скрипты проекта, которые собирают его, выкладывают в dev-среду и запускают тесты стека.
+## Kinds of checks
 
-| Проверка | Кто запускает | Что доказывает | Чего не видит |
+Besides the roles, the harness takes part in the checks: the project scripts that build the project, deploy it to the dev environment, and run the stack tests.
+
+| Check | Who runs it | What it proves | What it does not see |
 | --- | --- | --- | --- |
-| Проверки формы: линтер плана, Oracle, проверка точного набора файлов плана | Роли перед передачей работы, Manager, команды `planveyor sibling` | План, черновик кода и ревью заполнены по правилам, статус допускает переход, объявленные файлы на месте | Работает ли код |
-| Тесты без настоящей среды | Coder | Код и обвязка правильно обрабатывают подготовленные входы; проект собирается, линтер проходит | Как поведут себя настоящая база, сервис или внешний клиент |
-| Живая проверка | Роль с доступом к dev-среде или человек | Изменённое поведение выдержало проверки в этой среде на этой версии файлов | Другие среды и следующие версии файлов |
-| Ревью | Две линии Reviewer | Результат сверен с планом, отдельная линия искала риски, ревью привязано к версии целевых файлов | То, что Reviewer сам не запускал; это он пишет в ограничениях |
-| Приёмка | Architect | Критерии приёмки выполнены, ревью не устарело | То, чего не видели прогоны и ревью, на которые она опирается |
+| Structural checks: the plan linter, Oracle, the check of the exact bundle of the plan | The roles before a handoff, Manager, the `planveyor sibling` commands | The plan, the code draft, and the review are filled in by the rules, the status allows the transition, the declared files are in place | Whether the code works |
+| Tests without a real environment | Coder | The code and the harness handle prepared inputs correctly; the project builds, the linter passes | How a real database, service, or external client will behave |
+| Live check | A role with access to the dev environment, or a person | The changed behavior passed the checks in this environment on this version of the files | Other environments and later versions of the files |
+| Review | Two Reviewer lanes | The result is compared with the plan, a separate lane looked for risks, the review is tied to a version of the target files | What Reviewer did not run itself; Reviewer states this in the limits |
+| Acceptance | Architect | The acceptance criteria are met, the review is not stale | What the runs and the review it relies on did not see |
 
-Проверки формы находят пропущенный раздел плана или файл, которого нет на диске, но о бизнес-правиле ничего не знают. Тесты без среды подают коду фикстуры, подготовленные входы, и сравнивают результат с ожиданием; Coder запускает их по ходу работы. Живая проверка медленнее и требует доступа к среде, зато видит её настоящее состояние.
+Structural checks find a missing plan section or a file that is not on disk, but they know nothing about the business rule. Offline tests feed fixtures, prepared inputs, to the code and compare the result with the expectation; Coder runs them during the work. A live check is slower and needs access to the environment, but it sees the real state of that environment.
 
-Тесты и проверки для изменённых файлов называет план. Обвязку стека берут из плана, `AGENTS.md` или правил проекта ([контракт тестов](../../tests.md), [выбор обвязки](../../testing_runbook.md)). Своих команд для языка, фреймворка, базы данных или интерфейса Planveyor не подставляет. Если объявленной обвязки нет, это блокер или явное `N/A` с причиной в плане.
+The plan names the tests and checks for the changed files. The stack harness comes from the plan, `AGENTS.md`, or the project rules ([test contract](../../tests.md), [harness choice](../../testing_runbook.md)). Planveyor does not substitute its own commands for a language, framework, database, or interface. If there is no declared harness, this is a blocker or an explicit `N/A` with the reason in the plan.
 
-![Требование превращается в проверку: вход теста с ожиданием, проверка, наблюдаемый результат и решение по ревью](assets/testing-evidence-1.svg)
+![A requirement becomes a check: a test input with an expectation, the check, the observed result, and the review decision](assets/testing-evidence-1.svg)
 
-Например, правило «учитывать ожидаемую поставку» проверяет тест `test_positive_shortage_and_units_on_order`. В его фикстуре у товара One порог пополнения 12, на складе 3, в заказе 4, и тест ждёт от процедуры дефицит 5. Остальные случаи собраны в таблицу в [сквозном примере](sql-example.md).
+For example, the rule “take the expected delivery into account” is checked by the `test_positive_shortage_and_units_on_order` test. In its fixture, the product One has a reorder level of 12, 3 in stock, and 4 on order, and the test expects a shortage of 5 from the procedure. The other cases are collected in a table in the [running example](sql-example.md).
 
-## Что увидела каждая проверка в задаче GetReorderCandidates
+## What each check saw in the GetReorderCandidates task
 
-Кто что делал в этой задаче, рассказано в главе [«Роли и файлы задачи»](roles-artifacts.md), а как шёл живой прогон — в [сквозном примере](sql-example.md). Здесь те же события разложены по проверкам. Прогоны на dev-базе делал оператор и о каждом оставлял квитанцию: команду, время, версию файлов и результат.
+Who did what in this task is told in the [Roles and task files](roles-artifacts.md) chapter, and how the live run went is told in the [running example](sql-example.md). Here the same events are sorted by check. The operator made the runs on the dev database and left a receipt for each: the command, the time, the version of the files, and the result.
 
-| Проверка | Что показала | Чего не видела |
+| Check | What it showed | What it did not see |
 | --- | --- | --- |
-| Линтер плана | При первом запуске нашёл три недочёта формы | Верна ли формула дефицита |
-| Проверка набора файлов | До начала кода в наборе 19 файлов, ревью среди них ещё только запланировано; перед приёмкой 22 файла, все на месте | Что написано в этих файлах |
-| 40 тестов обвязки, сборка, линтер SQL и проверка секретов, всё без базы | Обвязка отвергает пропущенные, лишние, повторные и упавшие результаты и неверный порядок строк; сборка прошла без ошибок и предупреждений | Состояние dev-базы: у тестового класса там не было метки tSQLt, которая делает схему классом тестов |
-| Первый `make db-proof` | Обвязка остановилась до выкладки в базу: состояние тестовых классов неоднозначно | Саму процедуру: до SQL-тестов прогон не дошёл |
-| Второй `make db-proof` | 8 тестов из 8; товары, добавленные как 30, 10, 20, пришли в порядке 10, 20, 30; контрольные суммы 15 файлов записаны в квитанцию | Код после коммита; почему пропала метка: причину назвали вероятной, но не доказанной |
-| Ревью | Замечаний нет; 15 сумм из 15 совпали с файлами; 40 тестов обвязки прошли повторно | SQL: Reviewer его не запускал |
-| Приёмка Architect | Набор из 22 файлов прошёл проверку, суммы совпали, вердикт записан | SQL Architect тоже не запускал; приёмка опирается на прогоны и ревью |
+| Plan linter | On the first run, it found three form defects | Whether the shortage formula is right |
+| Bundle check | Before the code started, the bundle had 19 files, with the review among them only planned; before acceptance, 22 files, all in place | What these files say |
+| 40 harness tests, the build, the SQL linter, and the secrets check, all without a database | The harness rejects missing, extra, repeated, and failed results and a wrong row order; the build passed without errors or warnings | The state of the dev database: the test class there did not have the tSQLt marker that makes a schema a test class |
+| First `make db-proof` | The harness stopped before deploying to the database: the state of the test classes was ambiguous | The procedure itself: the run did not reach the SQL tests |
+| Second `make db-proof` | 8 tests out of 8; products added as 30, 10, 20 came back in the order 10, 20, 30; the checksums of 15 files are recorded in the receipt | The code after the commit; why the marker disappeared: the cause was named as likely but not proven |
+| Review | No findings; 15 sums out of 15 matched the files; the 40 harness tests passed again | SQL: Reviewer did not run it |
+| Architect acceptance | The bundle of 22 files passed the check, the sums matched, the verdict is recorded | Architect did not run SQL either; the acceptance relies on the runs and the review |
 
-Свои границы и то, что он проверил сам, Reviewer записал в линии рисков (запись разобрана в главе [«Ревью и приёмка»](review-acceptance.md#как-это-было-ревью-getreordercandidates)). Так Architect и Owner видят, на что опирается вывод ревью.
+Reviewer recorded its own limits and what it checked itself in the risk lane (the record is examined in the [Review and acceptance](review-acceptance.md#how-it-went-the-getreordercandidates-review) chapter). This way, Architect and Owner see what the conclusion of the review relies on.
 
-## Что добавила живая проверка
+## What the live check added
 
-До живого прогона у задачи всё было зелёным: 40 из 40 тестов обвязки, сборка, линтер, проверка секретов. Coder записал в план, что эти результаты не считаются успехом SQL, и оставил прогон на dev-базе оператору. Записи красного прогона сохранили, и план на них ссылается.
+Before the live run, everything in the task was green: 40 out of 40 harness tests, the build, the linter, the secrets check. Coder recorded in the plan that these results do not count as an SQL success and left the run on the dev database to the operator. The records of the red run were kept, and the plan links to them.
 
-Исправление поменяло обвязку и её тесты, поэтому Coder запустил тесты обвязки заново. Получилось 39 из 40: подмена в одном тесте оставляла путь к отчёту JUnit в настоящем каталоге проекта, а там уже лежал отчёт красного прогона. Coder перенёс этот путь во временный каталог и получил 40 из 40.
+The fix changed the harness and its tests, so Coder ran the harness tests again. The result was 39 out of 40: a fake in one test left the JUnit report path in the real project directory, and the report of the red run was already there. Coder moved this path to a temporary directory and got 40 out of 40.
 
-## Доказательство относится к версии файлов
+## Evidence is tied to a version of the files
 
-Зелёный результат действует только для тех файлов, на которых его получили. Поэтому каждая запись о проверке называет версию. Квитанция второго прогона начинается так:
+A green result is valid only for the files on which it was obtained. So every check record names the version. The receipt of the second run starts like this:
 
 ```text
 UTC start: 2026-09-27T22:26:39.501836+00:00
@@ -60,58 +62,58 @@ Outer actual rc: 0
 Exact current 8-case JUnit matches and proof green: True
 ```
 
-Ниже в квитанции перечислены контрольные суммы SHA-256 пятнадцати исполняемых и конфигурационных файлов. Reviewer и Architect сверили их с файлами на диске: 15 из 15. Значит, прогон шёл на тех же 15 файлах, которые потом приняли. `README.md` Coder поправил уже после прогона: к этой правке квитанция не относится; ревью проверяло README в новом виде.
+Further down, the receipt lists the SHA-256 checksums of fifteen executable and configuration files. Reviewer and Architect compared them with the files on disk: 15 out of 15. So the run used the same 15 files that were accepted later. Coder edited `README.md` after the run: the receipt does not cover this edit; the review checked the README in its new form.
 
-Ревью привязано к версии так же. В его шапке записан снимок целевых файлов:
+The review is tied to a version in the same way. Its header records the target snapshot:
 
 ```markdown
 **Target:** BUNDLE=current bundle_sha256=d8214af66e8b6797b45ecdf059790ed5e584513a4a773d385d2ad043a22a1cb4
 ```
 
-Снимок — контрольная сумма содержимого всех 16 целевых файлов из черновика кода. Проверки Planveyor пересчитывают её по текущим файлам. Если после ревью изменился хотя бы один целевой файл, сумма не сходится и ревью перестаёт действовать: Oracle сообщает о блокере, а `planveyor sibling close` отказывает в коммите.
+The snapshot is a checksum of the contents of all 16 target files from the code draft. Planveyor checks recompute it from the current files. If even one target file changed after the review, the sum does not match and the review stops being valid: Oracle reports a blocker, and `planveyor sibling close` refuses the commit.
 
-Прогон в примере сделан до коммита, после коммита SQL не запускали. Reviewer так и написал: зелёный результат относится к коду до коммита.
+The run in the example was made before the commit; SQL was not run after the commit. Reviewer wrote exactly that: the green result applies to the code before the commit.
 
-## Механизм, тест и принятая задача
+## Mechanism, test, and accepted task
 
-Различайте три ступени: команда есть, тест есть, задача принята. Что следует из каждой, показывает таблица.
+Tell three levels apart: a command exists, a test exists, a task is accepted. The table shows what follows from each.
 
-| Что вы видите | Что из этого следует | Что посмотреть дальше |
+| What you see | What follows from it | What to look at next |
 | --- | --- | --- |
-| Команду и код, который её выполняет | Механизм есть | Ограничения в [руководстве запуска](../launch-and-role-modes.ru.md) и в главе [«Что уже работает и что дальше»](capabilities-boundaries.md) |
-| Тест с названием и проверками | Поведение задано для входов этого теста | Сам тест: его фикстуры, что в нём подменено и какую ветку кода он проходит |
-| Успешный отчёт о прогоне | Проверенные случаи прошли на указанной версии и в указанной среде | Команду, время, версию файлов и полный результат |
-| Закрытый план | Задачу приняли и закоммитили | План, ревью, набор файлов и [закрытие задачи](closeout.md) |
-| Пункт в списке обязательств | Есть намерение или обязательство | Его состояние и предел в [«Обязательствах первого релиза»](../../release_backlog.md) |
+| A command and the code that runs it | The mechanism exists | The limits in the [launch guide](../launch-and-role-modes.md) and in the [What works now and what comes next](capabilities-boundaries.md) chapter |
+| A test with a name and assertions | The behavior is defined for the inputs of this test | The test itself: its fixtures, what it fakes, and which code branch it goes through |
+| A successful run report | The checked cases passed on the stated version and in the stated environment | The command, the time, the version of the files, and the full result |
+| A closed plan | The task was accepted and committed | The plan, the review, the bundle, and the [task closeout](closeout.md) |
+| An item in the backlog | There is an intention or a commitment | Its state and limit in the [First-release backlog](../../release_backlog.md) (in Russian) |
 
-Каждой ступени нужно своё доказательство. Код, который запускает роли, ещё не говорит, что клиент модели доступен, а тест с подменённым клиентом Codex не доказывает живую сессию роли. Принятая задача в одном sibling не подтверждает, что Planveyor справится с другим стеком.
+Each level needs its own evidence. Code that starts the roles does not yet say that the agent harness is available, and a test with a faked Codex client does not prove a live role session. An accepted task in one sibling does not confirm that Planveyor will handle another stack.
 
-## Что делает Owner
+## What Owner does
 
-Кто запускает живые проверки стека, вы выбираете в анкете стека при адаптации sibling: либо роли получают доступ к сети в настройках Codex, либо живые команды выполняет человек. Как во втором случае вернуть роли результат, красный или зелёный, показано в разделе «Что делает Owner» [сквозного примера](sql-example.md).
+You choose who runs the live stack checks in the stack brief during the sibling adaptation: either the roles get network access in the Codex settings, or a person runs the live commands. How to return the result to the role in the second case, red or green, is shown in the “What Owner does” section of the [running example](sql-example.md).
 
-Перед коммитом посмотрите набор командой `planveyor sibling close`. Если ревью устарело, `close --commit` откажет ([«Закрытие задачи»](closeout.md)).
+Before the commit, look at the bundle with `planveyor sibling close`. If the review is stale, `close --commit` refuses ([Task closeout](closeout.md)).
 
-`planveyor sibling ready` живые проверки заново не запускает. Поэтому сами посмотрите, что проверки этой задачи действительно прошли: отчёт прошлой или чужой задачи их не заменяет.
+`planveyor sibling ready` does not run the live checks again. So check for yourself that the checks of this task really passed: a report of an earlier task or of another task does not replace them.
 
-В записи о проверке ищите пять вещей:
+In a check record, look for five things:
 
-1. Изменение и точную версию файлов, к которой относится проверка.
-2. Команду, проект и существенные условия среды, без секретов.
-3. Фактический код возврата и названия случаев; отдельно пропущенные случаи, предупреждения и неприменимые проверки.
-4. Какие критерии приёмки доказаны, а каким нужна другая проверка.
-5. Ссылки на актуальные файлы для Reviewer и Architect.
+1. The change and the exact version of the files that the check applies to.
+2. The command, the project, and the essential conditions of the environment, without secrets.
+3. The actual exit code and the case names; separately, skipped cases, warnings, and checks that do not apply.
+4. Which acceptance criteria are proven and which need another check.
+5. Links to the current files for Reviewer and Architect.
 
-Версию файлов, команду и код возврата видно в квитанции выше, остальное — в плане и ревью.
+The version of the files, the command, and the exit code are visible in the receipt above; the rest is in the plan and the review.
 
-## Частые ошибки
+## Common mistakes
 
-- Принимать запись «Reviewer проверил» за повторный запуск проверок.
-- Прятать красный прогон.
-- Оценивать набор по числу тестов, не читая, что они проверяют.
+- Taking a “Reviewer checked” record for a repeated run of the checks.
+- Hiding a red run.
+- Judging a test suite by the number of tests without reading what they check.
 
-Функции и тесты, о которых шла речь, — в [справочнике по коду](code-map.md#тесты-и-доказательства-чему-можно-доверять).
+The functions and tests discussed here are in the [code map](code-map.md#tests-and-evidence-what-you-can-trust).
 
-Как устроены тесты самого Planveyor, рассказано в главе [«Тесты движка»](engine-tests.md).
+How the tests of Planveyor itself are built is told in the [Engine tests](engine-tests.md) chapter.
 
-Дальше: [«Sibling: создание и обновление»](sibling-lifecycle.md).
+Next: [Sibling: creation and upgrade](sibling-lifecycle.md).

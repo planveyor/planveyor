@@ -48,7 +48,7 @@ These terms stay in Latin script in Russian text too. Statuses, plan sections, v
 | Arch review | Приёмка Architect: «приёмка (Arch review)». Заголовок раздела в файле ревью — в разделе 4. |
 | PI | Предложение по процессу (process improvement), запись `### PI-NNN`. По-английски во множественном числе — PIs. |
 | ACK | Отметка в Planveyor: решение по запросу из sibling (`planveyor_upstream_request_ack`) или получение адресного пакета. |
-| SID | Идентификатор сессии ИИ-клиента. |
+| SID | Идентификатор сессии агентного харнеса. |
 | Codex home | Каталог настроек Codex: `PLANVEYOR_CODEX_HOME` или `~/.codex`. |
 | Self-Planveyor | Работа над самим Planveyor: проектом служит его корень. |
 | doctor | Проверки без запуска модели: `planveyor_entry_doctor`, `planveyor_consumer_doctor`. |
@@ -111,7 +111,7 @@ These terms stay in Latin script in Russian text too. Statuses, plan sections, v
 
 | Термин | Примечание |
 | --- | --- |
-| `planveyor sibling init`, `plan`, `architect`, `answer`, `run`, `close`, `close --commit`, `ready`, `upgrade` | Команды Owner. |
+| `planveyor sibling init`, `plan`, `architect`, `answer`, `run`, `tui`, `close`, `close --commit`, `ready`, `upgrade` | Команды Owner. |
 | `F<N>` | Номер пункта в `docs/release_backlog.md`. |
 
 ## 2. Translated terms / Переводимые термины
@@ -136,12 +136,13 @@ Use the pair from the table. In Russian text, the English term may follow in par
 | analysis pack | таблица анализа | Раздел `## Analysis pack`. На русском сайте — «пакет анализа». |
 | artifact | артефакт |   |
 | assertion | проверка в тесте |   |
+| attribution notices | указание авторства | Уведомления из файла `NOTICE`, раздел 4(d) лицензии Apache-2.0. |
 | authority | основание решения; полномочия |   |
 | backlog | список отложенных задач |   |
 | backup | резервная копия | Прежний каталог проекта после обновления. |
 | blocker | блокер | Замечание ревью `B<N>` в разделе `## S1 Blocker`. |
 | bounded discovery | поиск совпадений в ограниченном объёме | Поиск открытой отложенной задачи по той же теме. |
-| bundle check | проверка набора файлов | `planveyor_plan_bundle --preflight` и `--check`. |
+| bundle check | проверка набора файлов | `planveyor_plan_bundle --preflight`, `--scope-check` и `--check`. |
 | canon | канон | Действующие документы проекта. |
 | carrier | запись | Запись, в которой хранится значение. При первом упоминании — с примером. |
 | check; gate; verification; validation | проверка | Слово многозначное, английское выбирают по смыслу. «Gate» — проверка, которая разрешает переход: проверки закрытия — «closeout gates». «Verification» — маршрут вроде `make verify`. Ревью — «review», проверка в тесте — «assertion». |
@@ -154,14 +155,16 @@ Use the pair from the table. In Russian text, the English term may follow in par
 | closeout gates | проверки закрытия | Часть утверждённой фразы, раздел 3. |
 | code draft | черновик кода | Файл Planner в `docs/code_drafts/`. Не «технический draft». |
 | code draft traps | ловушки черновика кода | Раздел `## Critical invariants / traps / bypass paths`. |
+| code map | справочник по коду | Приложение учебного раздела `docs/guides/learn/code-map.md`. |
 | code snapshot | снимок кода | Файлы примера, приложенные к учебному разделу. |
 | Codex agent | агент Codex | Агент роли внутри сессии Manager в режиме collab, `agent_type`. Сайт пишет «субагенты Codex», «Codex subagents». |
-| collab mode; Manager collab | режим collab | Его запускает `planveyor sibling run`. Справка команды называет его «normal Manager», но «normal» — не название режима. |
+| collab mode; Manager collab | режим collab | Его открывают окно Manager `planveyor sibling tui` (режим TUI) и разовый ход `planveyor sibling run` (ручной режим в консоли). |
+| command approval request | запрос одобрения команды | Диалог Codex CLI в окне Manager: конкретный вызов, которому нужна запись в `.git`, ждёт разового «Yes, proceed». Его включают через `/permissions` → «Ask for approval». Не путать с вопросом к Owner в журнале (`human_gate`). |
 | commit | коммит | Решено. На русском сайте местами «сохранение», в документации так не пишут. |
 | commit policy | политика коммита | `COMMIT_POLICY`, значения не переводятся. |
 | consumer contract | контракт sibling | Правила и файлы, которые проект получил из Planveyor. |
 | context reset | сброс контекста |   |
-| contour | контур | Вид работы со своим результатом: разработка, анализ или декомпозиция. |
+| contour; work contour | контур; контур работы | Вид работы со своим результатом: разработка, анализ или декомпозиция. |
 | contract | контракт | Записанные правила, форматы и границы ответственности. |
 | contract notice | извещение | JSON-файл в `docs/contract_notices/`: что изменилось и что проекту сделать. |
 | contract test | контрактный тест | Тест движка, который проверяет обязательные маркеры в документе или промпте. |
@@ -172,18 +175,23 @@ Use the pair from the table. In Russian text, the English term may follow in par
 | custom pipeline | пошаговый режим Manager | Manager по очереди вызывает роли через обёртки, каждую в своей сессии: `planveyor_manager_custom_pipeline_tui`. Не путать с отдельным запуском роли. |
 | deadlock | тупик после вопроса Reviewer | В коде — `reviewer_manager_deadlock`. |
 | decomposition | декомпозиция | `decomposition_wave`. |
+| dedicated dev database; designated dev database | выделенная dev-база; назначенная dev-база | Dev-база, которую отдали проекту; живые проверки идут только в ней. |
+| delivery mode | способ доставки | Поле PI `delivery_mode`. |
 | delivery wave | волна поставки |   |
 | dev environment; dev database | dev-среда; dev-база | На сайте — «тестовая БД», «test database». |
 | dev target | dev-цель | Выделенная dev-среда, в которую роли публикуют и где запускают тесты. |
 | development; dev contour | разработка | Контур по умолчанию, `developer_wave`. |
 | direct order check | прямая проверка порядка | Отдельный вызов процедуры в SQL-примере. |
 | direct Owner assignment | прямое поручение Owner | На английском сайте — «a separate Owner assignment». |
+| directory swap | замена каталогов | Шаг `planveyor sibling upgrade`: исходный каталог становится резервной копией, кандидат занимает его место. |
 | dispatch; role call | вызов роли |   |
+| dispatcher | диспетчер | Функция `planveyor_cli()` в `scripts/planveyor.zsh`: передаёт команду фасада её обработчику. |
 | doc lint; documentation linter | линтер документации | `planveyor_doc_lint`, `make doc-lint`. |
 | docs closeout | закрытие документов | Решено. Варианты «document closeout», «docs tail», «docs finalize» в тексте не используются. Имена `planveyor_docs_closeout` и промптов `*_docs_finalize_*` не меняются. |
 | docs hygiene | гигиена документов |   |
 | draft | черновик | Статусы вида `Architect draft` не переводятся. |
 | drift | расхождение | Например, `routing_carrier_drift`, `head_drift`. |
+| elevated permission | повышение прав | Запрос роли на действие вне песочницы, например на запись в `.git`. |
 | engine | движок | Решено. «Ядро» — только на сайте. |
 | engine tests | тесты движка | `scripts/test_*.py`. |
 | entry point | точка входа |   |
@@ -202,6 +210,7 @@ Use the pair from the table. In Russian text, the English term may follow in par
 | fixture | фикстура |   |
 | follow-up | отложенная задача | Работа, которую решили сделать позже; записи лежат в `docs/followups/`. На русском сайте — «последующие задачи». |
 | forensic capture | сохранение доказательств | Сохранение отклонённых байтов, `--capture-rejected`. |
+| form defect | недочёт формы | Находка проверок формы. |
 | Git ref | ссылка Git | Например, `refs/planveyor/rejected-baselines/…`. |
 | Golden paths | Реестр повторяемых потоков | Название `docs/guides/golden_paths.md`. |
 | Guides | Руководства | Название `docs/guides/README.md`. |
@@ -216,18 +225,22 @@ Use the pair from the table. In Russian text, the English term may follow in par
 | intent | намерение | Слово из слогана сайта. |
 | lane; review lane | линия; линия ревью | У Reviewer две линии: линия рисков и линия контракта. |
 | Launch and role modes | Запуск и режимы ролей | Название `docs/guides/launch-and-role-modes.md`. |
+| launch guide | руководство запуска | `docs/guides/launch-and-role-modes.md`. |
+| learning section | учебный раздел | `docs/guides/learn/`. |
 | lifecycle | жизненный цикл |   |
-| Lifecycle and packets | Жизненный цикл и пакеты | Название `docs/guides/lifecycle-and-packets.md`. Учебный раздел пока пишет «Lifecycle и пакеты». |
+| Lifecycle and packets | Жизненный цикл и пакеты | Название `docs/guides/lifecycle-and-packets.md`. |
 | live run; live check | живой прогон; живая проверка | Проверки стека на настоящей dev-среде. В английских текстах встречается и «live proof». |
 | live target | живая цель | Раздел анкеты стека. |
 | local sections | локальные разделы | Заголовки этих разделов не переводятся, см. раздел 4. На русском сайте — «локальные секции». |
 | maintainer | сопровождающий |   |
 | managed paths | управляемые пути |   |
 | manifest | манифест |   |
+| manual console mode; manual mode | ручной режим в консоли; ручной режим | Работа с планом в sibling отдельными командами `planveyor sibling …`: каждая заканчивается и выходит, коммитит Owner командой `close --commit`. Пара к «режим TUI». |
 | matching row | совпавшая запись | Запись списка отложенных задач по той же теме. |
 | merge | слияние | Режим `merge` и имена команд пишутся латиницей. |
 | merge mode | режим merge | Режим Manager для проверки после слияния. |
 | merge tracker | трекер слияния | Локальный файл `.planveyor.merge_tracker.md`. |
+| module map | карта модулей | `scripts/planveyor/README.md`. |
 | no-op | изменения не нужны; менять нечего | Исход без изменений, например `outcome=no changes needed`. |
 | offline tests | тесты без среды; офлайн-тесты | Тесты на подготовленных входах вместо настоящей базы или сервиса. |
 | one-shot | разовый |   |
@@ -239,6 +252,7 @@ Use the pair from the table. In Russian text, the English term may follow in par
 | Owner question | вопрос к Owner | Его закрывает `planveyor sibling answer`. |
 | phase prompt | промпт фазы | Инструкция роли для текущего статуса плана. |
 | PI collector | сборщик предложений | `scripts/process_improvements_collect.py`. |
+| PI format correction | коррекция формата PI | Один дополнительный ответ той же роли после ошибки формата раздела `Process improvements`. Состояния `retryable` и `blocked` в строке `general_pi_format_correction_state=…`. |
 | PI promotion | привязка PI | Статус `promoted`. |
 | PI reconciliation | сверка PI | `scripts/process_improvements_reconcile.py --apply`. |
 | PI triage | разбор PI |   |
@@ -263,6 +277,7 @@ Use the pair from the table. In Russian text, the English term may follow in par
 | product tree | дерево файлов Planveyor |   |
 | project; consumer repository | проект | Sibling, в котором работают роли. В README встречается и `target-local`. |
 | promotion writer | штатный скрипт продвижения | Продвигает отложенную задачу в план. |
+| prompt index | индекс промптов | `docs/tools/prompts/README.md`. |
 | provenance | происхождение | `planveyor_plan_provenance_stamp`. |
 | Q&A log | журнал вопросов | Раздел плана `## Q&A log`. |
 | queue activation | включение очереди |   |
@@ -272,17 +287,21 @@ Use the pair from the table. In Russian text, the English term may follow in par
 | queue truth | источник истины об очереди |   |
 | range review; merge-range review | ревью диапазона | Шаг `review_range`, шаблон `docs/code_reviews/_template_merge_range.md`. |
 | readback | чтение состояния |   |
+| reasoning effort | уровень рассуждения | `model_reasoning_effort` в `config.toml`. |
 | receipt | квитанция | Запись о выполненном действии и его результате. |
 | recovery | восстановление | Восстановление прерванной сессии Manager. |
 | recovery plan | план восстановления | Отдельный план исправления после плана, принятого красным. |
-| reorder level | уровень пополнения | Столбец `ReorderLevel`. Рядом `UnitsInStock` — «In stock» и `UnitsOnOrder` — «On order». |
+| reorder level | порог пополнения | Столбец `ReorderLevel`. Рядом `UnitsInStock` — «In stock» и `UnitsOnOrder` — «On order». |
 | replace refs | замещающие ссылки Git | `git replace`. |
 | restamp | заново поставить отметку на пакете |   |
+| review result | итог ревью | Статус в шапке файла ревью; его ставит линия контракта. |
 | review; review artifact | ревью | Файл ревью лежит в `docs/code_reviews/` или `docs/doc_reviews/`, по-английски это «review artifact». |
 | review assets | приложения к ревью | Каталог `docs/code_reviews/assets/`. |
 | review freshness | свежесть ревью | Часть утверждённой фразы, раздел 3. |
 | risk lane | линия рисков | `reviewer_code_risk`. На сайте — «Риски реализации», «Implementation risks». |
+| risk lane record | запись линии рисков | Запись в разделе `## Evidence` плана; её находит `--select-risk-lane`. |
 | risk selector | скрипт выбора записи линии рисков | `scripts/review_artifact_lint.py --select-risk-lane`. |
+| role agent | агент роли | Агент Codex, который ведёт роль внутри сессии Manager (`agent_type`). |
 | role definition | документ роли | Документы в `docs/roles/`. В README ссылка на них называется «Role definitions». |
 | rollout; rollout packet | адресная доставка; адресный пакет | Пакет изменения для одного репозитория, каталог `docs/rollout_packets/`. |
 | route | маршрут | Часть утверждённой фразы, раздел 3. |
@@ -292,14 +311,17 @@ Use the pair from the table. In Russian text, the English term may follow in par
 | running example; end-to-end example | сквозной пример |   |
 | runtime | копия Planveyor, из которой идут команды | Решено: по-английски «runtime» — только эта копия, как в `PLANVEYOR_RUNTIME_ROOT`. В остальных случаях «движок» по-английски — «engine». |
 | runtime pin | привязка к копии Planveyor, из которой идут команды |   |
+| sandbox | песочница | Ограничения агентного харнеса на файлы, сеть и команды. |
 | sanitizer | очистка от личных данных |   |
 | scope | границы задачи | Раздел плана — `## Scope`. |
+| scope check | проверка состава набора | `planveyor_plan_bundle --scope-check`: перед diff Reviewer проверяет только состав и целостность набора; JSON `planveyor_plan_bundle_scope.v1`, код 0 — только `scope_ok=true`. Здесь scope — состав набора, а не границы задачи. |
 | scope expansion | расширение границ задачи | `plan_meta.scope_expansion`. |
 | second pass | второй проход | Проход CENSOR. |
 | secrets; private local paths | секреты; личные пути |   |
 | selectors | указатели | Локальные файлы `.planveyor.*`. |
 | session; role session | сессия; сессия роли |   |
 | session key | ключ сессии | Имя сессии роли в `.planveyor.session.<key>`. |
+| severity scale | шкала серьёзности | S1, S2, S3 в шаблонах ревью. |
 | shortage | дефицит | Столбец `Shortage` в SQL-примере. |
 | sibling template | шаблон sibling | Каталог `copier_template/`. |
 | single-role launch | отдельный запуск роли | Owner сам запускает одну роль через её обёртку. На сайте режим подписан «По шагам» и «Запускать выбранную роль», по-английски — «Step by step» и «Launch a chosen role». Не путать с пошаговым режимом Manager. |
@@ -321,8 +343,9 @@ Use the pair from the table. In Russian text, the English term may follow in par
 | targets; target files | целевые файлы | Поле `code_draft_meta.targets` черновика кода. |
 | task commit | коммит задачи | В него попадают изменённые файлы точного набора, и только они. |
 | terminal status | терминальный статус | `Done` или `Superseded`. Слово «terminal» в коде относится к статусу плана. |
-| trace | трасса | Например, собственные трассы сессий ИИ-клиента. |
+| trace | трасса | Например, собственные трассы сессий агентного харнеса. |
 | tSQLt class marker | метка класса tSQLt | Расширенное свойство `tSQLt.TestClass`. |
+| TUI mode | режим TUI | Основной путь работы с планом в sibling: одно окно Manager на весь план, его открывает `planveyor sibling tui`; роли — вложенные субагенты его сессии, коммиты делает Architect. Пара к «ручной режим в консоли». |
 | Turn intent into a result you can accept | Довести намерение до результата, который можно принять | Слоган сайта. |
 | umbrella plan | зонтичный план | Главный план декомпозиции. |
 | upgrade | обновление | Обновление sibling, `planveyor sibling upgrade`. |
@@ -332,7 +355,8 @@ Use the pair from the table. In Russian text, the English term may follow in par
 | verdict; aggregate verdict; overall verdict | вердикт; итоговый вывод | Итоговый вывод — раздел `## Lane synthesis / aggregate verdict` файла ревью. |
 | verification suite; verification routes | маршруты проверки | `docs/tools/verify_suite.md`. |
 | visual check | визуальная проверка |   |
-| wrapper | обёртка | Функция движка, которая готовит ход роли и запускает клиент. |
+| working tree | рабочая копия | Файлы проекта на диске вне индекса Git. |
+| wrapper | обёртка | Функция движка, которая готовит ход роли и запускает агентный харнес. |
 
 ## 3. Approved phrases / Утверждённые фразы
 

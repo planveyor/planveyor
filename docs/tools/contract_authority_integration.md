@@ -22,8 +22,9 @@ variable. For a consumer project, pass it explicitly before the function:
 ./bin/planveyor --project /absolute/path/to/consumer <planveyor_function> [args…]
 ~~~
 
-One call does not change cwd, session state, or consumer configuration after it
-ends. If the facade, the function, or the declared runtime is unavailable, that
+The facade leaves the parent shell's cwd and environment unchanged.
+The invoked command may still write its declared project files and local
+session records. If the facade, the function, or the declared runtime is unavailable, that
 is a blocker with a literal diagnostic, not a reason to guess a fallback path.
 
 ## Authority hierarchy

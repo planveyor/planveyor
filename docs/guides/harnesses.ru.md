@@ -1,4 +1,4 @@
-<!-- i18n: pair=docs/guides/harnesses.md pair-sha256=537980be0d5f1d6ce937e1b15939e2ae08e4f4f8b48bc3c0b4bddd661980514d self-sha256=8882cd8504e00174fd5c5a8b381b79dbcc5631f609ab7ad1345d2b381398ff90 -->
+<!-- i18n: pair=docs/guides/harnesses.md pair-sha256=901297e5eaebc0ed8f1afdf8f9df6973af7f633ec8161aa9980b7ecf1783838f self-sha256=9a2db67322921b11ea6f27e3d8bd61f862e5a6fed4c504754cd77b4aa33fb156 -->
 # Агентные харнесы
 
 [English](harnesses.md) · **Русский**
@@ -11,7 +11,8 @@
 
 | Маршрут | Агентный харнес |
 | --- | --- |
-| `planveyor sibling architect` и `planveyor sibling run` | Codex CLI |
+| Sibling, режим TUI: окно Manager `planveyor sibling tui` | Codex CLI |
+| Sibling, ручной режим в консоли: `planveyor sibling architect` и `planveyor sibling run` | Codex CLI |
 | Режим collab: `planveyor_manager_collab_tui`, `planveyor_manager_collab_cmd` | Codex CLI |
 | Отдельный запуск роли и пошаговый режим Manager | Codex CLI; Claude Code для Planner и обеих линий Reviewer |
 | Прямой маршрут Manager в ZCode | ZCode, только в корне Planveyor |
@@ -21,7 +22,12 @@
 
 ## Codex CLI
 
-Codex CLI ведёт поддерживаемый маршрут sibling. `planveyor sibling architect` запускает Architect в его собственной сессии, отдельным `codex exec`. `planveyor sibling run` открывает режим collab, в котором Manager поднимает пять ролей агентами Codex. Planveyor передаёт Codex каталог Codex home из `PLANVEYOR_CODEX_HOME` или, если переменная не задана, `~/.codex`. Если команды `codex` нет в `PATH`, команда роли останавливается с сообщением `Codex CLI is required; install it and authenticate in the consumer-owned home first`.
+Codex CLI ведёт оба режима sibling; пути работы у них разные, см. [«Два режима работы с планом»](stack-sibling.ru.md#два-режима-работы-с-планом).
+
+- **Режим TUI.** `planveyor sibling tui` открывает интерактивное окно Codex CLI с Manager на весь план; внутри вызывается `planveyor_manager_collab_tui`. Роли — вложенные субагенты Codex этой сессии и живут, пока открыто окно. Вложенные субагенты в интерактивном окне — возможность Codex CLI.
+- **Ручной режим в консоли.** `planveyor sibling architect` запускает Architect в его собственной сессии, отдельным `codex exec`. Каждый `planveyor sibling run` — один неинтерактивный ход режима collab: Manager поднимает пять ролей агентами Codex и выходит после принятой приёмки.
+
+Planveyor передаёт Codex каталог Codex home из `PLANVEYOR_CODEX_HOME` или, если переменная не задана, `~/.codex`. Если команды `codex` нет в `PATH`, команда роли останавливается с сообщением `Codex CLI is required; install it and authenticate in the consumer-owned home first`.
 
 Настройки описаны в разделе [«Настройка Codex»](launch-and-role-modes.ru.md#настройка-codex) руководства запуска. Его части перечислены в [последнем разделе](#что-вы-настраиваете) этой страницы.
 
@@ -43,7 +49,7 @@ Planveyor хранит выбор агентного харнеса для ро�
 
 Для sibling передайте `--project /absolute/path/to/sibling` до команды, как в разделе [«Выбор проекта»](launch-and-role-modes.ru.md#выбор-проекта).
 
-Выбор действует там, где роль запускает обёртка: при отдельном запуске роли и в пошаговом режиме Manager. Агентов Codex в режиме collab он не меняет и Claude Code в `planveyor sibling run` не добавляет.
+Выбор действует там, где роль запускает обёртка: при отдельном запуске роли и в пошаговом режиме Manager. Агентов Codex в режиме collab он не меняет и Claude Code ни в один из режимов sibling не добавляет: в первой версии Claude Code работает только для Planner и Reviewer, при отдельном запуске роли и в пошаговом режиме Manager.
 
 Для Claude Code нужны установленный CLI и его обычный вход. Planveyor читает три переменные:
 

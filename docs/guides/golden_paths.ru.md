@@ -1,10 +1,18 @@
-<!-- i18n: pair=docs/guides/golden_paths.md pair-sha256=dc3d4bd0e51919494c3a1f448bdd11970d7324b47b229e4a41f538d032232d91 self-sha256=e154484917e0ee5eff2c691db1f8226e673a50639c7f478faaa1c48376342c40 -->
+<!-- i18n: pair=docs/guides/golden_paths.md pair-sha256=f8929c30c54fd7658719a198190923b2c202dd816a81ae2d2976854d57b24430 self-sha256=896266a6ff5bc94fc697c3e2f1c2b1fed7e02319b38ea0bc1d298490b5a7eaf4 -->
 # Реестр повторяемых потоков
 
 [English](golden_paths.md) · **Русский**
 
 Этот файл даёт короткие указатели на точки входа. Он не выбирает за текущий план
 статус, режим очереди, агентный харнес или контракт `target-local`.
+
+Промпты также называют `memory-finalize/docs-closeout`, но отдельного
+якоря в реестре для него нет. Для закрытия документов следуйте
+[руководству запуска](launch-and-role-modes.ru.md). Для сбора решений из планов
+используйте существующую запись
+`docs/guides/golden_paths.md#post-merge-plan-harvest` ниже. Если ни одна
+существующая строка задаче не подходит, заведите отложенную задачу или укажите
+`N/A (why=...)`; не придумывайте якорь.
 
 ## Post-merge audit
 

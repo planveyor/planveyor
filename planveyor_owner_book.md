@@ -8,7 +8,7 @@ For a project under your own stack, the main path is the permanent [stack siblin
 planveyor sibling init ~/my-stack
 ```
 
-Then, in the project directory: plan skill → `architect` → real answers through `answer` → `run` → `close` preview → authorized `close --commit`. After the plan commit, a separate `run` closes out the documents; a new preview and `--commit` accept exactly the prepared documentation changes. `ready` checks the contract, the selected plan, and the closeout; live stack checks remain part of the accepted plan.
+Then, in the project directory, run the plan in one of the [two modes](docs/guides/stack-sibling.md#two-ways-to-work-on-a-plan). In TUI mode, the main path: plan skill → answers to the open questions of the plan through `answer`, if any → a new Manager session with `planveyor_manager_init` → command approval requests switched on with `/permissions` in the `planveyor_manager_resume` window → one Manager window, `planveyor sibling tui`, for the whole plan, where the same roles do the work and the docs closeout, and Architect commits after your approval: the implementation and, if the closeout requires it, the documents. In manual console mode: plan skill → `architect` → real answers through `answer` → `run` → `close` preview → authorized `close --commit`. After the plan commit, a separate `run` closes out the documents; a new preview and, if the documents need a commit, `--commit` accept exactly the prepared documentation changes. `ready` checks the contract, the selected plan, and the closeout; live stack checks remain part of the accepted plan.
 
 ## Environment and facade
 

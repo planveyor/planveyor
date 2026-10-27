@@ -1,54 +1,56 @@
-# Sibling: создание и обновление
+# Sibling: creation and upgrade
 
-Sibling — отдельный Git-репозиторий вашего проекта, созданный из Planveyor: код продукта, обвязка стека (`Makefile` и скрипты сборки и проверок), планы и правила ролей. Глава объясняет, что в нём принадлежит проекту, как `planveyor sibling init` создаёт проект и как `planveyor sibling upgrade` переносит в него новую версию Planveyor. Порядок команд описан в [руководстве по sibling](../stack-sibling.ru.md).
+**English** · [Русский](sibling-lifecycle.ru.md)
 
-## Какой сценарий нужен
+A sibling is a separate Git repository of your project, created from Planveyor: the product code, the stack harness (`Makefile` and the build and check scripts), the plans, and the role rules. This chapter explains what in it belongs to the project, how `planveyor sibling init` creates the project, and how `planveyor sibling upgrade` brings a new Planveyor version into it. The order of the commands is described in the [stack sibling guide](../stack-sibling.md).
 
-Выберите строку по тому, где должно появиться изменение: в вашем проекте или в Planveyor.
+## Which scenario you need
 
-| Что нужно | Что делать | Что получится | Что ещё предстоит |
+Choose a row by where the change should appear: in your project or in Planveyor.
+
+| What you need | What to do | What you get | What remains |
 | --- | --- | --- | --- |
-| Проекта ещё нет | `planveyor sibling init`, см. [создание проекта](../stack-sibling.ru.md#один-раз-среда-и-создание-проекта) | Новый репозиторий с контрактом Planveyor и первым коммитом от вашего имени в Git | Провести первый план: адаптацию под стек |
-| Изменить продукт или правила стека | Обычный план в проекте, см. [план и его статусы](plan-lifecycle.md) | Изменённый код, проверки или локальные разделы правил | Ревью, приёмка, коммит и закрытие документов |
-| Перейти на новую версию Planveyor | Обновить копию Planveyor, затем `planveyor sibling upgrade`, см. [новую версию](../stack-sibling.ru.md#получить-новую-версию-planveyor) | Перенесённый контракт, резервная копия и план обновления | Провести план обновления ролями до приёмки и закрытия документов |
-| В проекте нашли общую проблему Planveyor | Запрос в Planveyor, см. [предложить изменение](../stack-sibling.ru.md#предложить-изменение-planveyor) | Проверенный файл запроса и, с вашего разрешения, issue в GitHub | Решение принимают в Planveyor; если предложение примут, исправление придёт новой версией. Отправка запроса исправления не гарантирует |
+| There is no project yet | `planveyor sibling init`; see [project creation](../stack-sibling.md#one-time-setup-environment-and-project-creation) | A new repository with the Planveyor contract and a first commit under your Git identity | Run the first plan: the stack adaptation |
+| Change the product or the stack rules | An ordinary plan in the project; see [the plan and its statuses](plan-lifecycle.md) | Changed code, checks, or local sections of the rules | Review, acceptance, commit, and docs closeout |
+| Move to a new Planveyor version | Update the Planveyor checkout, then `planveyor sibling upgrade`; see [getting a new version](../stack-sibling.md#get-a-new-planveyor-version) | The carried-over contract, a backup, and an upgrade plan | Run the upgrade plan with the roles up to acceptance and docs closeout |
+| A shared Planveyor problem was found in the project | An upstream request; see [proposing a change](../stack-sibling.md#propose-a-change-to-planveyor) | A checked request file and, with your permission, a GitHub issue | The decision is made in Planveyor; if the proposal is accepted, the fix comes with a new version. Sending a request does not guarantee a fix |
 
-Запросы, извещения и адресные пакеты (rollout packet), которых sibling сейчас не получает, разобраны в главе [«Обмен изменениями с Planveyor»](change-packets.md).
+Upstream requests, contract notices, and rollout packets are covered in the [Exchanging changes with Planveyor](change-packets.md) chapter. A sibling does not receive rollout packets now.
 
-## Пример: SQL-проект
+## Example: an SQL project
 
-Примеры взяты из SQL-проекта, где решали задачу `GetReorderCandidates` из сквозного примера раздела. Проект не опубликован, файлы его задачи лежат в [снимке](examples/sql/README.md). Вся его история уместилась в семь коммитов:
+The examples come from the SQL project where the `GetReorderCandidates` task of the learning section's running example was solved. The project is not published; the files of its task are in the [snapshot](examples/sql/README.md). Its whole history fits into seven commits:
 
-| Коммит | Когда | Что в нём |
+| Commit | When | What it contains |
 | --- | --- | --- |
-| `b2962f4` | 27.09, 19:05 | Init: контракт Planveyor, 105 файлов |
-| `fb6f9bf` | 27.09, 20:41 | Адаптация под SQL Server: обвязка, настройки и локальные разделы, 28 файлов |
-| `60332b4` | 28.09, 00:00 | Закрытие документов адаптации |
-| `70526ee` | 28.09, 02:17 | Задача `GetReorderCandidates` |
-| `edac1b9` | 28.09, 03:05 | Закрытие документов задачи |
-| `6a353de` | 28.09, 11:06 | План обновления до следующей версии Planveyor, 7 файлов |
-| `f4f707b` | 28.09, 11:15 | Статус `Done` и запись о приёмке в плане обновления |
+| `b2962f4` | September 27, 19:05 | Init: the Planveyor contract, 105 files |
+| `fb6f9bf` | September 27, 20:41 | Adaptation to SQL Server: the harness, configuration, and local sections, 28 files |
+| `60332b4` | September 28, 00:00 | Docs closeout of the adaptation |
+| `70526ee` | September 28, 02:17 | The `GetReorderCandidates` task |
+| `edac1b9` | September 28, 03:05 | Docs closeout of the task |
+| `6a353de` | September 28, 11:06 | Upgrade plan to the next Planveyor version, 7 files |
+| `f4f707b` | September 28, 11:15 | The `Done` status and the acceptance record in the upgrade plan |
 
-Всё это было до команд `planveyor sibling`: роли и живые прогоны на dev-базе запускал оператор (см. [«Роли и файлы задачи»](roles-artifacts.md)), а коммиты делались без `planveyor sibling close --commit`. Как коммиты устроены сейчас, рассказано в разделе [«Кто делает коммит»](review-acceptance.md#кто-делает-коммит).
+All of this predates the `planveyor sibling` commands: an operator launched the roles and the live runs on the dev database (see [Roles and task files](roles-artifacts.md)), and the commits were made without `planveyor sibling close --commit`. The [Who makes the commit](review-acceptance.md#who-makes-the-commit) section explains how commits work now.
 
-## Что принадлежит проекту, а что Planveyor
+## What belongs to the project and what belongs to Planveyor
 
-Из Planveyor проект получает контракт: документы ролей, промпты, плейбуки, шаблоны, записи архитектурных решений (ADR) и скиллы в `.agents/skills/`. Раскладывает и обновляет контракт Copier, инструмент шаблонов проектов. Версию Planveyor, из которой собран контракт, записывают два файла проекта: `.copier-answers.yml` (поле `_commit`) и `planveyor_contract_authority.v1.json` в `docs/_meta/`.
+From Planveyor, the project gets the contract: role definitions, prompts, playbooks, templates, architecture decision records (ADRs), and skills in `.agents/skills/`. Copier, a project template tool, lays out and updates the contract. Two project files record the Planveyor version the contract was built from: `.copier-answers.yml` (the `_commit` field) and `planveyor_contract_authority.v1.json` in `docs/_meta/`.
 
-| Что | Кто владеет | Пример из SQL-проекта |
+| What | Who owns it | Example from the SQL project |
 | --- | --- | --- |
-| Общие правила ролей, промпты, плейбуки и шаблоны | Planveyor, приходят с контрактом | `docs/roles/`, `docs/tools/prompts/`, общая часть плейбука ревью `review_staged_or_commit.md` |
-| Команды, обёртки и скрипты движка | Planveyor, остаются во внешней копии | `bin/planveyor` и `scripts/` движка живут только в копии Planveyor |
-| Код продукта, обвязка стека, планы и ревью | Проект | Процедура [GetReorderCandidates.sql](examples/sql/sql/Northwind/GetReorderCandidates.sql), обвязка [sql.py](examples/sql/scripts/sql.py), `Makefile`, планы в `docs/plans/` |
-| Локальные разделы правил ролей | Проект | Шесть целей `make` в правилах Coder; условие, при котором Reviewer не повторяет прогон на dev-базе |
-| ИИ-клиент, учётные записи и dev-среда | Owner или тот, кто отвечает за dev-среду | `.env.local` с правами 0600, выделенная dev-база |
-| Выбор версии движка и обновление | Owner | Переход на следующую версию Planveyor 28 сентября |
+| Shared role rules, prompts, playbooks, and templates | Planveyor; they come with the contract | `docs/roles/`, `docs/tools/prompts/`, the shared part of the review playbook `review_staged_or_commit.md` |
+| Engine commands, wrappers, and scripts | Planveyor; they stay in the external checkout | The engine's `bin/planveyor` and `scripts/` live only in the Planveyor checkout |
+| Product code, the stack harness, plans, and reviews | The project | The procedure [GetReorderCandidates.sql](examples/sql/sql/Northwind/GetReorderCandidates.sql), the harness [sql.py](examples/sql/scripts/sql.py), `Makefile`, plans in `docs/plans/` |
+| Local sections of the role rules | The project | Six `make` targets in the Coder rules; the condition under which Reviewer does not repeat the run on the dev database |
+| The agent harness, accounts, and the dev environment | Owner or whoever is responsible for the dev environment | `.env.local` with mode 0600, the dedicated dev database |
+| The choice of the engine version and the upgrade | Owner | The move to the next Planveyor version on September 28 |
 
-### Локальные разделы
+### Local sections
 
-Правила стека записаны в восьми файлах: в промптах `architect_status_driven.md`, `planner_status_driven.md`, `coder_status_driven.md`, `coder_migrations_gate.md`, `reviewer_status_driven.md` и в плейбуках `review_staged_or_commit.md`, `review_merge_range.md`, `post_merge_audit.md`. В каждом из них два раздела с постоянными заголовками: `## Локальные правила стека` и `## Разрешённое локальное переопределение процесса`. После init их текст принадлежит проекту, и Planveyor туда ничего не дописывает. Остальной текст этих файлов (общие правила, статусы, полномочия ролей) принадлежит Planveyor.
+The stack rules are written in eight files: in the prompts `architect_status_driven.md`, `planner_status_driven.md`, `coder_status_driven.md`, `coder_migrations_gate.md`, and `reviewer_status_driven.md`, and in the playbooks `review_staged_or_commit.md`, `review_merge_range.md`, and `post_merge_audit.md`. Each of them has two sections with fixed headings: `## Локальные правила стека` (local stack rules) and `## Разрешённое локальное переопределение процесса` (allowed local process override). After init, their text belongs to the project, and Planveyor adds nothing there. The rest of the text of these files (shared rules, statuses, role permissions) belongs to Planveyor.
 
-В контракте раздел приходит незаполненным:
+The contract delivers the section unfilled; here it is as written, in Russian:
 
 ```markdown
 ## Локальные правила стека
@@ -56,68 +58,68 @@ Sibling — отдельный Git-репозиторий вашего прое�
 - Подготовка, build/test/smoke commands: N/A (why=stack-specific rule not configured)
 ```
 
-После адаптации в SQL-проекте эта строка в правилах Coder начиналась так:
+After the adaptation, this line in the Coder rules of the SQL project began like this:
 
 ```markdown
 - Подготовка, build/test/smoke commands: для текущей адаптации реализуй шесть interface targets `setup`, `db-extract`, `db-build`, `lint`, `check-secrets`, `db-proof` в `Makefile` и ignored local tools/cache/output до первого setup. …
 ```
 
-Второй раздел нужен для отступлений от общего процесса. В SQL-проекте его заполнили только в плейбуке ревью. Reviewer может не повторять `make db-proof`, если файлы SQL, инструментов и настроек побайтно совпадают с теми, на которых оператор уже выполнил прогон, а набор тестов совпадает с отчётом JUnit этого прогона. Причина записана там же: повторная выкладка схемы (publish) в общую dev-базу может задеть чужое состояние. Статусы и маршрут ревью такое переопределение не меняет.
+The second section is for departures from the shared process. In the SQL project, it was filled in only in the review playbook. Reviewer need not repeat `make db-proof` if the SQL, tool, and configuration files match byte for byte the files on which the operator already did the run, and the set of tests matches the JUnit report of that run. The reason is written in the same place: publishing the schema again to a shared dev database may affect someone else's state. Such an override does not change the statuses or the review route.
 
-## Создание проекта
+## Creating the project
 
-Команда `planveyor sibling init ~/my-stack` создаёт новый репозиторий вне копии Planveyor. Версию Planveyor она берёт из текущего коммита копии, поэтому всё в копии должно быть закоммичено. Первый коммит подписывается вашим именем и почтой из настроек Git или из флагов `--author-name` и `--author-email`. Каталог проекта должен быть новым или пустым.
+The `planveyor sibling init ~/my-stack` command creates a new repository outside the Planveyor checkout. It takes the Planveyor version from the current commit of the checkout, so everything in the checkout must be committed. The first commit is authored with your name and email, taken from the Git settings or from the `--author-name` and `--author-email` flags. The project directory must be new or empty.
 
-Проект собирается во временном каталоге `.<имя>-init-…` рядом с целевым. Copier раскладывает контракт, команда создаёт репозиторий с веткой `main`, сохраняет в нём ваше имя и почту для следующих коммитов, делает коммит `Initialize Planveyor sibling contract` и проверяет контракт. Только после успешной проверки временный каталог занимает место проекта; если шаг не прошёл, он остаётся рядом для разбора.
+The project is assembled in a temporary directory `.<name>-init-…` next to the target one. Copier lays out the contract; the command creates a repository with the `main` branch, saves your name and email in it for the next commits, makes the commit `Initialize Planveyor sibling contract`, and checks the contract. Only after a successful check does the temporary directory take the place of the project; if a step fails, the temporary directory stays next to the target for analysis.
 
-Плана и анкеты стека init не создаёт. Команда заканчивается подсказкой: открыть проект в чате и поручить скиллу `$planveyor-plan-draft` создать и выбрать план адаптации под стек.
+Init creates neither a plan nor a stack brief. The command ends with a hint: open the project in a chat and ask the `$planveyor-plan-draft` skill to create and select the stack adaptation plan.
 
-![Как появляется sibling: выбор движка и каталога, init, план адаптации, работа ролей, ревью и закрытие документов](assets/sibling-lifecycle-1.svg)
+![How a sibling appears: the choice of the engine and the directory, init, the adaptation plan, the work of the roles, review, and docs closeout](assets/sibling-lifecycle-1.svg)
 
-### Первый план: адаптация под стек
+### The first plan: stack adaptation
 
-Скилл создаёт план и анкету стека `stack_brief.md` в `docs/` проекта по шаблону `docs/_template_stack_brief.md`. В анкете десять разделов: от назначения проекта и стека до живой цели (dev-базы или сервиса, с которыми работают живые проверки), того, кто эти проверки запускает, и того, что вне объёма. Если поле анкеты пустое, Architect задаёт Owner вопрос и предлагает ответ.
+The skill creates the plan and the stack brief `stack_brief.md` in the project's `docs/` from the `docs/_template_stack_brief.md` template. The stack brief has ten sections: from the purpose of the project and the stack to the live target (the dev database or service that the live checks work with), who runs these checks, and what is out of scope. If a field of the stack brief is empty, Architect asks Owner a question and suggests an answer.
 
-Дальше план идёт обычным путём, от Architect до приёмки. Coder пишет обвязку, проверки и локальные разделы, а Reviewer проверяет, что команды стека действительно проверяют продукт. В границы плана входят обвязка стека, корневой `README.md` проекта и локальные правила ролей. Адаптация закончена после закрытия документов (глава [«Закрытие задачи»](closeout.md)).
+Then the plan goes the usual way, from Architect to acceptance. Coder writes the harness, the checks, and the local sections, and Reviewer checks that the stack commands really check the product. The plan scope includes the stack harness, the root `README.md` of the project, and the local role rules. The adaptation is finished after the docs closeout (the [Task closeout](closeout.md) chapter).
 
-В SQL-проекте анкеты ещё не было: её шаблона в той версии Planveyor не было. Решения о стеке Owner дал в задании, и Architect записал их прямо в план адаптации `260927_1913_sql_server_adaptation`. Два пункта из его раздела `## Solution (high level)`:
+The SQL project did not have a stack brief yet: that Planveyor version had no template for it. Owner gave the stack decisions in the assignment, and Architect wrote them directly into the adaptation plan `260927_1913_sql_server_adaptation`. Two items from its `## Solution (high level)` section:
 
 ```markdown
 - В текущем sibling зафиксировать `.NET SDK 10.0.401`, `Microsoft.Build.Sql 2.3.0`, `tSQLt.Dacpacs 1.0.8083.3529` с `tSQLt.2019`, `SqlPackage 170.5.96`, SQLFluff `3.4.2` и `go-sqlcmd 1.10`. …
 - `Makefile` предоставляет только существующий набор интерфейсов `setup`, `db-extract`, `db-build`, `lint`, `check-secrets`, `db-proof`; …
 ```
 
-План охватил 22 целевых файла. Четырнадцать из них относятся к обвязке и настройкам, среди них `Makefile`, обвязка [sql.py](examples/sql/scripts/sql.py) и схема `sql/Northwind/Northwind.sql`. Ещё восемь — файлы с локальными разделами. Коммит адаптации `fb6f9bf` появился в 20:41, через 1 ч 36 мин после init. В нём 28 файлов: 22 целевых, план, черновик кода, ревью и три приложения к ревью.
+The plan covered 22 target files. Fourteen of them belong to the harness and configuration, among them `Makefile`, the harness [sql.py](examples/sql/scripts/sql.py), and the schema `sql/Northwind/Northwind.sql`. The other eight are the files with local sections. The adaptation commit `fb6f9bf` appeared at 20:41, 1 hour 36 minutes after init. It has 28 files: the 22 target files, the plan, the code draft, the review, and three review assets.
 
-## Обновление до новой версии Planveyor
+## Upgrading to a new Planveyor version
 
-Новую версию выбираете вы: обновите свою копию Planveyor, например командой `git pull` в ней. Сама команда обновления `git pull` не делает и ветку не переключает. Новая версия должна продолжать прежнюю историю и лежать на ветке или теге.
+You choose the new version: update your Planveyor checkout, for example with `git pull` in it. The upgrade command itself does not run `git pull` and does not switch the branch. The new version must continue the earlier history and be on a branch or tag.
 
-До обновления доведите текущий план до конца, включая закрытие документов, завершите сессии ролей и выйдите из каталога проекта. Обновление меняет каталоги местами, поэтому его запускают снаружи:
+Before the upgrade, finish the current plan, including the docs closeout, end the role sessions, and leave the project directory. The upgrade swaps the directories, so you run it from outside:
 
 ```sh
 planveyor --project ~/my-stack sibling upgrade
 ```
 
-Обычно команды `planveyor sibling` находят проект по текущему каталогу, а флаг `--project` указывает его явно.
+Usually the `planveyor sibling` commands find the project from the current directory; the `--project` flag names it explicitly.
 
-### Как идёт обновление
+### How the upgrade goes
 
-1. **Проверки до копирования.** Команда убеждается, что в копии Planveyor и в проекте всё закоммичено, что каталог `.git` у проекта собственный (git worktree команда отклонит) и что новая версия продолжает прежнюю. Затем она сверяет проект с контрактом обеих версий: все ли файлы на месте и читаются ли локальные разделы. Если новая версия убирает из контракта файл, который проект изменил, или одни файлы контракта исчезают, а другие появляются, обновление остановится. Здесь же команда проверяет каждое извещение между версиями, то есть JSON-файл Planveyor о том, что изменилось и что сделать в проекте (подробно — в главе [«Обмен изменениями с Planveyor»](change-packets.md)).
-2. **Кандидат обновления.** Команда копирует проект в каталог `.<имя>-upgrade-<12 знаков нового коммита>` рядом с ним и запускает в копии Copier. Затем она сравнивает локальные разделы с исходными побайтно, ищет следы конфликта (маркеры `<<<<<<<`, файлы `.rej`, неразрешённые конфликты в индексе Git) и проверяет контракт кандидата: все ли файлы на месте и записана ли новая версия. Любая проблема останавливает обновление, и исходный проект остаётся как был.
-3. **План обновления.** Если всё чисто, команда создаёт в кандидате план адаптации обновления (дальше — план обновления) со статусом `Architect initial draft` и проверяет его линтером; если линтер не прошёл, исходный проект тоже не меняется. Имя плана складывается из даты, времени и коротких хешей обеих версий: `docs/plans/YYMMDD_HHMM_contract_upgrade_<старая>_<новая>.md`. В `## Scope` команда пишет обе версии движка, извещения и списком путей изменённые файлы контракта и движка (из `scripts`, `bin` и `Makefile`). Что изменилось по существу, роли выясняют сами, по извещениям и diff.
-4. **Резервная копия и замена каталогов.** Только теперь исходный каталог переименовывается в резервную копию `.<имя>-before-<12 знаков нового коммита>`, а кандидат занимает его место. Если второе переименование не удалось, команда возвращает исходный каталог.
-5. **Выбор плана.** Команда делает план обновления текущим, печатает путь резервной копии и сообщение «Контракт обновлён; адаптация ещё открыта.», а следующим шагом называет `planveyor sibling architect`.
+1. **Checks before copying.** The command makes sure that everything is committed in the Planveyor checkout and in the project, that the project has its own `.git` directory (the command rejects a git worktree), and that the new version continues the earlier one. Then it compares the project with the contract of both versions: whether all files are in place and whether the local sections can be read. If the new version removes from the contract a file that the project changed, or some contract files disappear while others appear, the upgrade stops. At the same step, the command checks every contract notice between the versions, that is, a Planveyor JSON file about what has changed and what to do in the project (details are in the [Exchanging changes with Planveyor](change-packets.md) chapter).
+2. **Upgrade candidate.** The command copies the project into the directory `.<name>-upgrade-<first 12 characters of the new commit>` next to it and runs Copier in the copy. Then it compares the local sections with the original ones byte for byte, looks for traces of a conflict (`<<<<<<<` markers, `.rej` files, unresolved conflicts in the Git index), and checks the contract of the candidate: whether all files are in place and whether the new version is recorded. Any problem stops the upgrade, and the original project stays as it was.
+3. **Upgrade plan.** If everything is clean, the command creates in the candidate an adaptation plan for the upgrade (below, the upgrade plan) with the `Architect initial draft` status and checks it with the linter; if the plan fails the linter, the original project does not change either. The plan name is made of the date, the time, and the short hashes of both versions: `docs/plans/YYMMDD_HHMM_contract_upgrade_<old>_<new>.md`. In `## Scope`, the command writes both engine versions, the notices, and, as a list of paths, the changed contract and engine files (from `scripts`, `bin`, and `Makefile`). The roles find out for themselves what has changed in substance, from the notices and the diff.
+4. **Backup and directory swap.** Only now is the original directory renamed to the backup `.<name>-before-<first 12 characters of the new commit>`, and the candidate takes its place. If the second rename fails, the command restores the original directory.
+5. **Plan selection.** The command makes the upgrade plan current, prints the backup path and the message `Контракт обновлён; адаптация ещё открыта.` (the contract is updated; the adaptation is still open), and names `planveyor sibling architect` as the next step.
 
-![Как идёт обновление: проверки, кандидат, план обновления до замены каталогов, затем работа ролей и закрытие документов](assets/sibling-lifecycle-2.svg)
+![How the upgrade goes: checks, the candidate, the upgrade plan before the directory swap, then the work of the roles and docs closeout](assets/sibling-lifecycle-2.svg)
 
-План создаётся при любом успешном обновлении. После обычного обновления изменённые Copier файлы и новый план лежат в проекте незакоммиченными. Дальше план обновления проходит тот же цикл, что любая задача: `architect`, `run`, `close`, `close --commit` и закрытие документов.
+The plan is created on every successful upgrade. After a regular upgrade, the files changed by Copier and the new plan lie in the project uncommitted. Then the upgrade plan goes through the same cycle as any task: `architect`, `run`, `close`, `close --commit`, and the docs closeout.
 
-### Как это прошло в SQL-проекте
+### How it went in the SQL project
 
-План обновления появился 28 сентября в 09:45. Команда записала в него три изменённых файла контракта (`.copier-answers.yml`, `planveyor_contract_authority.v1.json` и плейбук ревью `review_staged_or_commit.md`), один файл тестов движка `scripts/test_consumer_contract.py` и одно извещение.
+The upgrade plan appeared on September 28 at 09:45. The command wrote into it three changed contract files (`.copier-answers.yml`, `planveyor_contract_authority.v1.json`, and the review playbook `review_staged_or_commit.md`), one engine test file, `scripts/test_consumer_contract.py`, and one contract notice.
 
-В тексте, который принадлежит Planveyor, обновление изменило одну строку. Copier вставил её в плейбук ревью прямо над локальными разделами, а сами разделы не тронул (коммит `6a353de`):
+In the text that belongs to Planveyor, the upgrade changed one line. Copier inserted it into the review playbook right above the local sections and did not touch the sections themselves (commit `6a353de`):
 
 ```diff
 +При обновлении sibling укажи в локальном плане адаптации оба source commit и проверь сохранность bytes локальных секций до и после Copier.
@@ -125,53 +127,53 @@ planveyor --project ~/my-stack sibling upgrade
  ## Локальные правила стека
 ```
 
-Два других файла контракта хранят версию Planveyor, а файл тестов движка, как записал Architect, относится к самому Planveyor. Planner составил черновик кода с тремя целевыми файлами: теми самыми файлами контракта. Coder и Reviewer сверили 16 локальных разделов в восьми файлах с резервной копией, и все совпали побайтно. Обе линии Reviewer замечаний не нашли. В 11:06 коммит `6a353de` записал семь файлов: три файла контракта, план, черновик кода, ревью и приложение к ревью.
+The other two contract files store the Planveyor version, and the engine test file, as Architect recorded, belongs to Planveyor itself. Planner wrote a code draft with three target files: those same contract files. Coder and Reviewer compared the 16 local sections in eight files with the backup, and all of them matched byte for byte. Neither Reviewer lane had findings. At 11:06, commit `6a353de` recorded seven files: the three contract files, the plan, the code draft, the review, and a review asset.
 
-### Если обновление остановилось
+### If the upgrade stopped
 
-До копирования команда останавливается и сообщает причину. Что делать:
+When the command stops before copying, it reports the reason. What to do:
 
-- в проекте или в копии Planveyor есть незакоммиченные изменения, команда запущена изнутри проекта, проект открыт как git worktree: исправьте и запустите снова;
-- в копии Planveyor та же версия, что в проекте, или версия, которая не продолжает его историю: выберите в копии нужную версию;
-- занят путь кандидата: прошлый запуск остановился с кандидатом; доведите его разбор до `--accept-candidate` или уберите каталог кандидата и начните заново;
-- новая версия убирает файл, который проект изменил, файлы контракта переименованы неоднозначно или занят путь резервной копии: такие случаи требуют отдельного разбора, обходного пути у команды нет;
-- битое извещение лежит в истории Planveyor, и в проекте его не исправить: обновление через этот диапазон версий не пройдёт (пункт [F27](../../release_backlog.md#f27) «Обязательств первого релиза»). Сообщите о нём запросом в Planveyor.
+- the project or the Planveyor checkout has uncommitted changes, the command was run from inside the project, or the project is opened as a git worktree: fix this and run the command again;
+- the Planveyor checkout has the same version as the project, or a version that does not continue its history: select the right version in the checkout;
+- the candidate path is occupied: an earlier run stopped with a candidate; finish resolving it up to `--accept-candidate`, or remove the candidate directory and start over;
+- the new version removes a file that the project changed, contract files are renamed ambiguously, or the backup path is occupied: such cases need a separate analysis, and the command has no workaround;
+- a broken contract notice lies in the Planveyor history and cannot be fixed in the project: the upgrade will not pass through this range of versions (item [F27](../../release_backlog.md#f27) of the First-release backlog, in Russian). Report it with an upstream request.
 
-С кандидатом обновление останавливается, если Copier завершился ошибкой, в кандидате остались следы конфликта, удалённый в новой версии файл контракта остался на месте, изменился или пропал текст локального раздела либо контракт кандидата не прошёл проверку. Исходный проект при этом остаётся как был, резервной копии ещё нет.
+The upgrade stops with a candidate if Copier exited with an error, traces of a conflict remain in the candidate, a contract file removed in the new version is still in place, the text of a local section changed or disappeared, or the contract of the candidate failed the check. The original project then stays as it was, and there is no backup yet.
 
-Сейчас `planveyor sibling upgrade` в этом случае завершается кодом 3 и показывает только предупреждение о замене каталогов: что не прошло и где кандидат, команда не печатает. Кандидат лежит рядом с проектом, в `.<имя>-upgrade-<12 знаков нового коммита>`. Точный путь назовёт повторный запуск той же команды: `candidate path already exists: …`. Причину ищите в самом кандидате: `git status` покажет неразрешённые конфликты и файлы `.rej`, поиск `<<<<<<<` найдёт маркеры конфликта, а сравнение восьми файлов кандидата с файлами проекта покажет изменённый локальный текст.
+Currently, `planveyor sibling upgrade` exits with code 3 in this case and shows only the warning about the directory swap: the command does not print what failed or where the candidate is. The candidate lies next to the project, in `.<name>-upgrade-<first 12 characters of the new commit>`. A repeated run of the same command names the exact path: `candidate path already exists: …`. Look for the cause in the candidate itself: `git status` shows unresolved conflicts and `.rej` files, a search for `<<<<<<<` finds the conflict markers, and a comparison of the eight files of the candidate with the files of the project shows the changed local text.
 
-Плана обновления в кандидате ещё нет. Откройте каталог кандидата в обычном чате ИИ-клиента и попросите разобрать конфликты и проверить diff. После ревью закоммитьте результат в Git кандидата и примите кандидата снаружи той же командой с флагом:
+The candidate has no upgrade plan yet. Open the candidate directory in a regular agent harness chat and ask the agent to resolve the conflicts and check the diff. After review, commit the result in the candidate's Git and accept the candidate from outside with the same command and a flag:
 
 ```sh
 planveyor --project ~/my-stack sibling upgrade --accept-candidate
 ```
 
-Между остановкой и `--accept-candidate` не обновляйте копию Planveyor: нужна та же версия, с которой создан кандидат. Команда проверяет, что история кандидата продолжает историю проекта и в нём всё закоммичено. Затем она повторяет проверки первого шага и, уже без Copier, проверки кандидата из второго, создаёт план обновления и меняет каталоги местами.
+Between the stop and `--accept-candidate`, do not update the Planveyor checkout: you need the same version that the candidate was created with. The command checks that the history of the candidate continues the history of the project and that everything in the candidate is committed. Then it repeats the checks of the first step and, now without Copier, the candidate checks of the second step, creates the upgrade plan, and swaps the directories.
 
-### Где остаётся риск
+### Where the risk remains
 
-Проверки обновления смысл изменений не оценивают. Работают ли команды вашего стека с новыми правилами, показывают план обновления, ревью и живые проверки ролей. С `--accept-candidate` команда не сверяет содержимое файлов контракта с новой версией шаблона, и правильность разбора конфликта подтверждает только ревью кандидата. Это тоже записано в пункте F27.
+The upgrade checks do not judge the meaning of the changes. The upgrade plan, the review, and the live checks of the roles show whether the commands of your stack work with the new rules. With `--accept-candidate`, the command does not compare the contents of the contract files with the new version of the template, and only the review of the candidate confirms that the conflict was resolved correctly. This is also recorded in item F27.
 
-Резервная копия содержит весь проект, включая `.env.local` и локальное состояние. Никуда её не выкладывайте и удалите сами, когда план обновления принят.
+The backup contains the whole project, including `.env.local` and the local state. Do not publish it anywhere, and delete it yourself once the upgrade plan is accepted.
 
-### Если копия Planveyor ушла вперёд
+### If the Planveyor checkout has moved ahead
 
-Движок работает из внешней копии Planveyor, и за её версией нужно следить. Если вы обновили копию, а проект ещё нет, `planveyor sibling ready` и `planveyor --project ~/my-stack planveyor_consumer_doctor` сообщат `runtime commit … differs from contract …`. Doctor сверяет контракт проекта с версией движка. Тогда проведите обновление или выберите копию Planveyor той версии, что записана в `_commit` файла `.copier-answers.yml`.
+The engine runs from the external Planveyor checkout, and you need to keep track of its version. If you have updated the checkout but not yet the project, `planveyor --project ~/my-stack planveyor_consumer_doctor` exits with code 3 and a `blocked` JSON diagnostic with `runtime commit … differs from contract …` in `problems`. `planveyor sibling ready` also exits with code 3: it forwards the doctor diagnostic to `stderr` with the prefix `planveyor sibling:` and does not name a next command. Doctor compares the project contract with the engine version. In that case, run the upgrade or select a Planveyor checkout of the version recorded in `_commit` of the `.copier-answers.yml` file.
 
-## Что делает Owner
+## What Owner does
 
-1. Создаёт проект и проводит план адаптации под стек: `planveyor sibling init ~/my-stack`, скилл `$planveyor-plan-draft`, затем `architect`, `answer`, `run`, `close`, `close --commit` ([адаптация под ваш стек](../stack-sibling.ru.md#адаптация-под-ваш-стек)).
-2. Для новой версии обновляет копию Planveyor, доводит до конца текущий план, выходит из проекта и запускает обновление ([получить новую версию](../stack-sibling.ru.md#получить-новую-версию-planveyor)).
-3. Открывает проект заново и проводит план обновления тем же циклом.
-4. Если обновление остановилось с кандидатом, разбирает его в каталоге кандидата, коммитит результат и запускает `--accept-candidate`.
-5. Удаляет резервную копию после принятия плана обновления.
+1. Creates the project and runs the stack adaptation plan: `planveyor sibling init ~/my-stack`, the `$planveyor-plan-draft` skill, then `plan` to check the selected plan (select the created plan by its path if needed), followed, in TUI mode, by the answers to the open questions, the approval step, and the Manager window `planveyor sibling tui`, or, in manual console mode, by `architect`, `answer`, `run`, `close`, `close --commit` ([Adaptation to your stack](../stack-sibling.md#adaptation-to-your-stack)).
+2. For a new version, updates the Planveyor checkout, finishes the current plan, leaves the project, and runs the upgrade ([Get a new Planveyor version](../stack-sibling.md#get-a-new-planveyor-version)).
+3. Opens the project again and runs the upgrade plan with the same cycle.
+4. If the upgrade stopped with a candidate, resolves it in the candidate directory, commits the result, and runs `--accept-candidate`.
+5. Deletes the backup after the upgrade plan is accepted.
 
-## Частые ошибки
+## Common mistakes
 
-- Считать сообщение «Контракт обновлён» законченным обновлением. Обновление закончено, когда план обновления принят и документы закрыты.
-- Записывать правила стека вне двух локальных разделов. При обновлении побайтно защищены только они.
+- Treating the message `Контракт обновлён` (contract updated) as a finished upgrade. The upgrade is finished when the upgrade plan is accepted and the documents are closed.
+- Writing stack rules outside the two local sections. Only these sections are protected byte for byte during an upgrade.
 
-Функции и тесты, о которых шла речь, — в [справочнике по коду](code-map.md#sibling-создание-и-обновление).
+The functions and tests discussed here are in the [code map](code-map.md#sibling-creation-and-upgrade).
 
-Дальше: [«Обмен изменениями с Planveyor»](change-packets.md).
+Next: [Exchanging changes with Planveyor](change-packets.md).

@@ -1,33 +1,35 @@
-# Сквозной пример: какие товары пора пополнить
+# Running example: which products to reorder
 
-Задачу «какие товары пора пополнить» роли решили 28 сентября 2026 года в [sibling](glossary.md) на SQL Server. Другие главы берут из неё отдельные примеры, а здесь она разобрана целиком: правило и данные, процедура и тесты, записи в плане, черновике кода и ревью, живой прогон на dev-базе. Кто что делал и сколько это заняло, рассказано в главе [«Роли и файлы задачи»](roles-artifacts.md).
+**English** · [Русский](sql-example.ru.md)
 
-## Задача и правило
+The roles solved the task “which products to reorder” on September 28, 2026, in a [sibling](glossary.md) on SQL Server. Other chapters take separate examples from it; here it is covered in full: the rule and the data; the procedure and the tests; the records in the plan, the code draft, and the review; the live run on the dev database. The [Roles and task files](roles-artifacts.md) chapter tells who did what and how long it took.
 
-Нужен список активных товаров, которых на складе не хватает даже с учётом уже заказанной поставки. Процедура `dbo.GetReorderCandidates` читает таблицу `dbo.Products` и возвращает три столбца: `ProductID`, `ProductName` и дефицит `Shortage`. Сама она заказ не размещает и остатки не меняет.
+## The task and the rule
 
-| Столбец | Тип в схеме | Что в нём |
+The task needs a list of active products that are short in stock even with the delivery already on order. The `dbo.GetReorderCandidates` procedure reads the `dbo.Products` table and returns three columns: `ProductID`, `ProductName`, and the shortage `Shortage`. The procedure itself does not place orders or change stock levels.
+
+| Column | Type in the schema | What it holds |
 | --- | --- | --- |
-| `ProductID` | `INT NOT NULL` | Идентификатор товара |
-| `ProductName` | `NVARCHAR(40) NOT NULL` | Название |
-| `ReorderLevel` | `SMALLINT NULL` | Порог пополнения |
-| `UnitsInStock` | `SMALLINT NULL` | Остаток на складе |
-| `UnitsOnOrder` | `SMALLINT NULL` | Заказано, поставка ожидается |
-| `Discontinued` | `BIT NOT NULL` | `0` — товар активен, `1` — снят с продажи |
+| `ProductID` | `INT NOT NULL` | Product identifier |
+| `ProductName` | `NVARCHAR(40) NOT NULL` | Name |
+| `ReorderLevel` | `SMALLINT NULL` | Reorder level |
+| `UnitsInStock` | `SMALLINT NULL` | In stock |
+| `UnitsOnOrder` | `SMALLINT NULL` | On order, delivery expected |
+| `Discontinued` | `BIT NOT NULL` | `0`: the product is active; `1`: the product is discontinued |
 
-Правило из задания Owner:
+The rule from the Owner assignment:
 
-- дефицит `Shortage = ReorderLevel - (UnitsInStock + UnitsOnOrder)`;
-- в результат попадают товары с `Discontinued = 0` и `Shortage > 0`;
-- `NULL` в любом из трёх количеств считается нулём;
-- каждое количество приводится к `INT` до сложения и вычитания;
-- строки идут по возрастанию `ProductID`.
+- the shortage is `Shortage = ReorderLevel - (UnitsInStock + UnitsOnOrder)`;
+- the result includes products with `Discontinued = 0` and `Shortage > 0`;
+- `NULL` in any of the three quantities counts as zero;
+- each quantity is cast to `INT` before addition and subtraction;
+- the rows go in ascending order of `ProductID`.
 
-Количества хранятся как `SMALLINT`, и сумма двух таких чисел может выйти за предел типа. Поэтому их приводят к `INT`.
+The quantities are stored as `SMALLINT`, and the sum of two such numbers can go beyond the range of the type. That is why they are cast to `INT`.
 
-Задание ставило и границы: обвязку проекта, то есть его скрипты сборки и прогона тестов, расширить минимально и без нового фреймворка, схему базы заново не выгружать, секреты держать локально. Живой прогон на dev-базе делал оператор (см. [«Роли и файлы задачи»](roles-artifacts.md)).
+The assignment also set limits: extend the project harness, that is, its scripts for building and running tests, minimally and without a new framework; do not extract the database schema again; keep secrets local. An operator did the live run on the dev database (see [Roles and task files](roles-artifacts.md)).
 
-Architect перенёс правило в план. Первые два пункта раздела решений:
+Architect carried the rule over into the plan. The first two items of the decisions section, as written in the project, in Russian:
 
 ```markdown
 ## Decisions (final)
@@ -40,9 +42,9 @@ Architect перенёс правило в план. Первые два пун�
 […]
 ```
 
-Первый пункт повторяет правило и уточняет: строка с `NULL` в `Discontinued` в результат не попадает. В настоящей таблице этот столбец `NOT NULL`, так что такая строка бывает только в тестах. Второй пункт говорит, как проверять порядок строк: отдельным вызовом процедуры, о нём ниже.
+The first item repeats the rule and adds a detail: a row with `NULL` in `Discontinued` does not get into the result. In the real table, this column is `NOT NULL`, so such a row occurs only in tests. The second item says how to check the row order: with a separate call of the procedure, described below.
 
-Coder написал процедуру одним запросом. Вот он из [GetReorderCandidates.sql](examples/sql/sql/Northwind/GetReorderCandidates.sql), без обёртки `CREATE PROCEDURE`:
+Coder wrote the procedure as one query. Here it is from [GetReorderCandidates.sql](examples/sql/sql/Northwind/GetReorderCandidates.sql), without the `CREATE PROCEDURE` wrapper:
 
 ```sql
 SELECT
@@ -65,22 +67,22 @@ WHERE
 ORDER BY [Products].[ProductID];
 ```
 
-Каждое количество сначала проходит `COALESCE(..., 0)`, потом `CAST(... AS INT)`, и только потом начинается арифметика. Дефицит считается один раз в `CROSS APPLY`, а `WHERE` фильтрует уже готовый столбец. Строка с `NULL` в `Discontinued` не проходит условие `= 0` и отсеивается.
+Each quantity first goes through `COALESCE(..., 0)`, then through `CAST(... AS INT)`, and only then does the arithmetic start. The shortage is computed once in `CROSS APPLY`, and `WHERE` filters the ready column. A row with `NULL` in `Discontinued` does not pass the `= 0` condition and is filtered out.
 
-![Путь строки через процедуру: `NULL` в количествах становится нулём, количества приводятся к `INT` и дают дефицит, остаются активные товары с дефицитом больше нуля, строки сортируются по `ProductID`](assets/sql-example-1.svg)
+![The path of a row through the procedure: `NULL` in the quantities becomes zero, the quantities are cast to `INT` and give the shortage, active products with a shortage above zero remain, and the rows are sorted by `ProductID`](assets/sql-example-1.svg)
 
-## Данные и тесты
+## Data and tests
 
-Тесты написаны на tSQLt, библиотеке модульных тестов для SQL Server. В tSQLt каждый тест — хранимая процедура, а тесты одного класса лежат в отдельной схеме базы. Классом схему делает метка: расширенное свойство `tSQLt.TestClass`. Каждый из семи тестов процедуры начинается с вызова `tSQLt.FakeTable`: на время теста `dbo.Products` подменяется пустой копией без ограничений. Тест работает только с теми строками, которые сам туда положил, а настоящие данные не читает.
+The tests are written in tSQLt, a unit testing library for SQL Server. In tSQLt, each test is a stored procedure, and the tests of one class live in a separate database schema. A marker makes a schema a class: the `tSQLt.TestClass` extended property. Each of the seven tests of the procedure starts with a call of `tSQLt.FakeTable`: for the duration of the test, `dbo.Products` is replaced with an empty copy without constraints. The test works only with the rows it put there itself and does not read the real data.
 
-Первый тест, `test_positive_shortage_and_units_on_order`, кладёт две строки. `One` и `Two` — имена синтетических товаров:
+The first test, `test_positive_shortage_and_units_on_order`, puts in two rows. `One` and `Two` are the names of synthetic products:
 
 | `ProductID` | `ProductName` | `ReorderLevel` | `UnitsInStock` | `UnitsOnOrder` | `Discontinued` |
 | --- | --- | --- | --- | --- | --- |
 | 1 | `One` | 12 | 3 | 4 | 0 |
 | 2 | `Two` | 9 | 1 | 2 | 0 |
 
-У `One` на складе 3 и в заказе 4: обеспечено 7 из 12, дефицит 12 − (3 + 4) = 5. У `Two` дефицит 9 − (1 + 2) = 6. Конец теста:
+`One` has 3 in stock and 4 on order: 7 of 12 are covered, and the shortage is 12 − (3 + 4) = 5. For `Two`, the shortage is 9 − (1 + 2) = 6. The end of the test:
 
 ```sql
 INSERT INTO #Actual EXEC [dbo].[GetReorderCandidates];
@@ -89,31 +91,31 @@ EXEC [tSQLt].[AssertEqualsTable]
     @Expected = N'#Expected', @Actual = N'#Actual';
 ```
 
-Тест вызывает процедуру и складывает её строки во временную таблицу `#Actual`, а `tSQLt.AssertEqualsTable` сравнивает их с ожидаемыми строками из `#Expected`.
+The test calls the procedure and puts its rows into the temporary table `#Actual`, and `tSQLt.AssertEqualsTable` compares them with the expected rows from `#Expected`.
 
-Все семь тестов класса `GetReorderCandidatesTests` лежат в [GetReorderCandidatesTests.sql](examples/sql/sql/tests/GetReorderCandidatesTests.sql). Вход записан через косую черту: `ReorderLevel / UnitsInStock / UnitsOnOrder / Discontinued`.
+All seven tests of the `GetReorderCandidatesTests` class are in [GetReorderCandidatesTests.sql](examples/sql/sql/tests/GetReorderCandidatesTests.sql). The input is written with slashes: `ReorderLevel / UnitsInStock / UnitsOnOrder / Discontinued`.
 
-| Тест | Вход | Ожидаемый результат |
+| Test | Input | Expected result |
 | --- | --- | --- |
 | `test_positive_shortage_and_units_on_order` | `One`: `12 / 3 / 4 / 0`; `Two`: `9 / 1 / 2 / 0` | `(1, One, 5)`, `(2, Two, 6)` |
-| `test_equality_and_excess_excluded` | `Equal`: `10 / 5 / 5 / 0`; `Excess`: `10 / 8 / 5 / 0` | Пусто: дефицит 0 и −3 |
-| `test_discontinued_and_null_excluded` | `Active`, `Discontinued`, `Unknown`: `10 / 2 / 1`, в `Discontinued` соответственно `0`, `1` и `NULL` | Только `(1, Active, 7)` |
+| `test_equality_and_excess_excluded` | `Equal`: `10 / 5 / 5 / 0`; `Excess`: `10 / 8 / 5 / 0` | Empty: the shortage is 0 and −3 |
+| `test_discontinued_and_null_excluded` | `Active`, `Discontinued`, `Unknown`: `10 / 2 / 1`, with `0`, `1`, and `NULL` in `Discontinued` respectively | Only `(1, Active, 7)` |
 | `test_null_quantities_zero` | `NullReorder`: `NULL / 0 / 0 / 0`; `NullStock`: `7 / NULL / 2 / 0`; `NullOrder`: `7 / 3 / NULL / 0`; `AllNull`: `NULL / NULL / NULL / 0` | `(2, NullStock, 5)`, `(3, NullOrder, 4)` |
-| `test_empty_products` | Ни одной строки | Пусто |
-| `test_productid_order_rows` | `Order30`, `Order10`, `Order20` с ID 30, 10, 20: `5 / 0 / 0 / 0` | `(10, Order10, 5)`, `(20, Order20, 5)`, `(30, Order30, 5)`; проверяется состав |
-| `test_smallint_boundary_int_arithmetic` | `UnderflowWithoutInt`: `32767 / -32768 / -32768 / 0`; `OverflowWithoutInt`: `32767 / 32767 / 32767 / 0` | Только `(1, UnderflowWithoutInt, 98303)`; у второй строки дефицит −32767 |
+| `test_empty_products` | No rows | Empty |
+| `test_productid_order_rows` | `Order30`, `Order10`, `Order20` with IDs 30, 10, 20: `5 / 0 / 0 / 0` | `(10, Order10, 5)`, `(20, Order20, 5)`, `(30, Order30, 5)`; the set of rows is checked |
+| `test_smallint_boundary_int_arithmetic` | `UnderflowWithoutInt`: `32767 / -32768 / -32768 / 0`; `OverflowWithoutInt`: `32767 / 32767 / 32767 / 0` | Only `(1, UnderflowWithoutInt, 98303)`; the second row has a shortage of −32767 |
 
-Отрицательные остатки в последнем тесте искусственные: в настоящей таблице у количеств есть ограничение «не меньше нуля», а подменённая таблица его не наследует. Тест нужен для арифметики: без приведения к `INT` сумма склада и заказа, −65 536 в первой строке и 65 534 во второй, не поместилась бы в `SMALLINT`.
+The negative stock values in the last test are artificial: in the real table, the quantities have a “not less than zero” constraint, and the fake table does not inherit it. The test is there for the arithmetic: without the cast to `INT`, the sum of stock and order, −65,536 in the first row and 65,534 in the second, would not fit into `SMALLINT`.
 
-Сравнение таблиц порядка строк не видит: `tSQLt.AssertEqualsTable` сверяет только состав. Поэтому `test_productid_order_rows` проверяет, какие строки вернулись, а за порядок отвечает прямой вызов процедуры в [run-tests.sql](examples/sql/sql/tests/run-tests.sql). Этот скрипт запускает два класса тестов и после каждого печатает их результаты. Затем он открывает транзакцию, подменяет таблицу, кладёт товары с ID 30, 10, 20, печатает маркер `PV_ORDER_BEGIN`, вызывает процедуру, печатает `PV_ORDER_END` и откатывает транзакцию. Обвязка берёт строки между маркерами и требует ровно такие: `(10, Order10, 5)`, `(20, Order20, 5)`, `(30, Order30, 5)`. Имена `Order10`, `Order20`, `Order30` по алфавиту идут в том же порядке, что и ID, поэтому сортировку по имени эта проверка от сортировки по `ProductID` не отличит.
+A table comparison does not see the order of rows: `tSQLt.AssertEqualsTable` compares only the set of rows. So `test_productid_order_rows` checks which rows came back, and a direct call of the procedure in [run-tests.sql](examples/sql/sql/tests/run-tests.sql) is responsible for the order. This script runs the two test classes and prints their results after each one. Then it opens a transaction, replaces the table with a fake, puts in products with IDs 30, 10, 20, prints the `PV_ORDER_BEGIN` marker, calls the procedure, prints `PV_ORDER_END`, and rolls back the transaction. The harness takes the rows between the markers and requires exactly these: `(10, Order10, 5)`, `(20, Order20, 5)`, `(30, Order30, 5)`. The names `Order10`, `Order20`, `Order30` go in the same alphabetical order as the IDs, so this check cannot tell sorting by name from sorting by `ProductID`.
 
-В отчёте живого прогона восемь тестов. Семь из них — класс `GetReorderCandidatesTests`. Восьмой, `SqlHarnessSmoke.test_schema_present`, остался от первой задачи проекта, адаптации под SQL Server, и проверяет, что таблица `dbo.Products` существует. Проверка порядка в эти восемь не входит, это отдельное условие того же прогона. Зелёный отчёт обвязка пишет, только когда прошли и тесты, и проверка порядка.
+The report of the live run has eight tests. Seven of them are the `GetReorderCandidatesTests` class. The eighth, `SqlHarnessSmoke.test_schema_present`, remains from the first task of the project, the adaptation to SQL Server, and checks that the `dbo.Products` table exists. The order check is not one of these eight; it is a separate condition of the same run. The harness writes a green report only when both the tests and the order check have passed.
 
-## Что записано в плане и черновике кода
+## What the plan and the code draft say
 
-Правило и проверки Architect и Planner записали раньше кода. Отрывки показаны в итоговом виде, после приёмки: отметки `[x]` и запись о красном прогоне появились позже. Длинные строки в отрывках перенесены, пропуски отмечены `[…]`, а служебный номер шага прогона заменён словами «прошлой задачи».
+Architect and Planner wrote down the rule and the checks before the code. The excerpts are quoted as written in the project, in Russian, and in their final form, after acceptance: the `[x]` marks and the record of the red run appeared later. Long lines in the excerpts are wrapped, omissions are marked with `[…]`, and an internal run step number is replaced with the words “прошлой задачи” (of the previous task).
 
-В плане шесть критериев приёмки. Ниже первые пять; шестой касается коммита точного набора файлов плана.
+The plan has six acceptance criteria. Below are the first five; the sixth is about the commit of the plan's exact bundle.
 
 ```markdown
 ## Acceptance criteria / DoD
@@ -133,9 +135,9 @@ EXEC [tSQLt].[AssertEqualsTable]
 […]
 ```
 
-Первые два критерия повторяют правило, остальные три касаются прогона: неверный порядок строк должен давать красный результат, публиковать можно только в выделенную dev-базу, запускать только два своих класса тестов, а у каждой проверки записывается код выхода из настоящего запуска. Последний критерий заодно отмечает, что первый живой прогон был красным.
+The first two criteria repeat the rule, and the other three are about the run: a wrong row order must give a red result, publishing is allowed only to the dedicated dev database, only the project's own two test classes may be run, and each check records the exit code of a real run. The last criterion also notes that the first live run was red.
 
-Тесты план называет поимённо:
+The plan names the tests one by one:
 
 ```markdown
 ### Что написать / поправить
@@ -154,16 +156,16 @@ EXEC [tSQLt].[AssertEqualsTable]
   Никаких подключений к серверу в unit tests.
 ```
 
-Те же восемь имён Coder потом записал в обвязку, и прогон с другим набором тестов она не примет.
+Coder later wrote the same eight names into the harness, and the harness will not accept a run with a different set of tests.
 
-Planner составил черновик кода. Целевых файлов в нём 16. Шесть из них Coder меняет, включая README и два новых SQL-файла; остальные десять — прежние файлы, от которых зависит проверка. Все, кроме README, — 15 файлов кода и настроек: их содержимое потом сверяют обвязка и Reviewer. Шагов четыре:
+Planner wrote the code draft. It has 16 target files. Coder changes six of them, including the README and the two new SQL files; the other ten are existing files that the check depends on. All of them except the README are the 15 code and configuration files: the harness and Reviewer later compare their contents. There are four steps:
 
-1. Coder заменяет заглушки двух новых SQL-файлов, меняет только шесть файлов и прогоняет тесты обвязки без базы.
-2. Coder проверяет офлайн-сборку, линтер и отсутствие секретов в файлах.
-3. Оператор, проверив команды обвязки, один раз запускает `make db-proof` на выделенной dev-базе.
-4. Reviewer сверяет 16 целевых файлов, код выхода, порядок строк и отчёт JUnit.
+1. Coder replaces the stubs of the two new SQL files, changes only the six files, and runs the harness tests without a database.
+2. Coder checks the offline build, the linter, and that the files contain no secrets.
+3. The operator checks the harness commands and runs `make db-proof` once on the dedicated dev database.
+4. Reviewer verifies the 16 target files, the exit code, the row order, and the JUnit report.
 
-Отдельный раздел черновика перечисляет ловушки, то есть случаи, когда проверка зеленеет, ничего не доказав:
+A separate section of the draft lists traps, that is, cases where a check turns green without proving anything:
 
 ```markdown
 ## Critical invariants / traps / bypass paths
@@ -176,82 +178,82 @@ Planner составил черновик кода. Целевых файлов 
   inventory, current asset и actual rc.
 ```
 
-Для каждой ловушки записано, чем она закрыта: прямым выводом процедуры между маркерами, проверкой классов в базе перед запуском, сверкой коммита и файлов. Проверка классов и остановила первый живой прогон.
+For each trap, the draft records what closes it: the direct output of the procedure between the markers, the check of the classes in the database before the run, and the comparison of the commit and the files. The class check is what stopped the first live run.
 
-## Обвязка и живой прогон
+## The harness and the live run
 
-Тесты tSQLt выполняются в самой базе. Запускает их обвязка проекта — скрипт [sql.py](examples/sql/scripts/sql.py), который вызывают цели `make`. Команда `make db-proof` по порядку:
+The tSQLt tests run in the database itself. The project harness runs them: the [sql.py](examples/sql/scripts/sql.py) script, which the `make` targets call. The `make db-proof` command, in order:
 
-1. Читает параметры подключения из `.env.local` и сверяет исходники тестов и скрипт запуска: в тестах ровно восемь ожидаемых имён, а скрипт вызывает только два класса и проверку порядка.
-2. Запоминает содержимое 15 файлов кода и настроек, заново собирает оба проекта базы, схему и тесты, прогоняет линтер SQLFluff и запоминает коммит.
-3. Спрашивает dev-базу о двух классах тестов. Отсутствующий класс появится при публикации, класс с меткой проходит дальше, а класс без метки останавливает прогон до публикации. Остановит его и посторонняя процедура в схеме класса: там должны быть ровно ожидаемые тесты.
-4. Публикует в dev-базу собранный пакет схемы с тестами (DACPAC) с двумя настройками: не удалять объекты и не удалять расширенные свойства, которых нет в исходниках. Вторую добавили после первого живого прогона, о нём ниже. Новым классам ставит метку и снова проверяет оба класса.
-5. Запускает `run-tests.sql` и принимает результат, только если все восемь тестов успешны, а строки пришли в порядке 10, 20, 30.
-6. В конце пишет зелёный отчёт JUnit, перечитывает его и сверяет коммит, файлы и набор тестов с запомненными на шаге 2. Если что-то изменилось, отчёт становится красным. При любой ошибке команда завершается ненулевым кодом.
+1. Reads the connection settings from `.env.local` and checks the test sources and the run script: the tests have exactly the eight expected names, and the script calls only the two classes and the order check.
+2. Remembers the contents of the 15 code and configuration files, rebuilds both database projects, the schema and the tests, runs the SQLFluff linter, and remembers the commit.
+3. Queries the dev database about the two test classes. A missing class appears with the publication, a class with the marker passes on, and a class without the marker stops the run before the publication. An extraneous procedure in the schema of a class also stops it: the schema must hold exactly the expected tests.
+4. Publishes the built schema package with the tests (DACPAC) to the dev database with two settings: do not drop objects, and do not drop extended properties that are not in the sources. The second setting was added after the first live run; more on it below. Puts the marker on the new classes and checks both classes again.
+5. Runs `run-tests.sql` and accepts the result only if all eight tests succeed and the rows come in the order 10, 20, 30.
+6. At the end, writes a green JUnit report, reads it back, and compares the commit, the files, and the set of tests with those remembered in step 2. If a comparison detects a mismatch, it replaces the report with a red one. A readback error can leave the earlier green report in place; the command still exits with a nonzero code on any error. Check the exit code and the current files together with the report.
 
-До живого прогона Coder прогнал проверки, которым база не нужна, и все прошли: 40 из 40 тестов обвязки в `test_sql.py`, офлайн-сборка, линтер и проверка секретов. Вместо ответов SQL Server тесты обвязки подставляют готовый текст: например, что оба класса на месте и помечены, а строки пришли в неверном порядке 10, 30, 30. Так тесты убеждаются, что обвязка верно разбирает ответы и отказывает, когда должна.
+Before the live run, Coder ran the checks that need no database, and all of them passed: 40 of 40 harness tests in `test_sql.py`, the offline build, the linter, and the secrets check. Instead of SQL Server answers, the harness tests substitute prepared text: for example, that both classes are in place and marked, and that the rows came in the wrong order 10, 30, 30. This way the tests make sure that the harness parses the answers correctly and refuses when it should.
 
-Первый живой `make db-proof` оператор запустил после передачи от Coder, и через 5 секунд прогон остановился. Сборка и линтер прошли, а на проверке классов обвязка отказала:
+The operator started the first live `make db-proof` after the handoff from Coder, and the run stopped after 5 seconds. The build and the linter passed, but the harness refused at the class check:
 
 ```text
 db-proof: dev test class state is ambiguous
 make: *** [db-proof] Error 1
 ```
 
-Скрипт обвязки завершился с кодом 1, отсюда `Error 1`, а сам `make` вернул 2. В отчёте JUnit не оказалось ни одного теста и была одна ошибка. Публикации не было, ни один из восьми тестов не запускался. Оператор осмотрел базу, ничего в ней не меняя. Класс `SqlHarnessSmoke` был на месте и оказался своим: в нём ровно один тест `test_schema_present`, и его текст с точностью до пробелов совпадает с исходником. Пропала только метка.
+The harness script exited with code 1, hence `Error 1`, and `make` itself returned 2. The JUnit report had no tests and one error. There was no publication, and none of the eight tests ran. The operator inspected the database without changing anything in it. The `SqlHarnessSmoke` class was in place and turned out to be the project's own: it had exactly one test, `test_schema_present`, and its text matched the source except for whitespace. Only the marker was missing.
 
-Офлайн-тесты поймать это не могли. Отказ на классе без метки они проверяли, и в базе обвязка отказала ровно так же. Но есть ли метка у класса в настоящей базе, тест без базы не знает: состояние класса в нём задаёт сам тест. Метку обвязка ставит после публикации, в исходниках её нет. Вероятно, её удалила одна из прежних публикаций: у DacFx, инструмента публикации схемы, настройка `DropExtendedPropertiesNotInSource` по умолчанию включена.
+The offline tests could not catch this. They did check the refusal on a class without the marker, and in the database the harness refused in exactly the same way. But a test without a database does not know whether the class in the real database has the marker: in such a test, the test itself sets the state of the class. The harness puts the marker on after publication; the sources do not have it. Probably one of the earlier publications removed it: in DacFx, the schema publication tool, the `DropExtendedPropertiesNotInSource` setting is on by default.
 
-Coder добавил в публикацию `/p:DropExtendedPropertiesNotInSource=false`, и теперь тесты обвязки требуют, чтобы этот флаг стоял ровно один раз и со значением `false`. Оператор вернул метку только классу `SqlHarnessSmoke` и запустил прогон снова: по плану красный результат исправляют обычным порядком и после этого запускают заново. Второй прогон прошёл за 13 секунд. Оператор записал его в квитанцию `operator-validation.md`: команда, время, код выхода, контрольные суммы файлов и вывод. Вывод заканчивается строкой:
+Coder added `/p:DropExtendedPropertiesNotInSource=false` to the publication, and now the harness tests require this flag to appear exactly once and with the value `false`. The operator restored the marker only on the `SqlHarnessSmoke` class and started the run again: under the plan, a red result is fixed in the usual way, and then the run is repeated. The second run passed in 13 seconds. The operator recorded it in the receipt `operator-validation.md`: the command, the time, the exit code, the file checksums, and the output. The output ends with the line:
 
 ```text
 db-proof: source_commit=60332b46eba26a9c09cf199184c45afe10e61f1b; current classes/results/order verified; actual_rc=0
 ```
 
-Код выхода 0, в отчёте JUnit 8 тестов из 8 без ошибок, строки пришли в порядке 10, 20, 30. Проверки классов до и после публикации прошли, файлы за время прогона не менялись. `60332b4` в выводе — коммит, на котором проект стоял до задачи.
+The exit code was 0, the JUnit report had 8 tests of 8 without errors, and the rows came in the order 10, 20, 30. The class checks before and after publication passed, and the files did not change during the run. `60332b4` in the output is the commit the project was at before the task.
 
-## Что записал Reviewer
+## What Reviewer recorded
 
-Reviewer проверил результат в две линии и замечаний не нашёл. SQL он сам не запускал: сверил контрольные суммы 15 файлов кода и настроек с квитанцией оператора, и все совпали. Запись линии рисков разобрана в главе [«Ревью и приёмка»](review-acceptance.md#как-это-было-ревью-getreordercandidates).
+Reviewer checked the result in two lanes and had no findings. Reviewer did not run SQL itself but compared the checksums of the 15 code and configuration files with the operator receipt, and all of them matched. The risk lane record is examined in the [Review and acceptance](review-acceptance.md#how-it-went-the-getreordercandidates-review) chapter.
 
-## Снимок кода в `examples/sql/`
+## Code snapshot in `examples/sql/`
 
-Код задачи приложен к разделу. Снимок взят из коммита `f4f707b`, последнего в истории того же sibling. Пять из шести файлов снимка — копии файлов проекта: они побайтно совпадают с коммитом задачи `70526ee`, а их контрольные суммы — с записанными в квитанции зелёного прогона.
+The code of the task is attached to the learning section. The snapshot is taken from commit `f4f707b`, the last one in the history of the same sibling. Five of the six files of the snapshot are copies of project files: they match the task commit `70526ee` byte for byte, and their checksums match the ones recorded in the receipt of the green run.
 
-- [GetReorderCandidates.sql](examples/sql/sql/Northwind/GetReorderCandidates.sql) — процедура.
-- [GetReorderCandidatesTests.sql](examples/sql/sql/tests/GetReorderCandidatesTests.sql) — семь тестов.
-- [SqlHarnessSmoke.sql](examples/sql/sql/tests/SqlHarnessSmoke.sql) — восьмой тест: таблица `dbo.Products` существует.
-- [run-tests.sql](examples/sql/sql/tests/run-tests.sql) — запуск двух классов и проверка порядка.
-- [sql.py](examples/sql/scripts/sql.py) — обвязка: цели `make` от `setup` до `db-proof`.
-- [test_sql_excerpt.py](examples/sql/test_sql_excerpt.py) — два из 40 тестов обвязки: разбор результатов и порядка строк, красный отчёт при неверном порядке. Это отрывок, сам по себе он не запускается.
+- [GetReorderCandidates.sql](examples/sql/sql/Northwind/GetReorderCandidates.sql): the procedure.
+- [GetReorderCandidatesTests.sql](examples/sql/sql/tests/GetReorderCandidatesTests.sql): seven tests.
+- [SqlHarnessSmoke.sql](examples/sql/sql/tests/SqlHarnessSmoke.sql): the eighth test, which checks that the `dbo.Products` table exists.
+- [run-tests.sql](examples/sql/sql/tests/run-tests.sql): runs the two classes and checks the order.
+- [sql.py](examples/sql/scripts/sql.py): the harness, with the `make` targets from `setup` to `db-proof`.
+- [test_sql_excerpt.py](examples/sql/test_sql_excerpt.py): two of the 40 harness tests, on parsing the results and the row order and on a red report for a wrong order. This is an excerpt; it does not run on its own.
 
-Планов, квитанций, параметров подключения и локальных настроек в снимке нет. Откуда он взят, записано в [README снимка](examples/sql/README.md).
+The snapshot contains no plans, receipts, connection settings, or local configuration. Its origin is recorded in the [snapshot README](examples/sql/README.md).
 
-## Что делает Owner
+## What Owner does
 
-Сейчас такую задачу Owner ведёт командами `planveyor sibling`. Кто запускает живые команды проекта, Owner согласует при адаптации sibling в разделе «Кто запускает живые цели» [анкеты стека](../../_template_stack_brief.md), файла с решениями о стеке. Вариантов два: роли запускают такие команды сами из песочницы с доступом к сети, или их запускает только человек. Во втором случае:
+Today Owner runs such a task with the `planveyor sibling` commands. During the sibling adaptation, Owner agrees on who runs the live commands of the project, in the “Кто запускает живые цели” (who runs the live targets) section of the [stack brief](../../_template_stack_brief.md) (in Russian), the file with the decisions about the stack. There are two variants: the roles run such commands themselves from a sandbox with network access, or only a person runs them. In the second case:
 
-1. Запустите `planveyor sibling run`: команда ведёт задачу, пока Coder не остановится на `In progress` с точной командой; в этом примере это была бы `make db-proof`.
-2. Запустите эту команду у себя. Параметры подключения обвязка читает сама из `.env.local` с правами 0600. Этот файл вы заполняете в локальном редакторе; в чат ИИ-клиента, план и отчёты секреты не попадают.
-3. Верните роли код выхода, путь к отчёту и текст ошибки без секретов. Как это сделать, сказано в разделе [«Провести план»](../stack-sibling.ru.md#провести-план) руководства по sibling.
-4. При красном результате работа возвращается к Coder. После исправления нужен новый прогон: прежний результат к изменённым файлам не относится.
+1. Run the plan. By the role rules, Coder then stops at `In progress` with the exact command, in this example `make db-proof`. In TUI mode, such a stop is meant to reach you in the Manager window; in manual console mode, `planveyor sibling run` drives the task up to it.
+2. Run this command yourself. The harness reads the connection settings itself from `.env.local` with mode 0600. You fill in this file in a local editor; secrets do not go into the agent harness chat, the plan, or the reports.
+3. Return to the role the exit code, the path to the report, and the error text without secrets: in TUI mode, as an answer in the Manager window; in manual console mode, through `planveyor sibling answer`. For details, see the [Run the plan](../stack-sibling.md#run-the-plan) section of the stack sibling guide.
+4. On a red result, the work returns to Coder. After the fix, a new run is needed: the earlier result does not apply to the changed files.
 
-Dev-базу готовит администратор. Анкета требует, чтобы до первой записи обвязка проверяла положительный признак назначенной dev-базы. Обвязка этого примера проверяет меньше: она только не пускает публикацию в системные базы и в саму `Northwind`.
+An administrator prepares the dev database. The stack brief requires the harness to check a positive marker of the designated dev database before the first write. The harness of this example checks less: it only blocks publication to the system databases and to `Northwind` itself.
 
-## Частые ошибки
+## Common mistakes
 
-- Считать сравнение таблиц проверкой порядка. `tSQLt.AssertEqualsTable` видит только состав строк.
-- Считать 40 зелёных тестов обвязки доказательством того, что процедура работает на SQL Server. Они проверяют саму обвязку на подставленных ответах базы.
-- Засчитывать зелёный прогон после правки файлов. Он привязан к коммиту и содержимому 15 файлов кода и настроек.
-- Обходить остановку обвязки: ослаблять проверку или править базу без разбора. В примере проверку оставили строгой, а метку вернули только своему классу, сверенному с исходником.
+- Treating a table comparison as an order check. `tSQLt.AssertEqualsTable` sees only the set of rows.
+- Treating 40 green harness tests as evidence that the procedure works on SQL Server. They check the harness itself on substituted database answers.
+- Counting a green run after the files were edited. It is tied to the commit and to the contents of the 15 code and configuration files.
+- Working around a harness stop by weakening the check or by editing the database without analysis. In the example, the check stayed strict, and the marker was restored only on the project's own class, after it was compared with the source.
 
-## Эта задача в других главах
+## This task in other chapters
 
-- [План и его статусы](plan-lifecycle.md): как статус этого плана переходил от роли к роли.
-- [Ревью и приёмка](review-acceptance.md): две линии Reviewer и приёмка Architect.
-- [Закрытие задачи](closeout.md): что было после приёмки, коммит и закрытие документов.
-- [Тесты и доказательства](testing-evidence.md): чему можно доверять на каждом уровне, от тестов обвязки до живого прогона.
+- [The plan and its statuses](plan-lifecycle.md): how the status of this plan passed from role to role.
+- [Review and acceptance](review-acceptance.md): the two Reviewer lanes and Architect acceptance.
+- [Task closeout](closeout.md): what happened after acceptance, the commit and the docs closeout.
+- [Tests and evidence](testing-evidence.md): what you can trust at each level, from the harness tests to the live run.
 
-Функции и тесты, о которых шла речь, — в [справочнике по коду](code-map.md#сквозной-пример-какие-товары-пора-пополнить).
+The functions and tests discussed here are in the [code map](code-map.md#running-example-which-products-to-reorder).
 
-Дальше: [«План и его статусы»](plan-lifecycle.md).
+Next: [The plan and its statuses](plan-lifecycle.md).

@@ -1,44 +1,46 @@
-# Роли и файлы задачи
+# Roles and task files
 
-Planveyor делит задачу между участниками с разной ответственностью. Каждый делает свой шаг и записывает результат в файл, и следующий берёт работу из этого файла: переписку читать не нужно. Дальше всё показано на реальной задаче из SQL-проекта.
+**English** · [Русский](roles-artifacts.ru.md)
 
-## Кто за что отвечает
+Planveyor splits a task between participants with different responsibilities. Each one does its step and writes the result into a file, and the next one takes the work from that file: there is no need to read the conversation. Below, everything is shown on a real task from an SQL project.
 
-Owner — человек, владелец проекта. Architect, Planner, Coder, Reviewer и Manager — сессии ИИ-клиента, по умолчанию Codex. Роль не привязана к конкретной модели: модель и уровень рассуждения для каждой роли задаёт [настройка Codex](../launch-and-role-modes.ru.md#настройка-codex), а клиент выбирается отдельно.
+## Who is responsible for what
 
-| Участник | За что отвечает | Что передаёт дальше | Чего не делает |
+Owner is a person, the owner of the project. Architect, Planner, Coder, Reviewer, and Manager are agent harness sessions, Codex by default. A role is not tied to a specific model: the [Codex setup](../launch-and-role-modes.md#codex-setup) sets the model and the reasoning effort for each role, and the agent harness is chosen separately.
+
+| Participant | What it is responsible for | What it passes on | What it does not do |
 | --- | --- | --- | --- |
-| Owner | Цель задачи и решения, которые принимает только человек | Цель, ответы на вопросы, разрешения на коммит | — |
-| Architect | Что делать, в каких рамках и как принимать результат | План с решениями, в конце — вердикт о приёмке | Не пишет код продукта |
-| Planner | Точный список файлов, шагов и проверок | Черновик кода (code draft) | Не реализует изменения |
-| Coder | Код и тесты по черновику | Изменённые файлы и результаты проверок | Не расширяет задачу молча |
-| Reviewer | Риски и соответствие результата плану | Ревью | Не исправляет код вместо Coder |
-| Manager | Какую роль запустить по статусу плана | Ход следующей роли | Не правит план, ответы и код |
+| Owner | The goal of the task and the decisions that only a person makes | The goal, answers to questions, permissions to commit | — |
+| Architect | What to do, within what limits, and how to accept the result | The plan with the decisions; at the end, the acceptance verdict | Does not write product code |
+| Planner | The exact list of files, steps, and checks | The code draft | Does not implement changes |
+| Coder | Code and tests by the draft | The changed files and the check results | Does not silently expand the task |
+| Reviewer | Risks and whether the result matches the plan | The review | Does not fix code instead of Coder |
+| Manager | Which role to launch by the plan status | The turn of the next role | Does not edit the plan, the answers, or the code |
 
-Ответы за Owner никто не придумывает. Если у Planner, Coder или Reviewer возникает вопрос по смыслу задачи, они возвращают его Architect. Architect отвечает сам или формулирует вопрос для Owner. Подробнее о полномочиях — в [документах ролей](../../roles/index.md).
+Nobody makes up answers for Owner. If Planner, Coder, or Reviewer has a question about the meaning of the task, they return it to Architect. Architect answers itself or formulates a question for Owner. More about the authority of the roles is in the [role definitions](../../roles/index.md) (in Russian).
 
-![Owner передаёт цель Architect, дальше работа идёт через Planner, Coder и Reviewer и возвращается к Architect на приёмку](assets/roles-artifacts-1.svg)
+![Owner gives the goal to Architect, then the work goes through Planner, Coder, and Reviewer and returns to Architect for acceptance](assets/roles-artifacts-1.svg)
 
-На схеме обычный путь без возвратов. Вопрос или замечание может вернуть работу той роли, чей это файл: пробел в шагах — Planner, ошибку реализации — Coder, смысловой вопрос — Architect. Полный порядок возвратов описывают [правила Manager](../../roles/manager.md).
+The diagram shows the usual path without returns. A question or a finding can return the work to the role that owns the file: a gap in the steps to Planner, an implementation error to Coder, a question about meaning to Architect. The full order of returns is described in the [Manager rules](../../roles/manager.md).
 
-## Файлы задачи
+## Task files
 
-| Файл | Что в нём | Кто пишет |
+| File | What it contains | Who writes it |
 | --- | --- | --- |
-| План, `docs/plans/ГГММДД_ЧЧММ_<тема>.md` | Цель, решения, границы задачи (`## Scope`), критерии приёмки, вопросы и ответы, статус, журнал проверок (`## Evidence`) | Architect; каждая следующая роль дописывает свою часть |
-| Черновик кода, `docs/code_drafts/<имя плана>__code_draft.md` | Список целевых файлов (`code_draft_meta.targets`) и шаги для Coder | Planner |
-| Ревью, `docs/code_reviews/<имя плана>.md` | Выводы двух линий Reviewer и вердикт Architect | Reviewer, затем Architect |
-| Отложенные задачи, `docs/followups/` | Работа, которую решили сделать позже; у каждой записи свой владелец | Роли предлагают записи при закрытии документов, записывает их скрипт `followups_apply.py` |
+| Plan, `docs/plans/YYMMDD_HHMM_<topic>.md` | The goal, the decisions, the scope (`## Scope`), the acceptance criteria, the questions and answers, the status, the evidence log (`## Evidence`) | Architect; each next role adds its part |
+| Code draft, `docs/code_drafts/<plan name>__code_draft.md` | The list of target files (`code_draft_meta.targets`) and the steps for Coder | Planner |
+| Review, `docs/code_reviews/<plan name>.md` | The conclusions of the two Reviewer lanes and the verdict of Architect | Reviewer, then Architect |
+| Follow-ups, `docs/followups/` | Work that was decided to be done later; each record has its own owner | The roles propose records at the docs closeout; the `followups_apply.py` script writes them |
 
-По статусу в шапке плана (`**Status:**`) видно, какая роль работает сейчас. Скрипт Oracle читает статус вместе с файлами задачи и сообщает состояние плана и то, что мешает переходу, а Manager по этому ответу выбирает следующую роль; подробнее — в [главе о плане](plan-lifecycle.md). Шаблоны: [план](../../plans/_template.md), [черновик кода](../../code_drafts/_template.md). По ходу задачи отложенную работу отмечают в разделе плана `## Follow-ups (deferred)`, а при закрытии документов из неё получаются отдельные записи `followups.v2`. Сгенерированный индекс помогает их найти, но решений в нём не принимают.
+The status in the plan header (`**Status:**`) shows which role is working now. The Oracle script reads the status together with the task files and reports the state of the plan and what blocks the transition, and Manager chooses the next role by this answer; more about it is in the [chapter about the plan](plan-lifecycle.md). Templates: [plan](../../plans/_template.md) (in Russian), [code draft](../../code_drafts/_template.md) (in Russian). During the task, deferred work is noted in the `## Follow-ups (deferred)` section of the plan, and at the docs closeout it becomes separate `followups.v2` records. The generated index helps to find them, but no decisions are made in it.
 
-## Как это было: задача GetReorderCandidates
+## How it went: the GetReorderCandidates task
 
-28 сентября 2026 года роли решили эту задачу в SQL-проекте на Planveyor. Процедура `dbo.GetReorderCandidates` должна вернуть активные товары, которых на складе не хватает даже с учётом уже заказанной поставки. Данные и тесты задачи — в [сквозном примере](sql-example.md), а здесь — кто что сделал.
+On September 28, 2026, the roles solved this task in the SQL project on Planveyor. The `dbo.GetReorderCandidates` procedure must return the active products that are short in stock even when the delivery already on order is counted. The data and tests of the task are in the [running example](sql-example.md); here is who did what.
 
-**Owner** дал задание одним абзацем: одна процедура только для чтения, формула дефицита, правила для `NULL`, порядок строк, семь случаев для тестов. В задании оговорено, что прогон на dev-базе делает оператор — человек или агент с доступом к этой базе; в Planveyor такой роли нет. Решения Owner принял заранее, поэтому формальных вопросов к нему не было; одно уточнение он дал по ходу работы Coder.
+**Owner** gave the assignment in one paragraph: one read-only procedure, the shortage formula, the rules for `NULL`, the row order, seven test cases. The assignment stated that the run on the dev database is done by the operator, a person or an agent with access to this database; Planveyor has no such role. Owner made the decisions in advance, so there were no formal questions to Owner; Owner gave one clarification while Coder was working.
 
-**Architect** записал план за 7 минут. Шапка плана в конце работы выглядела так:
+**Architect** wrote the plan in 7 minutes. At the end of the work, the plan header looked like this:
 
 ```markdown
 **Plan type:** dev
@@ -53,9 +55,9 @@ Owner — человек, владелец проекта. Architect, Planner, C
 - `Done` — Architect
 ```
 
-Два решения Architect особенно заметны дальше. Сравнение таблиц в тестах tSQLt не учитывает порядок строк, поэтому порядок проверяют отдельным прямым вызовом процедуры: товары кладут в порядке 30, 10, 20, а обвязка (скрипт, который собирает базу и запускает тесты) требует на выходе 10, 20, 30. Второе решение — включить в список целевых файлов и прежние файлы, от которых зависит проверка, даже если их не меняют. Линтер плана с первого раза нашёл три недочёта формы; Architect их исправил и передал план Planner.
+Two decisions of Architect stand out in what follows. Table comparison in tSQLt tests ignores the row order, so the order is checked with a separate direct call of the procedure: the products are inserted in the order 30, 10, 20, and the harness (the script that builds the database and runs the tests) requires 10, 20, 30 on output. The second decision is to put into the list of target files also the existing files that the check depends on, even if they are not changed. On its first run, the plan linter found three form defects; Architect fixed them and handed the plan to Planner.
 
-**Planner** составил черновик кода за 5 минут. Главное в нём — список целевых файлов. Их 16: шесть меняет Coder, а десять по решению Architect входят в список без изменений. Вот шесть изменяемых:
+**Planner** wrote the code draft in 5 minutes. The main part of it is the list of target files. There are 16 of them: Coder changes six, and ten are in the list without changes, by the decision of Architect. Here are the six that change:
 
 ```json
 {"path": "scripts/sql.py", "kind": "py"},
@@ -66,50 +68,50 @@ Owner — человек, владелец проекта. Architect, Planner, C
 {"path": "README.md", "kind": "doc"}
 ```
 
-Неизменные — например, `Makefile`, `global.json` и схема базы `sql/Northwind/Northwind.sql`.
+The unchanged ones are, for example, `Makefile`, `global.json`, and the database schema `sql/Northwind/Northwind.sql`.
 
-Для двух новых SQL-файлов Planner создал заглушки, которые Coder обязан заменить до ревью. Предварительная проверка точного набора файлов плана насчитала 19: 16 целевых, план, черновик и ревью, которого пока нет.
+For the two new SQL files, Planner created stubs that Coder must replace before review. The preflight of the exact bundle of the plan counted 19 files: 16 targets, the plan, the draft, and the review, which did not exist yet.
 
-**Coder** написал процедуру и тесты и поправил обвязку. Без настоящей базы прошло всё: 40 из 40 тестов обвязки, сборка без ошибок и предупреждений, линтер, проверка секретов. Прогон на dev-базе — за оператором, поэтому Coder передал работу ему и оставил статус `In progress`.
+**Coder** wrote the procedure and the tests and adjusted the harness. Without a real database, everything passed: 40 of 40 harness tests, the build without errors or warnings, the linter, the secrets check. The run on the dev database was up to the operator, so Coder handed the work to the operator and left the `In progress` status.
 
-**Оператор** запустил `make db-proof`, и первый прогон упал через 5 секунд: обвязка остановилась ещё до публикации, потому что не смогла однозначно определить состояние тестовых классов в базе. Проверка показала, что у класса `SqlHarnessSmoke` нет метки tSQLt. Вероятная причина — настройка публикации DacFx `DropExtendedPropertiesNotInSource`, которая по умолчанию удаляет такие метки. Coder добавил в публикацию `/p:DropExtendedPropertiesNotInSource=false`, оператор восстановил метку, и второй запуск прошёл за 13 секунд: 8 тестов из 8, строки в порядке 10, 20, 30. Офлайн-тесты этого не показали: метка пропала в самой базе.
+**The operator** ran `make db-proof`, and the first run failed after 5 seconds: the harness stopped before publishing, because it could not determine the state of the test classes in the database unambiguously. A check showed that the `SqlHarnessSmoke` class had no tSQLt class marker. The likely cause is the DacFx publish setting `DropExtendedPropertiesNotInSource`, which removes such markers by default. Coder added `/p:DropExtendedPropertiesNotInSource=false` to the publish step, the operator restored the marker, and the second run passed in 13 seconds: 8 of 8 tests, the rows in the order 10, 20, 30. The offline tests did not show this: the marker disappeared in the database itself.
 
-**Reviewer** проверял в две линии. Линия рисков ищет ошибки и опасные места, линия контракта сверяет результат с планом. Замечаний не нашла ни одна. В ревью Reviewer оговорил ограничения: сам он SQL не запускал, и зелёный прогон относится к коду до коммита. Финальная проверка набора насчитала 22 файла; откуда ещё три, показано в главе [«План и его статусы»](plan-lifecycle.md#как-это-было-план-getreordercandidates).
+**Reviewer** checked in two lanes. The risk lane looks for errors and dangerous spots, and the contracts lane checks the result against the plan. Neither lane had findings. In the review, Reviewer stated the limits: it did not run SQL itself, and the green run applies to the code before the commit. The final check of the bundle counted 22 files; where the three extra ones came from is shown in the chapter [The plan and its statuses](plan-lifecycle.md#how-it-went-the-getreordercandidates-plan).
 
-**Architect** сам сверил файлы и контрольные суммы, записал вердикт о приёмке и в 02:17 сделал коммит `70526ee` с 12 файлами: шесть изменённых целевых файлов, план, черновик, ревью и три приложения к нему. Десять неизменённых целевых файлов в коммит не попали. В 03:05 второй коммит `edac1b9` закрыл документы. В нём одно предложение по процессу: плейбук ревью ссылался на отчёт JUnit предыдущей задачи, а должен брать отчёт текущей (глава [«Закрытие задачи»](closeout.md)).
+**Architect** verified the files and the checksums itself, wrote the acceptance verdict, and at 02:17 made commit `70526ee` with 12 files: the six changed target files, the plan, the draft, the review, and its three assets. The ten unchanged target files did not go into the commit. At 03:05, the second commit `edac1b9` closed the documents. It has one process improvement: the review playbook referred to the JUnit report of the previous task, while it should take the report of the current one (the [Task closeout](closeout.md) chapter).
 
-Это было ещё до команд `planveyor sibling`: роли запускал оператор, а коммит делал Architect. Теперь в sibling Owner ведёт задачу этими командами. Architect записывает вердикт и останавливается, а коммит делает команда `planveyor sibling close --commit` после того, как Owner посмотрел набор файлов. Порядок команд — в [руководстве по sibling](../stack-sibling.ru.md).
+This was before the `planveyor sibling` commands existed: the operator launched the roles, and Architect made the commit. Now a sibling has two modes. In TUI mode, the main path, Manager drives the task in one window, and Architect commits: Owner approves its requests to write to `.git` in the window. In manual console mode, Owner drives the task with the `planveyor sibling` commands: Architect writes the verdict and stops, and the `planveyor sibling close --commit` command makes the commit after Owner has looked at the bundle. Both modes are described in the [stack sibling guide](../stack-sibling.md#two-ways-to-work-on-a-plan).
 
-## Manager и проверка передачи
+## Manager and the handoff check
 
-Manager — координатор. Он читает статус плана, запускает роль, чей сейчас ход, и смотрит, что она оставила. В задаче он не меняет план, ответы, код и настройки и коммитов не делает. За один запуск Manager проходит не больше 12 шагов; если задача не закончена, ту же команду запускают снова.
+Manager is the coordinator. It reads the plan status, launches the role whose turn it is, and looks at what that role left. In the task, it does not change the plan, the answers, the code, or the settings, and it makes no commits. In one launch, Manager takes at most 12 steps; if the task is not finished, Manager stops: in manual console mode, the same command is run again, and in TUI mode, Owner tells Manager in the same window to continue.
 
-Прежде чем передать работу дальше, Manager просит роль, которая её сдаёт, ещё раз пройтись по своим файлам. Этот второй проход той же сессии называется CENSOR. Его делает Architect перед Planner, Planner перед Coder и Coder перед Reviewer: промпты [architect_censor.md](../../tools/prompts/architect_censor.md), [planner_censor.md](../../tools/prompts/planner_censor.md), [coder_censor.md](../../tools/prompts/coder_censor.md).
+Before passing the work on, Manager asks the role that hands it over to go through its files once more. This second pass of the same session is called CENSOR. Architect does it before Planner, Planner before Coder, and Coder before Reviewer: the prompts [architect_censor.md](../../tools/prompts/architect_censor.md) (in Russian), [planner_censor.md](../../tools/prompts/planner_censor.md) (in Russian), [coder_censor.md](../../tools/prompts/coder_censor.md) (in Russian).
 
-На втором проходе роль сверяет, всё ли обсуждённое записано в план и черновик, и дописывает пропущенное, не выходя за свои полномочия. Результат она отмечает в журнале проверок. Если всплыл вопрос по смыслу задачи, работа возвращается к Architect. Manager сам перечитывает результат прохода и привязывает его к номеру своего вызова. Отметка действует только для этой передачи: если план потом изменился, она уже не считается. CENSOR не заменяет ревью: это самопроверка перед передачей.
+On the second pass, the role checks whether everything discussed is written into the plan and the draft, and adds what is missing without going beyond its authority. It notes the result in the evidence log. If a question about the meaning of the task comes up, the work returns to Architect. Manager rereads the result of the pass itself and ties it to the number of its own call. The mark is valid only for this handoff: if the plan changes later, it no longer counts. CENSOR does not replace review: it is a self-check before the handoff.
 
-Для небольших правок второй проход можно пропустить (условия — в главе [«Запуск: команды, обёртки, клиенты»](runtime-launch.md#manager-collab)).
+For small edits, the second pass can be skipped (the conditions are in the [Launch: commands, wrappers, agent harnesses](runtime-launch.md#manager-collab) chapter).
 
-В задаче GetReorderCandidates роли запускал оператор, поэтому Manager и CENSOR в её файлах не видны. Как Manager запускает роли, рассказывает [глава о запуске](runtime-launch.md).
+In the GetReorderCandidates task, the operator launched the roles, so Manager and CENSOR are not visible in its files. How Manager launches the roles is told in the [launch chapter](runtime-launch.md).
 
-## Роль, промпт и обёртка
+## Role, prompt, and wrapper
 
-Роль задают три вещи:
+Three things define a role:
 
-- **документ роли** — за что роль отвечает и где её границы: [architect.md](../../roles/architect.md);
-- **промпт фазы** — что делать при текущем статусе: [architect_status_driven.md](../../tools/prompts/architect_status_driven.md); для первого обсуждения задачи — отдельный [architect_draft_discussion.md](../../tools/prompts/architect_draft_discussion.md);
-- **обёртка** — функция движка, которая готовит всё нужное и запускает сессию: `planveyor_arch()`, для первого обсуждения — `planveyor_arch_initial()`.
+- **the role definition**: what the role is responsible for and where its limits are: [architect.md](../../roles/architect.md) (in Russian);
+- **the phase prompt**: what to do in the current status: [architect_status_driven.md](../../tools/prompts/architect_status_driven.md) (in Russian); for the first discussion of the task, a separate [architect_draft_discussion.md](../../tools/prompts/architect_draft_discussion.md) (in Russian);
+- **the wrapper**: the engine function that prepares everything needed and starts the session: `planveyor_arch()`, and for the first discussion, `planveyor_arch_initial()`.
 
-Промпт определяет, что роль делает, а обёртка — как её запускают. В sibling роль читает копию промпта из самого проекта. Общая часть промпта приходит из Planveyor и обновляется командой `planveyor sibling upgrade`, когда вы обновили копию Planveyor. Два [локальных раздела](sibling-lifecycle.md#локальные-разделы), «Локальные правила стека» и «Разрешённое локальное переопределение процесса», принадлежат проекту, и обновление их сохраняет.
+The prompt defines what the role does, and the wrapper defines how it is launched. In a sibling, the role reads a copy of the prompt from the project itself. The shared part of the prompt comes from Planveyor and is updated by `planveyor sibling upgrade` when you have updated your Planveyor checkout. Two [local sections](sibling-lifecycle.md#local-sections), `## Локальные правила стека` (local stack rules) and `## Разрешённое локальное переопределение процесса` (allowed local process override), belong to the project, and the upgrade keeps them.
 
-## Частые ошибки
+## Common mistakes
 
-- Искать код продукта среди скриптов движка. Продукт и его проверки живут в sibling.
-- Считать роль конкретной моделью.
-- Принимать ответ роли «готово» за результат. Смотрите на изменённые файлы и свежую проверку.
-- Поручать Manager исправить план. Он вернёт работу роли, которой принадлежит файл.
-- Ссылаться на отчёты прошлой задачи, как плейбук ревью в примере выше. У каждой задачи свои отчёты.
+- Looking for product code among the engine scripts. The product and its checks live in the sibling.
+- Treating a role as a specific model.
+- Taking a role's “done” answer for the result. Look at the changed files and a fresh check.
+- Asking Manager to fix the plan. It will return the work to the role that owns the file.
+- Referring to the reports of a previous task, as the review playbook did in the example above. Each task has its own reports.
 
-Функции и тесты, о которых шла речь, — в [справочнике по коду](code-map.md#роли-и-файлы-задачи).
+The functions and tests mentioned here are in the [code map](code-map.md#roles-and-task-files).
 
-Дальше: [«Сквозной пример: какие товары пора пополнить»](sql-example.md).
+Next: [Running example: which products to reorder](sql-example.md).

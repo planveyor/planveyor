@@ -1,89 +1,91 @@
-# Проверка после слияния
+# Post-merge check
 
-Эта глава для тех, кто сопровождает сам Planveyor. Если вы ведёте задачи в sibling, из этой темы вам сейчас нужен только раздел `## Post-merge gate` вашего плана; он разобран в главе [«Закрытие задачи»](closeout.md).
+**English** · [Русский](postmerge.ru.md)
 
-Проверка после слияния берёт диапазон коммитов `BASE..HEAD`, который уже попал в основную ветку, и смотрит на него целиком. Ревью каждой задачи видело только точный набор файлов своего плана, а после слияния ветки сошлись, конфликты разрешены и задачи работают вместе. Заодно проверка забирает из временных планов и ревью решения, правила и отложенную работу, прежде чем эти файлы удалят.
+This chapter is for those who maintain Planveyor itself. If you run tasks in a sibling, all you need from this topic for now is the `## Post-merge gate` section of your plan; the [Task closeout](closeout.md) chapter covers it.
 
-## Где она работает
+The post-merge check takes a commit range `BASE..HEAD` that has already reached the main branch and looks at it as a whole. The review of each task saw only the exact bundle of its plan, while after the merge the branches have come together, the conflicts are resolved, and the tasks work together. Along the way, the check takes the decisions, rules, and deferred work out of the temporary plans and reviews before these files are deleted.
 
-Из коробки проверка после слияния сейчас работает только в самом Planveyor. В sibling для неё нет команды `planveyor sibling …`. Низкоуровневые команды фасад принимает и там, но им нужны два файла настроек в каталоге `docs/_meta/` проекта: `planveyor_merge_gate_policy.v1.json` и `review_range_policy.v1.json`. Шаблон sibling их не создаёт, и руководство по sibling не объясняет, как их написать. Когда эти файлы есть, движок создаёт и трекер, и план ревью диапазона, это проверяют его тесты. Целиком в sibling эту проверку ещё никто не проводил.
+## Where it runs
 
-## Шаги
+Out of the box, the post-merge check currently works only in Planveyor itself. A sibling has no `planveyor sibling …` command for it. The facade accepts the low-level commands there too, but they need two settings files in the `docs/_meta/` directory of the project: `planveyor_merge_gate_policy.v1.json` and `review_range_policy.v1.json`. The sibling template does not create them, and the stack sibling guide does not explain how to write them. When these files exist, the engine creates both the tracker and the range review plan; its tests check this. Nobody has run this check in full in a sibling yet.
 
-Проверку ведёт Manager в отдельном режиме merge. Порядок шагов хранит трекер слияния, локальный файл `.planveyor.merge_tracker.md`; его не коммитят. Следующий шаг Manager каждый раз узнаёт у скрипта `merge_tracker_oracle.py`. В работе у него одна роль за раз, а при любой ошибке скрипта он останавливается и возвращает ход Owner.
+## Steps
 
-![Шаги проверки после слияния: от выбора диапазона до аудита, архива и локального коммита](assets/postmerge-1.svg)
+Manager runs the check in a separate merge mode. The merge tracker, the local file `.planveyor.merge_tracker.md`, keeps the order of the steps; it is not committed. Each time, Manager learns the next step from the `merge_tracker_oracle.py` script. It works with one role at a time, and on any script error it stops and returns the turn to Owner.
 
-| Шаг трекера | Кто выполняет | Что получается |
+![Post-merge check steps: from choosing the range to the audit, the archive, and the local commit](assets/postmerge-1.svg)
+
+| Tracker step | Who does it | What it produces |
 | --- | --- | --- |
-| `review_range` | Reviewer в две линии, затем Architect | Ревью диапазона и решение Architect по нему |
-| `merge_notes` | Architect | Заметки о том, что вошло в диапазон |
-| `plan_harvest` | Architect | Отчёт о сборе: решения и отложенная работа из планов и ревью диапазона |
-| `canon_sweep` | Architect | Общие документы Planveyor сокращены до сути со ссылками; квитанция об этом |
-| `packetization_gate` | Скрипт | Отчёт о пакетах адресной доставки (о них ниже) |
-| `docs_finalize` | Architect | Квитанция с разделом предложений по процессу |
-| `doc_lint` | Скрипт | Проверка ссылок и формата документов |
-| `post_merge_audit` | Architect | Аудит: требования сверены с кодом, проверками, документами и ревью диапазона |
-| `docs_hygiene_archive` | Скрипт | Закрытые планы диапазона, их черновики и ревью сохранены в поисковый архив |
-| `docs_hygiene_suggest` | Скрипт | Список файлов, которые можно удалить, и готовая команда для Owner |
-| `ready_to_push` | Скрипт | Итоговые квитанции и локальный коммит файлов проверки |
+| `review_range` | Reviewer in two lanes, then Architect | The range review and the decision of Architect on it |
+| `merge_notes` | Architect | Notes on what went into the range |
+| `plan_harvest` | Architect | The harvest report: the decisions and deferred work from the plans and the range review |
+| `canon_sweep` | Architect | The shared Planveyor documents are cut down to the essentials, with links; a receipt about it |
+| `packetization_gate` | Script | A report on rollout packets (more on them below) |
+| `docs_finalize` | Architect | A receipt with a process improvements section |
+| `doc_lint` | Script | A check of the links and the format of the documents |
+| `post_merge_audit` | Architect | The audit: the requirements are compared with the code, the checks, the documents, and the range review |
+| `docs_hygiene_archive` | Script | The closed plans of the range, their drafts, and their reviews are saved to a searchable archive |
+| `docs_hygiene_suggest` | Script | A list of files that can be deleted, and a ready command for Owner |
+| `ready_to_push` | Script | The final receipts and a local commit of the check files |
 
-Квитанция здесь — файл в `docs/reviews/` с записью о выполненном шаге. Скрипты запускает Manager. Файл политики проекта может добавить свои шаги, например проверку миграций. Готовность всего диапазона подтверждает отчёт `planveyor_merge_bundle_report`: Manager запускает его на шаге `ready_to_push`, когда остальные шаги пройдены. После этого скрипт шага коммитит локально файлы проверки, которые принял отчёт, вместе с итоговыми квитанциями. `git push` делает Owner.
+A receipt here is a file in `docs/reviews/` with a record of a completed step. Manager runs the scripts. The project policy file can add its own steps, for example a migrations check. The `planveyor_merge_bundle_report` report confirms that the whole range is ready: Manager runs it at the `ready_to_push` step, when the other steps are done. After that, the step script locally commits the check files that the report accepted, together with the final receipts. Owner runs `git push`.
 
-## Кто что делает
+## Who does what
 
-| Участник | Что делает |
+| Participant | What they do |
 | --- | --- |
-| Owner | Выбирает диапазон или ветку для слияния. Отвечает, когда Manager остановился. Делает `git push` после локального коммита. Решает, удалять ли временные файлы, и удаляет их отдельным коммитом |
-| Manager | Проходит шаги трекера по порядку, вызывает роли и скрипты. Отчётов ревью и аудита не пишет |
-| Reviewer | Проверяет диапазон теми же двумя линиями, что и отдельную задачу |
-| Architect | Разбирает ревью диапазона, пишет заметки, отчёт о сборе, квитанцию по документам и аудит, чистит общие документы |
-| Coder | Разрешает конфликты при слиянии и чинит объявленную проектом проверку миграций |
-| Planner | В этом режиме не участвует |
+| Owner | Chooses the range or the branch to merge. Answers when Manager has stopped. Runs `git push` after the local commit. Decides whether to delete the temporary files, and deletes them in a separate commit |
+| Manager | Goes through the tracker steps in order and calls the roles and the scripts. Does not write the review and audit reports |
+| Reviewer | Checks the range with the same two lanes as a single task |
+| Architect | Examines the range review; writes the notes, the harvest report, the documents receipt, and the audit; cleans up the shared documents |
+| Coder | Resolves the conflicts during the merge and fixes the migrations check that the project declared |
+| Planner | Does not take part in this mode |
 
-Кандидатов на удаление выдаёт скрипт шага `docs_hygiene_suggest`, а Architect в аудите сводит точный список и проверяет, что на эти файлы не останется ссылок.
+The `docs_hygiene_suggest` step script gives the candidates for deletion, and Architect assembles the exact list in the audit and checks that no links to these files will remain.
 
-## Слияние и запуск
+## Merge and launch
 
-Ветку можно слить вручную или поручить это Manager:
+You can merge the branch by hand or leave it to Manager:
 
 ```sh
-./bin/planveyor planveyor_merge_apply_collab_cmd --from <ветка>
+./bin/planveyor planveyor_merge_apply_collab_cmd --from <branch>
 ```
 
-Manager сливает ветку без `git push`. Конфликты разрешает Coder, а конфликт в опасных путях, например в миграциях или настройках окружения, сразу возвращается Owner. После слияния Manager сам переходит к проверке. Если ветка уже слита, проверку запускают отдельно:
+Manager merges the branch without `git push`. Coder resolves the conflicts, and a conflict in dangerous paths, for example in migrations or environment settings, goes straight back to Owner. After the merge, Manager moves on to the check by itself. If the branch is already merged, you start the check separately:
 
 ```sh
 ./bin/planveyor planveyor_merge_collab_cmd --range <BASE>..<HEAD>
 ```
 
-Вместо диапазона можно передать коммит слияния (`--range <MERGE_SHA>`) или `--range auto`: тогда берётся последний коммит слияния. Интерактивный вариант — `./bin/planveyor planveyor_merge_collab_tui`. Если Manager остановился, прочитайте названный шаг и причину, исправьте и запустите команду снова без `--range`: Manager продолжит по тому же трекеру.
+Instead of a range, you can pass a merge commit (`--range <MERGE_SHA>`) or `--range auto`: then the last merge commit is taken. The interactive variant is `./bin/planveyor planveyor_merge_collab_tui`. If Manager has stopped, read the named step and the reason, fix it, and run the command again without `--range`: Manager continues with the same tracker.
 
-Временные планы и ревью Owner удаляет отдельным коммитом, когда решит. Перед этим он заново запускает архив и список кандидатов для того же диапазона, потому что после проверки в документах могли появиться правки:
+Owner deletes the temporary plans and reviews in a separate commit when they decide to. Before that, Owner runs the archive and the candidate list again for the same range, because the documents may have been edited after the check:
 
 ```sh
 ./bin/planveyor planveyor_docs_hygiene_archive --range <BASE>..<HEAD> --apply
 ./bin/planveyor planveyor_docs_hygiene_suggest --range <BASE>..<HEAD>
 ```
 
-## Ревью диапазона
+## Range review
 
-На шаге `review_range` скрипт `planveyor_review_range_init` заводит план типа `review-only` с черновиком кода и записывает в плане путь к файлу ревью: в `docs/doc_reviews/`, если в диапазоне только документы, иначе в `docs/code_reviews/`. Отчёт пишет Reviewer, по шаблону `_template_merge_range.md` и теми же двумя линиями. Когда отчёт готов, план переходит в `Ready for Arch review`. У плана ревью это значит «отчёт готов к разбору», и замечания S1 в нём допустимы.
+At the `review_range` step, the `planveyor_review_range_init` script creates a `review-only` plan with a code draft and records in the plan the path to the review file: in `docs/doc_reviews/` when all selected range paths are under `docs/`, otherwise in `docs/code_reviews/` (so a root `README.md` uses the latter). Reviewer writes the report from the `_template_merge_range.md` template, with the same two lanes. When the report is ready, the plan moves to `Ready for Arch review`. For a review plan, this means “the report is ready to be examined”, and S1 findings in it are allowed.
 
-Architect разбирает отчёт:
+Architect examines the report:
 
-- блокирующих замечаний нет, риски S2 приняты осознанно: план ревью закрывается `Done`, проверка идёт дальше; неблокирующую работу можно вынести в новый план или в список отложенных задач;
-- до продолжения нужно исправление: Architect заводит новый план со статусом `Architect initial draft`, план ревью помечает `Superseded`, и проверка останавливается. Когда исправление слито, Owner снова запускает `planveyor_merge_collab_cmd` на обновлённом диапазоне.
+- there are no blocking findings, and the S2 risks are accepted deliberately: the review plan is closed with `Done`, and the check goes on; non-blocking work can be moved to a new plan or to the backlog;
+- a fix is needed before the check can go on: Architect creates a new plan with the `Architect initial draft` status, marks the review plan `Superseded`, and the check stops. When the fix is merged, Owner runs `planveyor_merge_collab_cmd` again on the updated range.
 
-Коммита по плану ревью Architect не делает: эти файлы попадают в коммит шага `ready_to_push`. Повторное ревью переписывает тот же файл; второй файл ревью для того же диапазона заводят только явно, через `planveyor_review_range_init --force-new`. Аудит потом читает итоговый раздел этого ревью (`Lane synthesis / aggregate verdict`), отдельного ревью для аудита не запускают.
+Architect does not make a commit for the review plan: these files go into the commit of the `ready_to_push` step. A repeated review rewrites the same file; a second review file for the same range is created only explicitly, through `planveyor_review_range_init --force-new`. The audit then reads the final section of this review (`Lane synthesis / aggregate verdict`); no separate review is run for the audit.
 
-## Пакеты адресной доставки
+## Rollout packets
 
-Шаг `packetization_gate` нужен, когда диапазон меняет общие документы Planveyor, которые доставляются в другие проекты. Пакет нужен только для путей, у которых объявлен получатель; sibling сейчас пакетов не получает. Скрипт проверяет, что для таких изменений подготовлены пакеты адресной доставки ([«Обмен изменениями с Planveyor»](change-packets.md)), и пишет отчёт `packetization_gate.v1` по точному диапазону. Если пакета не хватает, шаг не засчитывается, пока пакет не создадут командой `planveyor_rollout_packet_create`. Аудит такого диапазона без действующего отчёта не пройдёт. Принял ли пакет проект-получатель, отчёт не показывает.
+The `packetization_gate` step is needed when the range changes shared Planveyor documents that are delivered to other projects. A packet is needed only for paths that have a declared recipient; a sibling does not receive packets now. The script checks that rollout packets are prepared for such changes ([Exchanging changes with Planveyor](change-packets.md)), and writes a `packetization_gate.v1` report for the exact range. If a packet is missing, the step does not count until the packet is created with `planveyor_rollout_packet_create`. The audit of such a range does not pass without a valid report. The report does not show whether the recipient project adopted the packet.
 
-## Пример: шаблон ревью диапазона
+## Example: the range review template
 
-В истории Planveyor и в SQL-проекте из сквозного примера настоящего запуска этой проверки нет. Вот начало шаблона ревью диапазона [`_template_merge_range.md`](../../code_reviews/_template_merge_range.md):
+Neither the Planveyor history nor the SQL project from the running example has a real run of this check. Here is the beginning of the range review template [`_template_merge_range.md`](../../code_reviews/_template_merge_range.md) (in Russian):
 
 ```markdown
 # Code review — merge-range (BASE..HEAD)
@@ -100,12 +102,12 @@ Architect разбирает отчёт:
 - note: если были fixup‑коммиты после merge — они тоже входят в BASE..HEAD
 ```
 
-В ревью одной задачи по текущему набору строка `**Target:**` хранит контрольную сумму набора (`BUNDLE=current bundle_sha256=…`), здесь в ней диапазон коммитов. Добавлены строки `**Range:**` и `**Exclude docs:**` и разделы о составе диапазона. Дальше идут те же разделы двух линий, итоговый раздел и шкала S1–S3.
+In the review of a single task against the current bundle, the `**Target:**` line holds the checksum of the bundle (`BUNDLE=current bundle_sha256=…`); here it holds the commit range. The `**Range:**` and `**Exclude docs:**` lines and the sections about the contents of the range are added. Then come the same sections of the two lanes, the final section, and the S1–S3 scale.
 
-Раздел `## Post-merge gate` в плане отдельной задачи эта проверка не заполняет: к её началу план уже в `Done` и не меняется (раздел разобран в главе [«Закрытие задачи»](closeout.md)). В итоговом разделе ревью задачи `GetReorderCandidates` осталась строка `audit_status: pending_post_merge_audit`: аудита после слияния в том проекте не было. Закрытию задачи это значение не мешает, линтер ревью проверяет только, что оно из допустимых.
+This check does not fill in the `## Post-merge gate` section in the plan of a single task: by the time the check starts, the plan is already in `Done` and does not change (the [Task closeout](closeout.md) chapter covers the section). In the final section of the review of the `GetReorderCandidates` task, the line `audit_status: pending_post_merge_audit` remained: there was no post-merge audit in that project. This value does not block the task closeout; the review linter checks only that it is one of the allowed values.
 
-Подробные правила шагов — в руководстве [«Lifecycle и пакеты»](../lifecycle-and-packets.ru.md#проверка-после-слияния-и-закрытие) и в плейбуках [ревью диапазона](../../playbooks/review_merge_range.md), [аудита](../../playbooks/post_merge_audit.md), [сбора по планам](../../playbooks/post_merge_plan_harvest.md) и [гигиены документов](../../playbooks/post_merge_docs_hygiene.md).
+The detailed rules of the steps are in the [Lifecycle and packets](../lifecycle-and-packets.md#post-merge-and-closeout) guide and in the playbooks for the [range review](../../playbooks/review_merge_range.md) (in Russian), the [audit](../../playbooks/post_merge_audit.md) (in Russian), the [plan harvest](../../playbooks/post_merge_plan_harvest.md) (in Russian), and [docs hygiene](../../playbooks/post_merge_docs_hygiene.md) (in Russian).
 
-Функции и тесты, о которых шла речь, — в [справочнике по коду](code-map.md#проверка-после-слияния).
+The functions and tests discussed here are in the [code map](code-map.md#post-merge-check).
 
-Дальше: [«Тесты движка»](engine-tests.md).
+Next: [Engine tests](engine-tests.md).

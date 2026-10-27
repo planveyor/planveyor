@@ -1,4 +1,4 @@
-<!-- i18n: pair=docs/tools/contract_authority_integration.md pair-sha256=dd78193294ed195ba1352ebf349fab501876fd5a151952412b551732d9c555c3 self-sha256=0b25d9d58e4abf14a10970dffa2949f7f04ac7702b38fd249ae6fd95c2fce971 -->
+<!-- i18n: pair=docs/tools/contract_authority_integration.md pair-sha256=4436a1fb2d442e5f011448a9b0d910aa1d125be9078c574eb3a8945c70d11e30 self-sha256=3d4d122b35c3853b373ea32a9e2cf8ff83d0981a62b2aea401f6d2c90ec55e18 -->
 # Привязка копии Planveyor и контрактных источников
 
 [English](contract_authority_integration.md) · **Русский**
@@ -25,8 +25,9 @@ shell-реализацию через `source` и не подменяйте ко
 ./bin/planveyor --project /absolute/path/to/consumer <planveyor_function> [args…]
 ~~~
 
-Один вызов не меняет рабочий каталог (`cwd`), состояние сессии или конфигурацию
-проекта после завершения. Если фасад, функция или объявленная
+Фасад не меняет рабочий каталог (`cwd`) и окружение родительской оболочки.
+Вызванная команда может сохранять объявленные файлы проекта и локальные
+записи сессий. Если фасад, функция или объявленная
 копия Planveyor недоступны, это блокер с дословной диагностикой. Запасной путь не
 угадывайте.
 

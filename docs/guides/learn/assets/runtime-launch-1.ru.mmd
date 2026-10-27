@@ -1,0 +1,5 @@
+flowchart LR
+    A["Фасад bin/planveyor"] --> B["Диспетчер planveyor_cli"]
+    B --> C["planveyor_sibling: план, статус, сессия"]
+    C --> D["Обёртка и сессия харнеса"]
+    D --> E["Роль и файлы задачи"]

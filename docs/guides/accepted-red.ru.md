@@ -1,4 +1,4 @@
-<!-- i18n: pair=docs/guides/accepted-red.md pair-sha256=6d6f27fc7d5eab275e7d0048402374d7ec65f08bfd51c3027407973cd25baf48 self-sha256=a98765c7eb9d55b488eee81ed3bc73f8d03b9de9139e3435d784dfe499079c96 -->
+<!-- i18n: pair=docs/guides/accepted-red.md pair-sha256=397a5208e2e84b5c8e56e73af3cda64899a3bce52a7ced90a9f7d3e8d27d332f self-sha256=484a27aa88af417b2ad61f1eac61145bacf7252639e2429a313079179051290e -->
 # План, принятый красным, и сохранение доказательств
 
 [English](accepted-red.md) · **Русский**
@@ -36,7 +36,7 @@
 "$PLANVEYOR_RUNTIME_ROOT/bin/planveyor" --project "$PWD" planveyor_docs_closeout <SOURCE_PLAN> --json
 ```
 
-Режимы `planveyor_plan_bundle` отвечают JSON `planveyor_plan_bundle_closeout.v1` в stdout с кодом 0, а при отказе — JSON `planveyor_rejected_baseline_error.v1` со `state=blocked` и `reason_code` в stderr с кодом 2. `--recovery-plan` допустим только с `--capture-rejected`. Ключи закрытия, предварительной проверки и сообщения коммита (closeout, preflight, message) в этих режимах запрещены.
+Успешные операции жизненного цикла сохранения отклонённых байтов отвечают JSON `planveyor_plan_bundle_closeout.v1` в stdout с кодом 0. Отказ вспомогательного скрипта этих операций — JSON `planveyor_rejected_baseline_error.v1` со `state=blocked` и `reason_code` в stderr с кодом 2. Ошибки вызова, например отсутствующий план, `--recovery-plan` без `--capture-rejected` или ключи закрытия, предварительной проверки и сообщения коммита (closeout, preflight, message) в режиме восстановления, печатают обычный текст в stderr и завершаются с кодом 1.
 
 1. **Проверка** (`--verify-rejected`) только читает состояние. Пока сохранения нет, ответ — `recovery_state=capture_required`, если байты целевых файлов совпадают с ревью, или `snapshot_mismatch_without_durable_ref`, если уже не совпадают. Во втором случае сохранить отклонённые байты нельзя.
 2. **Сохранение** (`--capture-rejected`) записывает отклонённые байты в Git. Для него нужны:
@@ -46,7 +46,7 @@
 
    Повторное сохранение при целой ссылке ничего не меняет и возвращает текущее состояние. После сохранения — `recovery_state=cleanup_required`.
 3. **Очистка** (`--cleanup-rejected`) возвращает каждый целевой файл к байтам HEAD, а целевой файл, которого нет в HEAD, удаляет. Для неё нужны целое сохранение, тот же HEAD, что при сохранении, индекс целевых файлов, равный HEAD, и целевые файлы только в двух состояниях: отклонённые байты или байты HEAD. Поэтому план восстановления меняет эти целевые файлы только после очистки. После очистки — `recovery_state=completed`, `closeout_kind=accepted_red_recovered`, `bundle_ok=true`; `delivery_green` остаётся `false`. Повторная очистка ничего не меняет.
-4. **Закрытие.** Для плана, принятого красным, `--closeout-json` печатает тот же ответ, а не обычный ответ для точного набора файлов. При повреждённой записи он отказывает с `accepted_red_closeout_invalid_carrier`. `--stage`, `--commit-ready` и `--commit-exact` отказывают с `staging_forbidden`. `planveyor_docs_closeout` отвечает `completed` с `reason_code=accepted_red_recovery_completed` только после очистки и проверки квитанции. До этого он отвечает `blocked`, обычно с `accepted_red_recovery_incomplete` или причиной `accepted_red_*`. Если других правок документов нет, ответ содержит `final_docs_commit=no_op` с причиной `accepted_red_evidence_ref_materialized`.
+4. **Закрытие.** Для плана, принятого красным, `--closeout-json` печатает тот же ответ, а не обычный ответ для точного набора файлов. При повреждённой записи он отказывает с `accepted_red_closeout_invalid_carrier`. `--stage`, `--commit-ready` и `--commit-exact` отказывают с `staging_forbidden`, если классификация прошла успешно и сохранение не признано повреждённым; иначе они отказывают с `staging_forbidden_invalid_carrier`. `planveyor_docs_closeout` отвечает `completed` с `reason_code=accepted_red_recovery_completed` только после очистки и проверки квитанции. До этого он отвечает `blocked`, обычно с `accepted_red_recovery_incomplete` или причиной `accepted_red_*`. Если других правок документов нет, ответ содержит `final_docs_commit=no_op` с причиной `accepted_red_evidence_ref_materialized`.
 
 После очистки план восстановления может менять целевые файлы из своего черновика кода: состояние `active_checkout_state=recovery_owned_overlap` допустимо. Изменение другого отклонённого целевого файла даёт `drifted`, и проверка отказывает с `active_checkout_drift`.
 
@@ -66,20 +66,20 @@
 
 - Каждое чтение заново проверяет ссылку целиком: цепочку родителей, манифест, квитанцию очистки и blob-объекты целевых файлов. Повреждённая ссылка даёт `durable_capture_state=invalid`, а сохранение и очистка поверх неё отказывают с `recovery_ref_invalid`.
 - Четыре файла маршрута должны байт в байт совпадать с теми, что записаны при сохранении. Иначе — `routing_carrier_drift`: `--closeout-json` отказывает, а `planveyor_docs_closeout` отвечает `blocked`. Правка преемника до закрытия документов исходного плана тоже считается расхождением.
-- Проверки отвергают замещающие ссылки Git (replace refs), `info/grafts` и переменные `GIT_DIR`, `GIT_WORK_TREE`, `GIT_COMMON_DIR`, `GIT_INDEX_FILE`, `GIT_REPLACE_REF_BASE` в окружении вспомогательного скрипта.
+- Если в окружении вспомогательного скрипта присутствует `GIT_DIR`, `GIT_WORK_TREE`, `GIT_COMMON_DIR` или `GIT_INDEX_FILE`, разбор отказывает с `not_accepted_red`. Непустой `GIT_REPLACE_REF_BASE`, замещающие ссылки Git (replace refs) или `info/grafts` делают проверку долговечной ссылки недействительной: сохранение и очистка отказывают с `recovery_ref_invalid`, а добавление в индекс — с `staging_forbidden_invalid_carrier`. Публичный фасад запускает дочерний процесс через `env -i` и эти переменные Git не передаёт.
 - В нейтральном движке не заданы обходы для исторических случаев: мост снимка (snapshot bridge) и перепривязка маршрута. Поэтому сохранение возможно, только пока текущие байты целевых файлов совпадают с ревью.
 
 ## Частые отказы
 
 | `reason_code` | Что значит | Что делать |
 |---|---|---|
-| `not_accepted_red`, `routing_contract_invalid` | условия плана, принятого красным, не выполнены, записи неполны или в окружении есть переменные Git | сверить план, преемника, черновик кода и ревью с первым разделом |
+| `not_accepted_red`, `routing_contract_invalid` | условия плана, принятого красным, не выполнены, записи неполны или в окружении вспомогательного скрипта присутствует `GIT_DIR`, `GIT_WORK_TREE`, `GIT_COMMON_DIR` либо `GIT_INDEX_FILE` | сверить план, преемника, черновик кода и ревью с первым разделом; убрать перечисленные переменные, переопределяющие контекст Git, из окружения вспомогательного скрипта |
 | `recovery_plan_invalid` | план восстановления не подходит | поправить в нём строку исходного плана, статус или черновик кода |
 | `rejected_target_staged` | отклонённые целевые файлы добавлены в индекс | убрать их из индекса |
 | `snapshot_mismatch` | байты целевых файлов уже не совпадают с ревью | сохранение невозможно, решение — за Owner |
-| `recovery_ref_cas_conflict` | HEAD сдвинулся во время записи ссылки или ссылка уже занята | прочитать `--verify-rejected` и повторить на неподвижном HEAD |
+| `recovery_ref_cas_conflict` | транзакция записи ссылки отклонена, например HEAD или ссылка изменились после проверки | прочитать `--verify-rejected` и повторить при неподвижных HEAD и ссылке; целая ссылка, найденная до сохранения, используется повторно, а повреждённая даёт `recovery_ref_invalid` |
 | `capture_required` | очистка без сохранения | сначала выполнить сохранение |
 | `head_drift` | HEAD изменился после сохранения | проводить очистку на том же HEAD, что и сохранение (`captured_parent`) |
 | `rejected_target_drift` | целевой файл не совпадает ни с отклонёнными байтами, ни с HEAD | разобрать изменения этого целевого файла |
 | `routing_carrier_drift` | файл маршрута изменён после сохранения | вернуть байты из коммита сохранения |
-| `staging_forbidden` | попытка добавить в индекс или закоммитить план, принятый красным | не добавлять в индекс, закрывать через очистку |
+| `staging_forbidden`, `staging_forbidden_invalid_carrier` | попытка добавить в индекс или закоммитить план, принятый красным; второй код означает ошибку классификации или повреждённое сохранение | не добавлять в индекс; при втором коде сначала разобрать повреждённую запись, затем закрывать через очистку |

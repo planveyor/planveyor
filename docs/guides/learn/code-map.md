@@ -1,419 +1,421 @@
-# Справочник по коду
+# Code map
 
-Это приложение для разработчиков Planveyor. Сюда вынесены таблицы из всех глав: файлы и функции, с которых стоит начать чтение реализации, и именованные тесты с тем, что они проверяют. Разделы идут в порядке глав. Номера строк в коде меняются, поэтому ищите функцию или тест по имени.
+**English** · [Русский](code-map.ru.md)
 
-Описания тестов сделаны по их исходному коду. Прошли ли эти тесты на вашей версии, показывает только их запуск: команды — в [маршрутах проверки](../../tools/verify_suite.ru.md).
+This appendix is for Planveyor developers. The tables from all chapters are collected here: the files and functions to start reading the implementation from, and the named tests with what they check. The sections follow the order of the chapters. Line numbers in the code change, so look for a function or a test by its name.
 
-## Роли и файлы задачи
+The test descriptions are based on the test source code. Only running these tests shows whether they pass on your version: the commands are in the [verification routes](../../tools/verify_suite.md).
 
-Глава: [Роли и файлы задачи](roles-artifacts.md).
+## Roles and task files
 
-### Где читать реализацию
+Chapter: [Roles and task files](roles-artifacts.md).
 
-| Вопрос | Файл и ключевой символ |
+### Where to read the implementation
+
+| Question | File and key symbol |
 | --- | --- |
-| Как фаза получает имя prompt | [planveyor.zsh](../../../scripts/planveyor.zsh), `_planveyor_prompt_filename_for_role_phase()` |
-| Как выбираются фактические bytes prompt | [planveyor.zsh](../../../scripts/planveyor.zsh), `_planveyor_prompt_file_for_role_phase()` |
-| Как вызываются основные роли | [role_runtime.zsh](../../../scripts/planveyor/role_runtime.zsh), `planveyor_arch()`, `planveyor_planner()`, `planveyor_coder()` |
-| Как запускается конкретная линия Reviewer | [role_runtime.zsh](../../../scripts/planveyor/role_runtime.zsh), `_planveyor_reviewer_run_for_session_key()` |
-| Как Manager передаёт работу линиям | [manager_collab_pipeline.md](../../tools/prompts/manager_collab_pipeline.md), подпункт алгоритма о Reviewer dispatch |
-| Как проверяется принадлежность источника | [contract_authority_context.py](../../../scripts/contract_authority_context.py), `context_for_reader()` и `read_declared_text()` |
+| How a phase gets the prompt name | [planveyor.zsh](../../../scripts/planveyor.zsh), `_planveyor_prompt_filename_for_role_phase()` |
+| How the actual prompt bytes are chosen | [planveyor.zsh](../../../scripts/planveyor.zsh), `_planveyor_prompt_file_for_role_phase()` |
+| How the main roles are called | [role_runtime.zsh](../../../scripts/planveyor/role_runtime.zsh), `planveyor_arch()`, `planveyor_planner()`, `planveyor_coder()` |
+| How a specific Reviewer lane is launched | [role_runtime.zsh](../../../scripts/planveyor/role_runtime.zsh), `_planveyor_reviewer_run_for_session_key()` |
+| How Manager hands the work to the lanes | [manager_collab_pipeline.md](../../tools/prompts/manager_collab_pipeline.md) (in Russian), the algorithm subitem about Reviewer dispatch |
+| How the ownership of a source is checked | [contract_authority_context.py](../../../scripts/contract_authority_context.py), `context_for_reader()` and `read_declared_text()` |
 
-### Что проверяют тесты
+### What the tests check
 
-| Именованный тест | Точные проверки и предел вывода |
+| Named test | Exact assertions and the limit of the conclusion |
 | --- | --- |
-| [test_planveyor_codex_agent_roles.py](../../../scripts/test_planveyor_codex_agent_roles.py): `test_collab_prompt_dispatches_the_configured_role_types` | Через `assertIn` проверяет пары `architect/planner/coder → agent_type`, а также `followup_task` и `list_agents`; запрещает `planner → agent_type=default`. Это проверка текста prompt, не живого исполнения роли |
-| [test_analysis_source_ownership.py](../../../scripts/test_analysis_source_ownership.py): `test_every_shipped_role_declares_shared_root_then_declared_target_local` | Для Architect, Planner, Coder и Reviewer проверяет наличие и порядок маркеров источника analysis-wave playbook: shared root, объявленный target-local источник, запрет guessed fallback. Это узкая проверка четырёх role docs; Manager и все прочие источники роли ею не проверяются |
-| [test_planveyor_codex_agent_roles.py](../../../scripts/test_planveyor_codex_agent_roles.py): `test_home_ensure_selects_consumer_home_without_rewriting_agent_roles` | Общий fixture проверяет код `0`, возвращённый каталог, неизменность snapshot файлов и отсутствие нового `agents/planner.toml`. Клиент в fixture заменён заглушкой; проверка не доказывает аутентификацию |
+| [test_planveyor_codex_agent_roles.py](../../../scripts/test_planveyor_codex_agent_roles.py): `test_collab_prompt_dispatches_the_configured_role_types` | Uses `assertIn` to check the pairs `architect/planner/coder → agent_type`, as well as `followup_task` and `list_agents`; forbids `planner → agent_type=default`. This checks the prompt text, not a live run of a role |
+| [test_analysis_source_ownership.py](../../../scripts/test_analysis_source_ownership.py): `test_every_shipped_role_declares_shared_root_then_declared_target_local` | For Architect, Planner, Coder, and Reviewer, checks the presence and the order of the source markers of the analysis-wave playbook: the shared root, the declared target-local source, and the ban on a guessed fallback. This is a narrow check of four role documents; it does not check Manager or any other source of a role |
+| [test_planveyor_codex_agent_roles.py](../../../scripts/test_planveyor_codex_agent_roles.py): `test_home_ensure_selects_consumer_home_without_rewriting_agent_roles` | The shared fixture checks code `0`, the returned directory, the unchanged file snapshot, and the absence of a new `agents/planner.toml`. The client in the fixture is replaced with a stub; the check does not prove authentication |
 
-## Сквозной пример: какие товары пора пополнить
+## Running example: which products to reorder
 
-Глава: [Сквозной пример: какие товары пора пополнить](sql-example.md). Здесь код SQL sibling из [снимка](examples/sql/README.md), а не код Planveyor. В снимке два из 40 тестов обвязки, остальные остались в sibling.
+Chapter: [Running example: which products to reorder](sql-example.md). Here is the code of the SQL sibling from the [snapshot](examples/sql/README.md), not the code of Planveyor. The snapshot has two of the 40 harness tests; the others stayed in the sibling.
 
-### Где читать реализацию
+### Where to read the implementation
 
-| Вопрос | Файл и ключевой символ |
+| Question | File and key symbol |
 | --- | --- |
-| Как процедура считает дефицит | [GetReorderCandidates.sql](examples/sql/sql/Northwind/GetReorderCandidates.sql), `COALESCE` и `CAST(... AS INT)` внутри `CROSS APPLY` |
-| Как запускаются два класса тестов и проверка порядка | [run-tests.sql](examples/sql/sql/tests/run-tests.sql), маркеры `PV_TEST_RESULT`, `PV_ORDER_BEGIN`, `PV_ORDER_END` |
-| Что делает `make db-proof` | [sql.py](examples/sql/scripts/sql.py), `db_proof()` |
-| Как проверяются исходники тестов и скрипт запуска | [sql.py](examples/sql/scripts/sql.py), `verify_test_files()`, `current_test_set()` |
-| Как проверяется состояние классов в базе | [sql.py](examples/sql/scripts/sql.py), `existing_classes_are_safe()` |
-| С какими параметрами идёт публикация | [sql.py](examples/sql/scripts/sql.py), `publish_args()` |
-| Как разбираются результаты тестов и порядок строк | [sql.py](examples/sql/scripts/sql.py), `parse_test_results()`, `parse_order_rows()` |
-| Как прогон привязан к коммиту и файлам | [sql.py](examples/sql/scripts/sql.py), `current_proof_bytes()`, `reusable_proof()` |
-| Когда отчёт JUnit зелёный, а когда красный | [sql.py](examples/sql/scripts/sql.py), `junit_xml()`, `junit_matches()`, `failure_junit()` |
+| How the procedure computes the shortage | [GetReorderCandidates.sql](examples/sql/sql/Northwind/GetReorderCandidates.sql), `COALESCE` and `CAST(... AS INT)` inside `CROSS APPLY` |
+| How the two test classes and the order check are run | [run-tests.sql](examples/sql/sql/tests/run-tests.sql), the markers `PV_TEST_RESULT`, `PV_ORDER_BEGIN`, `PV_ORDER_END` |
+| What `make db-proof` does | [sql.py](examples/sql/scripts/sql.py), `db_proof()` |
+| How the test sources and the run script are checked | [sql.py](examples/sql/scripts/sql.py), `verify_test_files()`, `current_test_set()` |
+| How the state of the classes in the database is checked | [sql.py](examples/sql/scripts/sql.py), `existing_classes_are_safe()` |
+| Which parameters the publication uses | [sql.py](examples/sql/scripts/sql.py), `publish_args()` |
+| How the test results and the row order are parsed | [sql.py](examples/sql/scripts/sql.py), `parse_test_results()`, `parse_order_rows()` |
+| How a run is tied to the commit and the files | [sql.py](examples/sql/scripts/sql.py), `current_proof_bytes()`, `reusable_proof()` |
+| When the JUnit report is green and when it is red | [sql.py](examples/sql/scripts/sql.py), `junit_xml()`, `junit_matches()`, `failure_junit()` |
 
-### Что проверяют тесты
+### What the tests check
 
-| Именованный тест | Точные проверки и предел вывода |
+| Named test | Exact assertions and the limit of the conclusion |
 | --- | --- |
-| [test_sql_excerpt.py](examples/sql/test_sql_excerpt.py): `test_exact_result_and_direct_client_order_parsers` | На подставленном выводе базы принимает восемь успешных результатов и порядок `(10, 20, 30)`. Отвергает пропущенный, повторный, лишний и неуспешный результат; вывод без маркера `PV_ORDER_BEGIN` и с повторным маркером; ID 30 во второй строке вместо 20 (порядок 10, 30, 30); пропущенную и испорченную строку. Проверяет разбор вывода, база в тесте не участвует |
-| [test_sql_excerpt.py](examples/sql/test_sql_excerpt.py): `test_wrong_client_order_writes_red_junit_and_no_green_proof` | Вызывает `db_proof()` с подменёнными командами: оба класса помечены, строки приходят в порядке 10, 30, 30. Ожидает ошибку `order observer sequence mismatch`, три запроса состояния классов и ровно один отчёт JUnit с `errors="1"`, который `junit_matches()` не принимает. Сборка, линтер, публикация и запросы к базе в тесте подменены |
+| [test_sql_excerpt.py](examples/sql/test_sql_excerpt.py): `test_exact_result_and_direct_client_order_parsers` | On substituted database output, accepts eight successful results and the order `(10, 20, 30)`. Rejects a missing, repeated, extra, or failed result; output without the `PV_ORDER_BEGIN` marker and with a repeated marker; ID 30 in the second row instead of 20 (order 10, 30, 30); a missing and a corrupted row. It checks the parsing of the output; the database takes no part in the test |
+| [test_sql_excerpt.py](examples/sql/test_sql_excerpt.py): `test_wrong_client_order_writes_red_junit_and_no_green_proof` | Calls `db_proof()` with substituted commands: both classes are marked, and the rows come in the order 10, 30, 30. Expects the error `order observer sequence mismatch`, three class state queries, and exactly one JUnit report with `errors="1"`, which `junit_matches()` does not accept. The build, the linter, the publication, and the database queries are substituted in the test |
 
-## План и его статусы
+## The plan and its statuses
 
-Глава: [План и его статусы](plan-lifecycle.md).
+Chapter: [The plan and its statuses](plan-lifecycle.md).
 
-### Где читать реализацию
+### Where to read the implementation
 
-| Механика | Файл и символ |
+| Mechanism | File and symbol |
 | --- | --- |
-| Явный вход Oracle | [planveyor.zsh](../../../scripts/planveyor.zsh), `planveyor_plan_status_oracle()` |
-| Header, authority и итоговый readback | [plan_status_oracle.py](../../../scripts/plan_status_oracle.py), `_scan_status_line()`, `machine_authority_decision_readback()`, `oracle_result()` |
-| Проверки готовности handoff | [plan_lint.py](../../../scripts/plan_lint.py), `validate_exact_bundle_preflight()` и `lint_plan()` |
-| Создание основы draft | [planveyor.zsh](../../../scripts/planveyor.zsh), `planveyor_code_draft_stub_from_plan()` |
-| Выбор и чтение active plan | [planveyor.zsh](../../../scripts/planveyor.zsh), `planveyor_plan_set()` и `planveyor_planpath()` |
-| Финальный состав и закрытие | [planveyor.zsh](../../../scripts/planveyor.zsh), `planveyor_plan_bundle()` и `planveyor_plan_closeout_preflight()` |
-| Отдельный хвост документов | [docs_closeout.py](../../../scripts/docs_closeout.py), `classify_docs_closeout()` |
-| Что печатает `planveyor sibling plan` | [sibling_runbook.py](../../../scripts/sibling_runbook.py), `show_plan()` |
-| Как `planveyor sibling answer` записывает ответ Owner | [sibling_runbook.py](../../../scripts/sibling_runbook.py), `handle_answer()` |
-| Что проверяет `planveyor sibling close` перед `Done` и как записывает `Done` | [sibling_closeout.py](../../../scripts/sibling_closeout.py), `validate_done_admission()` и `handle_close()`; сам статус пишет [sibling_runbook.py](../../../scripts/sibling_runbook.py), `Context.set_status()`, через `planveyor_sibling()` в [planveyor.zsh](../../../scripts/planveyor.zsh) (`--internal set-done`, допуск проверяется заново) |
-| Почему открытый `## Post-merge gate` не пускает план в `Done` | [plan_lint.py](../../../scripts/plan_lint.py), `validate_done_post_merge_gate_checklist()` |
+| The explicit Oracle entry point | [planveyor.zsh](../../../scripts/planveyor.zsh), `planveyor_plan_status_oracle()` |
+| The header, the authority, and the final readback | [plan_status_oracle.py](../../../scripts/plan_status_oracle.py), `_scan_status_line()`, `machine_authority_decision_readback()`, `oracle_result()` |
+| Handoff readiness checks | [plan_lint.py](../../../scripts/plan_lint.py), `validate_exact_bundle_preflight()` and `lint_plan()` |
+| Creating the draft skeleton | [planveyor.zsh](../../../scripts/planveyor.zsh), `planveyor_code_draft_stub_from_plan()` |
+| Selecting and reading the active plan | [planveyor.zsh](../../../scripts/planveyor.zsh), `planveyor_plan_set()` and `planveyor_planpath()` |
+| The final bundle contents and the closeout | [planveyor.zsh](../../../scripts/planveyor.zsh), `planveyor_plan_bundle()` and `planveyor_plan_closeout_preflight()` |
+| The separate docs closeout | [docs_closeout.py](../../../scripts/docs_closeout.py), `classify_docs_closeout()` |
+| What `planveyor sibling plan` prints | [sibling_runbook.py](../../../scripts/sibling_runbook.py), `show_plan()` |
+| How `planveyor sibling answer` writes the Owner answer | [sibling_runbook.py](../../../scripts/sibling_runbook.py), `handle_answer()` |
+| What `planveyor sibling close` checks before `Done` and how it writes `Done` | [sibling_closeout.py](../../../scripts/sibling_closeout.py), `validate_done_admission()` and `handle_close()`; the status itself is written by [sibling_runbook.py](../../../scripts/sibling_runbook.py), `Context.set_status()`, through `planveyor_sibling()` in [planveyor.zsh](../../../scripts/planveyor.zsh) (`--internal set-done`, and the admission is checked again) |
+| Why an open `## Post-merge gate` keeps the plan from reaching `Done` | [plan_lint.py](../../../scripts/plan_lint.py), `validate_done_post_merge_gate_checklist()` |
 
-### Что проверяют тесты
+### What the tests check
 
-| Именованный тест | Точные проверки и предел вывода |
+| Named test | Exact assertions and the limit of the conclusion |
 | --- | --- |
-| [test_plan_status_oracle.py](../../../scripts/test_plan_status_oracle.py): `test_json_output_uses_single_header_status_and_ignores_body_status` | Проверяет код `0`, `status_norm=ready for coder`, точную header-строку, переданный `plan_path` и hash длиной `64`; историческое `Done` в теле не выбирается. Это разбор fixture, не исполнение Coder |
-| [test_plan_status_oracle.py](../../../scripts/test_plan_status_oracle.py): `test_duplicate_header_status_fails_with_line_details` | Проверяет код `3`, сообщение `expected exactly 1 header **Status:** line, got 2` и обе строки header. Это диагностика неоднозначного плана |
-| [test_planveyor_plan_bundle.py](../../../scripts/test_planveyor_plan_bundle.py): `test_preflight_allows_missing_first_pass_review_artifact` | Подготовка возвращает `0` и `PLANNED`; финальный `--check` возвращает ненулевой код и `MISSING-PATH`, receipt указывает `next_owner=Reviewer`. Это различие стадий допуска, не готовое review |
-| [test_planveyor_plan_bundle.py](../../../scripts/test_planveyor_plan_bundle.py): `test_preflight_rejects_stale_target_inventory` | Проверяет ненулевой код и `MISSING-PATH` с отсутствующим target. Несуществующий файл объявлен в `code_draft_meta.targets`; объявление без файла на диске не делает inventory пригодным |
-| [test_plan_lint.py](../../../scripts/test_plan_lint.py): `test_done_plan_with_open_post_merge_gate_checkbox_fails` | Для плана в статусе `Done` с открытым пунктом `- [ ]` в `## Post-merge gate` возвращает одну находку `ERROR` с упоминанием `Post-merge gate` и `- [ ]`. Проверяется функция `validate_done_post_merge_gate_checklist()` на тексте fixture, без полного прогона линтера |
-| [test_plan_lint.py](../../../scripts/test_plan_lint.py): `test_done_plan_with_post_merge_gate_section_level_na_passes` | Тот же `Done`-план, у которого раздел `## Post-merge gate` целиком заменён строкой `N/A (why=…)`, не даёт находок |
-| [test_sibling_runbook.py](../../../scripts/test_sibling_runbook.py): `test_actual_question_closes_and_preserves_verbatim_multiline_text` | Ответ Owner дописывается в план строкой `(Owner, id=Q1, status=closed)` и строками `  > …` без изменения текста; прежнее содержимое плана сохраняется, `owner_qna_readback` после записи даёт `clean`, команда из текста ответа не выполняется. Проверка проекта и Oracle в fixture заменены чтением раздела вопросов из текста плана |
-| [test_sibling_closeout.py](../../../scripts/test_sibling_closeout.py): `test_early_status_red_or_stale_review_and_owner_question_block` | По очереди подставляет в ответ Oracle статус `ready for arch review`, состояния ревью `stale_green_review` и `live_blocker`, открытый вопрос Owner и `route_guard_triggered=true`; каждый раз `handle_close()` с `--commit` останавливается, а HEAD, индекс и байты плана не меняются. Oracle, сборка набора и линтер в fixture заменены управляемыми ответами, Git настоящий |
-| [test_sibling_closeout.py](../../../scripts/test_sibling_closeout.py): `test_failed_final_lint_restores_only_own_plan_bytes_and_does_not_commit` | Если финальный линтер после записи `Done` отказывает, `handle_close()` останавливается с сообщением «Статус восстановлен»: байты плана и HEAD прежние, в индексе исходная версия плана, целевой файл не тронут, `git reset` не вызывается. Линтер в fixture заменён управляемым ответом |
+| [test_plan_status_oracle.py](../../../scripts/test_plan_status_oracle.py): `test_json_output_uses_single_header_status_and_ignores_body_status` | Checks code `0`, `status_norm=ready for coder`, the exact header line, the passed `plan_path`, and a hash of length `64`; a historical `Done` in the body is not selected. This is the parsing of a fixture, not a run of Coder |
+| [test_plan_status_oracle.py](../../../scripts/test_plan_status_oracle.py): `test_duplicate_header_status_fails_with_line_details` | Checks code `3`, the message `expected exactly 1 header **Status:** line, got 2`, and both header lines. This is the diagnosis of an ambiguous plan |
+| [test_planveyor_plan_bundle.py](../../../scripts/test_planveyor_plan_bundle.py): `test_preflight_allows_missing_first_pass_review_artifact` | The preflight returns `0` and `PLANNED`; the final `--check` returns a nonzero code and `MISSING-PATH`, and the receipt names `next_owner=Reviewer`. This is the difference between the admission stages, not a finished review |
+| [test_planveyor_plan_bundle.py](../../../scripts/test_planveyor_plan_bundle.py): `test_preflight_rejects_stale_target_inventory` | Checks a nonzero code and `MISSING-PATH` with the missing target. A nonexistent file is declared in `code_draft_meta.targets`; a declaration without a file on disk does not make the inventory usable |
+| [test_plan_lint.py](../../../scripts/test_plan_lint.py): `test_done_plan_with_open_post_merge_gate_checkbox_fails` | For a plan in the `Done` status with an open item `- [ ]` in `## Post-merge gate`, returns one `ERROR` finding that mentions `Post-merge gate` and `- [ ]`. The test checks the function `validate_done_post_merge_gate_checklist()` on the fixture text, without a full linter run |
+| [test_plan_lint.py](../../../scripts/test_plan_lint.py): `test_done_plan_with_post_merge_gate_section_level_na_passes` | The same `Done` plan, with the whole `## Post-merge gate` section replaced by the line `N/A (why=…)`, gives no findings |
+| [test_sibling_runbook.py](../../../scripts/test_sibling_runbook.py): `test_actual_question_closes_and_preserves_verbatim_multiline_text` | The Owner answer is appended to the plan as the line `(Owner, id=Q1, status=closed)` and the lines `  > …`, with the text unchanged; the earlier plan content is kept, `owner_qna_readback` gives `clean` after the write, and a command from the answer text is not run. In the fixture, the project check and Oracle are replaced by reading the questions section from the plan text |
+| [test_sibling_closeout.py](../../../scripts/test_sibling_closeout.py): `test_early_status_red_or_stale_review_and_owner_question_block` | Puts into the Oracle answer, one at a time, the status `ready for arch review`, the review states `stale_green_review` and `live_blocker`, an open Owner question, and `route_guard_triggered=true`; each time, `handle_close()` with `--commit` stops, and HEAD, the index, and the plan bytes do not change. In the fixture, Oracle, the bundle assembly, and the linter are replaced with controlled answers; Git is real |
+| [test_sibling_closeout.py](../../../scripts/test_sibling_closeout.py): `test_failed_final_lint_restores_only_own_plan_bytes_and_does_not_commit` | If the final linter refuses after `Done` is written, `handle_close()` stops with the message `Статус восстановлен` (status restored): the plan bytes and HEAD are unchanged, the index holds the original version of the plan, the target file is untouched, and `git reset` is not called. In the fixture, the linter is replaced with a controlled answer |
 
-## Разработка, анализ и декомпозиция
+## Development, analysis, and decomposition
 
-Глава: [Разработка, анализ и декомпозиция](work-contours.md).
+Chapter: [Development, analysis, and decomposition](work-contours.md).
 
-### Где читать реализацию
+### Where to read the implementation
 
-| Вопрос | Файл и символ |
+| Question | File and symbol |
 | --- | --- |
-| Подготовка существующего анализа | [planveyor.zsh](../../../scripts/planveyor.zsh), `planveyor_analysis_init()` |
-| Подготовка и запуск decomposition | [planveyor.zsh](../../../scripts/planveyor.zsh), `planveyor_decomposition_init()`, `planveyor_decomposition_collab_tui()` |
-| Как определяется authority analysis pack | [plan_status_oracle.py](../../../scripts/plan_status_oracle.py), `resolve_analysis_pack_authority()` |
-| Как читается граф children | [plan_status_oracle.py](../../../scripts/plan_status_oracle.py), `decomposition_child_state()` |
-| Как получается общая картина planning work | [planning_wave_readback.py](../../../scripts/planning_wave_readback.py), `build_readback()` |
-| Как планы допускаются в очередь | [plan_queue.py](../../../scripts/plan_queue.py), `validate_explicit_plan_for_queue()` и `set_queue()` |
-| Какие пять исходов анализа допустимы и что требует каждый | [plan_vocab.json](../../_meta/plan_vocab.json), `planning_contour.accepted_routes` и `status_transition_matrix`; [plan_status_oracle.py](../../../scripts/plan_status_oracle.py), `NON_EXECUTABLE_ROUTE_EXPECTED_FIELDS`, `NON_EXECUTABLE_ROUTE_REVISIT_REQUIRED` и `non_executable_source_route_carrier_issues()`; последнюю вызывает [plan_lint.py](../../../scripts/plan_lint.py) |
+| Preparing an existing analysis | [planveyor.zsh](../../../scripts/planveyor.zsh), `planveyor_analysis_init()` |
+| Preparing and launching a decomposition | [planveyor.zsh](../../../scripts/planveyor.zsh), `planveyor_decomposition_init()`, `planveyor_decomposition_collab_tui()` |
+| How the analysis pack authority is determined | [plan_status_oracle.py](../../../scripts/plan_status_oracle.py), `resolve_analysis_pack_authority()` |
+| How the graph of child plans is read | [plan_status_oracle.py](../../../scripts/plan_status_oracle.py), `decomposition_child_state()` |
+| How the overall picture of the planning work is built | [planning_wave_readback.py](../../../scripts/planning_wave_readback.py), `build_readback()` |
+| How plans are admitted to the queue | [plan_queue.py](../../../scripts/plan_queue.py), `validate_explicit_plan_for_queue()` and `set_queue()` |
+| Which five analysis outcomes are allowed and what each one requires | [plan_vocab.json](../../_meta/plan_vocab.json), `planning_contour.accepted_routes` and `status_transition_matrix`; [plan_status_oracle.py](../../../scripts/plan_status_oracle.py), `NON_EXECUTABLE_ROUTE_EXPECTED_FIELDS`, `NON_EXECUTABLE_ROUTE_REVISIT_REQUIRED`, and `non_executable_source_route_carrier_issues()`; [plan_lint.py](../../../scripts/plan_lint.py) calls the last one |
 
-### Что проверяют тесты
+### What the tests check
 
-| Именованный тест | Точные проверки и предел вывода |
+| Named test | Exact assertions and the limit of the conclusion |
 | --- | --- |
-| [test_plan_status_oracle.py](../../../scripts/test_plan_status_oracle.py): `test_plan_resident_statuses_are_exactly_the_statuses_without_code_draft` | Plan-resident статусы (ранние статусы и `Superseded`) равны canonical statuses за вычетом `code_draft_required`. Standalone-required множество равно самой группе `code_draft_required`: здесь authority уже во внешнем pack. Проверяется согласованность vocabulary, не качество анализа |
-| [test_planning_wave_readback.py](../../../scripts/test_planning_wave_readback.py): `test_external_recommendation_uses_standalone_truth_host` | Проверяет schema `planning_wave_readback.v1`, plan reference, внешний `truth_host` pack и рекомендацию `developer_wave`. Наличие рекомендации в readback не доказывает dispatch |
-| [test_plan_status_oracle.py](../../../scripts/test_plan_status_oracle.py): `test_operational_duplicate_warns_but_scalars_stay_pack_derived` | Требует `operational_duplicate` и lifecycle `warning`; при противоречащем plan budget возвращённые `budget_status=active` и depth `1` берутся из pack. Diagnostic warning не означает отсутствие проблемы |
-| [test_plan_status_oracle.py](../../../scripts/test_plan_status_oracle.py): `test_active_decomposition_without_child_graph_exposes_missing_blocker` | При fixture с `Done` Oracle возвращает код `0`, но `queue_closeout_ready=false`, kind `decomposition_children_missing` и child state `missing`. Успешный readback не равен готовности закрытия |
-| [test_plan_lint.py](../../../scripts/test_plan_lint.py): `test_operational_duplicate_with_ref_holds_on_every_status_family` | Для статусов `Architect initial draft`, `Ready for Planner`, `Ready for Review` и `Superseded` план со строкой `analysis_pack_ref` и продублированной строкой `route_recommendation` даёт ровно одну находку `ERROR` с `analysis_pack_authority_invalid:operational_duplicate` |
-| [test_plan_lint.py](../../../scripts/test_plan_lint.py): `test_defer_source_route_requires_revisit_when` | Для плана анализа с принятым исходом `defer` без строки `revisit_when` в `## Promoted route artifact` линтер возвращает `ERROR` с упоминанием `revisit_when` |
-| [test_plan_lint.py](../../../scripts/test_plan_lint.py): `test_human_gate_source_route_requires_revisit_when` | То же для исхода `human_gate`: без `revisit_when` линтер возвращает `ERROR` с упоминанием `revisit_when` |
+| [test_plan_status_oracle.py](../../../scripts/test_plan_status_oracle.py): `test_plan_resident_statuses_are_exactly_the_statuses_without_code_draft` | The plan-resident statuses (the early statuses and `Superseded`) equal the canonical statuses minus `code_draft_required`. The standalone-required set equals the `code_draft_required` group itself: here the authority is already in the external pack. The test checks the consistency of the vocabulary, not the quality of an analysis |
+| [test_planning_wave_readback.py](../../../scripts/test_planning_wave_readback.py): `test_external_recommendation_uses_standalone_truth_host` | Checks the schema `planning_wave_readback.v1`, the plan reference, the external `truth_host` pack, and the recommendation `developer_wave`. A recommendation in the readback does not prove a dispatch |
+| [test_plan_status_oracle.py](../../../scripts/test_plan_status_oracle.py): `test_operational_duplicate_warns_but_scalars_stay_pack_derived` | Requires `operational_duplicate` and the lifecycle `warning`; with a contradicting plan budget, the returned `budget_status=active` and depth `1` come from the pack. A diagnostic warning does not mean that there is no problem |
+| [test_plan_status_oracle.py](../../../scripts/test_plan_status_oracle.py): `test_active_decomposition_without_child_graph_exposes_missing_blocker` | With a `Done` fixture, Oracle returns code `0`, but `queue_closeout_ready=false`, the kind `decomposition_children_missing`, and the child state `missing`. A successful readback does not equal closeout readiness |
+| [test_plan_lint.py](../../../scripts/test_plan_lint.py): `test_operational_duplicate_with_ref_holds_on_every_status_family` | For the statuses `Architect initial draft`, `Ready for Planner`, `Ready for Review`, and `Superseded`, a plan with an `analysis_pack_ref` line and a duplicated `route_recommendation` line gives exactly one `ERROR` finding with `analysis_pack_authority_invalid:operational_duplicate` |
+| [test_plan_lint.py](../../../scripts/test_plan_lint.py): `test_defer_source_route_requires_revisit_when` | For an analysis plan with the accepted outcome `defer` and no `revisit_when` line in `## Promoted route artifact`, the linter returns an `ERROR` that mentions `revisit_when` |
+| [test_plan_lint.py](../../../scripts/test_plan_lint.py): `test_human_gate_source_route_requires_revisit_when` | The same for the outcome `human_gate`: without `revisit_when`, the linter returns an `ERROR` that mentions `revisit_when` |
 
-## Ревью и приёмка
+## Review and acceptance
 
-Глава: [Ревью и приёмка](review-acceptance.md).
+Chapter: [Review and acceptance](review-acceptance.md).
 
-### Где читать реализацию
+### Where to read the implementation
 
-| Вопрос | Файл и символ |
+| Question | File and symbol |
 | --- | --- |
-| Как получаются текущие target bytes | [review_target_snapshot.py](../../../scripts/review_target_snapshot.py), `build_current_bundle_snapshot()` |
-| Где единая проверка current proof | [plan_lint.py](../../../scripts/plan_lint.py), `preflight_current_review_proof()` |
-| Как проверяются lanes и общий artifact | [review_artifact_lint.py](../../../scripts/review_artifact_lint.py), `lint_review_artifacts()`; CLI selector `--select-risk-lane` |
-| Как current review влияет на readback | [plan_status_oracle.py](../../../scripts/plan_status_oracle.py), `classify_review_readback()` |
-| Как читается принятие Architect в sibling | [sibling_closeout.py](../../../scripts/sibling_closeout.py), `_arch_acceptance()` и `validate_done_admission()` |
-| Где описана ответственность Architect | [architect.md](../../roles/architect.md), раздел `Architect arch review` |
-| Как Manager запускает две линии Reviewer и скрипт выбора между ними | [manager_collab_pipeline.md](../../tools/prompts/manager_collab_pipeline.md), подпункт `4c) Reviewer logical dispatch` |
-| Как команда выбирает политику коммита | [planveyor.zsh](../../../scripts/planveyor.zsh), `planveyor_sibling()` и `_planveyor_role_prompt_body()` |
+| How the current target bytes are obtained | [review_target_snapshot.py](../../../scripts/review_target_snapshot.py), `build_current_bundle_snapshot()` |
+| Where the single current proof check is | [plan_lint.py](../../../scripts/plan_lint.py), `preflight_current_review_proof()` |
+| How the lanes and the shared artifact are checked | [review_artifact_lint.py](../../../scripts/review_artifact_lint.py), `lint_review_artifacts()`; the CLI selector `--select-risk-lane` |
+| How the current review affects the readback | [plan_status_oracle.py](../../../scripts/plan_status_oracle.py), `classify_review_readback()` |
+| How the acceptance of Architect is read in a sibling | [sibling_closeout.py](../../../scripts/sibling_closeout.py), `_arch_acceptance()` and `validate_done_admission()` |
+| Where the responsibility of Architect is described | [architect.md](../../roles/architect.md) (in Russian), the `Architect arch review` section |
+| How Manager launches the two Reviewer lanes and the selection script between them | [manager_collab_pipeline.md](../../tools/prompts/manager_collab_pipeline.md), the subitem `4c) Reviewer logical dispatch` |
+| How the command chooses the commit policy | [planveyor.zsh](../../../scripts/planveyor.zsh), `planveyor_sibling()` and `_planveyor_role_prompt_body()` |
 
-### Что проверяют тесты
+### What the tests check
 
-| Именованный тест | Точные проверки и предел вывода |
+| Named test | Exact assertions and the limit of the conclusion |
 | --- | --- |
-| [test_review_artifact_lint.py](../../../scripts/test_review_artifact_lint.py): `test_final_status_without_risk_lane_is_reported`, `test_final_status_without_contracts_lane_is_reported` | Каждый удаляет соответствующую lane секцию и требует один finding `missing_final_lane_sections` с её именем. Это структурная полнота финального artifact, не экспертное качество review |
-| [test_review_artifact_lint.py](../../../scripts/test_review_artifact_lint.py): `test_select_risk_lane_cli_preflights_referenced_support_before_selected` | Проверяет код `0`, `state=selected`, совпадающий `run_id` и неизменность plan/support bytes. Fixture использует `BUNDLE=staged`; это не самостоятельный proof всей current-bundle цепочки |
-| [test_review_artifact_lint.py](../../../scripts/test_review_artifact_lint.py): `test_final_dual_lane_rejects_stale_matching_current_bundle_hash` | Требует finding `current_review_proof_compact_snapshot_invalid` и отсутствие `dual_lane_target_snapshot_mismatch`: два одинаковых claims ещё могут быть непригодным current proof |
-| [test_sibling_closeout.py](../../../scripts/test_sibling_closeout.py): `test_arch_verdict_uses_only_unique_actual_section_and_first_line` | Непринятие, условная/вторая строка, duplicate section и fenced пример вызывают `Blocked`; state не меняется. Точный verdict принимается и в верхнем регистре. Fixture context не доказывает реальный role run |
-| [test_review_artifact_lint.py](../../../scripts/test_review_artifact_lint.py): `test_select_risk_lane_cli_blocks_referenced_support_and_clears_identity` | Подробный файл записи содержит развёрнутый путь к интерпретатору Homebrew: код `1`, `state=blocked`, `error_code=expanded_homebrew_python_command_evidence`; `selected_line`, `run_id` и `target_snapshot` пустые |
-| [test_sibling_runbook.py](../../../scripts/test_sibling_runbook.py): `test_direct_native_after_human_call_ignores_ambient_selector_and_history` | После `planveyor sibling architect` задание Architect содержит `COMMIT_POLICY=human_explicit`; следующий прямой вызов `planveyor_arch` через фасад получает `COMMIT_POLICY=native_existing`, хотя в окружении задано `PLANVEYOR_SIBLING_COMMIT_POLICY=human_explicit`; индекс остаётся пустым. Клиент Codex в fixture заменён скриптом, который только записывает задание |
+| [test_review_artifact_lint.py](../../../scripts/test_review_artifact_lint.py): `test_final_status_without_risk_lane_is_reported`, `test_final_status_without_contracts_lane_is_reported` | Each test removes the matching lane section and requires one finding `missing_final_lane_sections` with its name. This is the structural completeness of the final artifact, not the expert quality of the review |
+| [test_review_artifact_lint.py](../../../scripts/test_review_artifact_lint.py): `test_select_risk_lane_cli_preflights_referenced_support_before_selected` | Checks code `0`, `state=selected`, a matching `run_id`, and unchanged plan/support bytes. The fixture uses `BUNDLE=staged`; this is not an independent proof of the whole current-bundle chain |
+| [test_review_artifact_lint.py](../../../scripts/test_review_artifact_lint.py): `test_final_dual_lane_rejects_stale_matching_current_bundle_hash` | Requires the finding `current_review_proof_compact_snapshot_invalid` and no `dual_lane_target_snapshot_mismatch`: two identical claims can still be an unusable current proof |
+| [test_sibling_closeout.py](../../../scripts/test_sibling_closeout.py): `test_arch_verdict_uses_only_unique_actual_section_and_first_line` | A non-acceptance, a conditional or second line, a duplicate section, and a fenced example raise `Blocked`; the state does not change. The exact verdict is accepted in upper case too. The fixture context does not prove a real role run |
+| [test_review_artifact_lint.py](../../../scripts/test_review_artifact_lint.py): `test_select_risk_lane_cli_blocks_referenced_support_and_clears_identity` | The detailed record file contains an expanded path to the Homebrew interpreter: code `1`, `state=blocked`, `error_code=expanded_homebrew_python_command_evidence`; `selected_line`, `run_id`, and `target_snapshot` are empty |
+| [test_sibling_runbook.py](../../../scripts/test_sibling_runbook.py): `test_direct_native_after_human_call_ignores_ambient_selector_and_history` | After `planveyor sibling architect`, the Architect prompt contains `COMMIT_POLICY=human_explicit`; the next direct call of `planveyor_arch` through the facade gets `COMMIT_POLICY=native_existing`, although the environment sets `PLANVEYOR_SIBLING_COMMIT_POLICY=human_explicit`; the index stays empty. In the fixture, the Codex client is replaced with a script that only records the prompt |
 
-## Закрытие задачи
+## Task closeout
 
-Глава: [Закрытие задачи](closeout.md).
+Chapter: [Task closeout](closeout.md).
 
-### Где читать реализацию
+### Where to read the implementation
 
-| Вопрос | Файл и символ |
+| Question | File and symbol |
 | --- | --- |
-| Как `close` проверяет задачу и делает оба коммита, а `ready` читает итог | [sibling_closeout.py](../../../scripts/sibling_closeout.py), `handle_close()` и `handle_ready()` |
-| Как собирается, ставится в индекс и проверяется точный набор файлов | [planveyor.zsh](../../../scripts/planveyor.zsh): `planveyor_plan_bundle`, `planveyor_plan_closeout_preflight` |
-| Как классифицируется закрытие документов и в каком порядке вызываются роли | [docs_closeout.py](../../../scripts/docs_closeout.py): `classify_docs_closeout` и `DISPATCH_FAMILY` |
-| Чем запускаются роли двух этапов | [docs_finalize.zsh](../../../scripts/planveyor/docs_finalize.zsh): публичные role wrappers двух семейств |
-| Кто записывает предложения по процессу | [process_improvements_collect.py](../../../scripts/process_improvements_collect.py) |
-| Кто записывает отложенные задачи | [followups_apply.py](../../../scripts/followups_apply.py) |
-| Как строится сообщение коммита документов | [followups_capture.py](../../../scripts/followups_capture.py), `_resolve_commit_message()` |
-| Почему план в `Done` не может держать открытые пункты `## Post-merge gate` | [plan_lint.py](../../../scripts/plan_lint.py), `validate_done_post_merge_gate_checklist()` |
+| How `close` checks the task, makes the task commit and, if needed, the documents commit, and how `ready` reads the result | [sibling_closeout.py](../../../scripts/sibling_closeout.py), `handle_close()` and `handle_ready()` |
+| How the exact bundle is assembled, staged, and checked | [planveyor.zsh](../../../scripts/planveyor.zsh): `planveyor_plan_bundle`, `planveyor_plan_closeout_preflight` |
+| How the docs closeout is classified and in which order the roles are called | [docs_closeout.py](../../../scripts/docs_closeout.py): `classify_docs_closeout` and `DISPATCH_FAMILY` |
+| What launches the roles of the two stages | [docs_finalize.zsh](../../../scripts/planveyor/docs_finalize.zsh): the public role wrappers of the two families |
+| Who writes the process improvements | [process_improvements_collect.py](../../../scripts/process_improvements_collect.py) |
+| Who writes the follow-ups | [followups_apply.py](../../../scripts/followups_apply.py) |
+| How the message of the documents commit is built | [followups_capture.py](../../../scripts/followups_capture.py), `_resolve_commit_message()` |
+| Why a plan in `Done` cannot keep open `## Post-merge gate` items | [plan_lint.py](../../../scripts/plan_lint.py), `validate_done_post_merge_gate_checklist()` |
 
-### Что проверяют тесты
+### What the tests check
 
-| Именованный тест | Точные проверки и предел вывода |
+| Named test | Exact assertions and the limit of the conclusion |
 | --- | --- |
-| [test_docs_closeout.py](../../../scripts/test_docs_closeout.py): `test_terminal_commit_ready_remains_blocked_until_semantic_commit_materializes` | Требует `blocked` и `semantic_closeout_commit_pending`; готовность коммита не засчитывается как его выполнение |
-| [test_docs_closeout.py](../../../scripts/test_docs_closeout.py): `test_dispatch_family_orders_general_then_followups` | Проверяет точные восемь пар role/lane, а не реальный запуск восьми ИИ-сессий |
-| [test_sibling_closeout.py](../../../scripts/test_sibling_closeout.py): `test_preview_and_declined_gates_have_no_status_index_or_history_effects` | `close` без `--commit` возвращает `semantic_ready`, полный список путей и сообщение коммита; `HEAD`, индекс и байты плана не меняются, статус не ставится, Manager не вызывается |
-| [test_sibling_closeout.py](../../../scripts/test_sibling_closeout.py): `test_done_with_canonical_pending_semantic_delta_can_be_committed` | План в `Done` с незакоммиченным набором (`semantic_closeout_has_unstaged_delta`): `close` возвращает `semantic_ready`, `close --commit` — `semantic_committed`, изменённый целевой файл попадает в коммит |
-| [test_sibling_closeout.py](../../../scripts/test_sibling_closeout.py): `test_ready_does_not_run_stack_commands_and_blocked_noop_is_not_ready` | При `state=blocked` закрытия документов `ready` возвращает `pending` и не вызывает `make`, `planveyor_plan_lint` и `planveyor_manager_init` |
+| [test_docs_closeout.py](../../../scripts/test_docs_closeout.py): `test_terminal_commit_ready_remains_blocked_until_semantic_commit_materializes` | Requires `blocked` and `semantic_closeout_commit_pending`; readiness to commit does not count as the commit itself |
+| [test_docs_closeout.py](../../../scripts/test_docs_closeout.py): `test_dispatch_family_orders_general_then_followups` | Checks the exact eight role/lane pairs, not a real launch of eight AI sessions |
+| [test_sibling_closeout.py](../../../scripts/test_sibling_closeout.py): `test_preview_and_declined_gates_have_no_status_index_or_history_effects` | `close` without `--commit` returns `semantic_ready`, the full list of paths, and the commit message; `HEAD`, the index, and the plan bytes do not change, no status is set, and Manager is not called |
+| [test_sibling_closeout.py](../../../scripts/test_sibling_closeout.py): `test_done_with_canonical_pending_semantic_delta_can_be_committed` | A plan in `Done` with an uncommitted bundle (`semantic_closeout_has_unstaged_delta`): `close` returns `semantic_ready`, `close --commit` returns `semantic_committed`, and the changed target file goes into the commit |
+| [test_sibling_closeout.py](../../../scripts/test_sibling_closeout.py): `test_ready_does_not_run_stack_commands_and_blocked_noop_is_not_ready` | With `state=blocked` of the docs closeout, `ready` returns `pending` and does not call `make`, `planveyor_plan_lint`, or `planveyor_manager_init` |
 
-## Тесты и доказательства: чему можно доверять
+## Tests and evidence: what you can trust
 
-Глава: [Тесты и доказательства: чему можно доверять](testing-evidence.md).
+Chapter: [Tests and evidence: what you can trust](testing-evidence.md).
 
-### Где читать реализацию
+### Where to read the implementation
 
-| Вопрос | Файл и ключевой символ |
+| Question | File and key symbol |
 | --- | --- |
-| Как проверяется форма плана | [plan_lint.py](../../../scripts/plan_lint.py), `lint_plan()` |
-| Как проверяется набор файлов задачи | [planveyor.zsh](../../../scripts/planveyor.zsh), `planveyor_plan_bundle()` с режимами `--preflight` и `--check` |
-| Как считается снимок целевых файлов для ревью | [review_target_snapshot.py](../../../scripts/review_target_snapshot.py), `build_current_bundle_snapshot()`, `_bundle_sha256()` |
-| Как ревью сверяется с текущими файлами | [plan_lint.py](../../../scripts/plan_lint.py), `preflight_current_review_proof()`, `select_plan_risk_lane_snapshot()` |
-| Как Oracle читает состояние ревью и выбирает роль | [plan_status_oracle.py](../../../scripts/plan_status_oracle.py), `classify_review_readback()`, `review_operational_route()` |
-| Почему `planveyor sibling close` отказывает при устаревшем ревью | [sibling_closeout.py](../../../scripts/sibling_closeout.py), `validate_done_admission()`: требует `review_readback_state=ok`; повторная сверка ответа Oracle в `handle_close()` перед коммитом. Строку `Вердикт: принято.` отдельно проверяет `_arch_acceptance()` |
+| How the form of the plan is checked | [plan_lint.py](../../../scripts/plan_lint.py), `lint_plan()` |
+| How the task bundle is checked | [planveyor.zsh](../../../scripts/planveyor.zsh), `planveyor_plan_bundle()` with the `--preflight`, `--scope-check`, and `--check` modes |
+| How the target snapshot for the review is computed | [review_target_snapshot.py](../../../scripts/review_target_snapshot.py), `build_current_bundle_snapshot()`, `_bundle_sha256()` |
+| How the review is compared with the current files | [plan_lint.py](../../../scripts/plan_lint.py), `preflight_current_review_proof()`, `select_plan_risk_lane_snapshot()` |
+| How Oracle reads the review state and chooses the role | [plan_status_oracle.py](../../../scripts/plan_status_oracle.py), `classify_review_readback()`, `review_operational_route()` |
+| Why `planveyor sibling close` refuses with a stale review | [sibling_closeout.py](../../../scripts/sibling_closeout.py), `validate_done_admission()`: requires `review_readback_state=ok`; `handle_close()` checks the Oracle answer again before the commit. The line `Вердикт: принято.` (verdict: accepted) is checked separately by `_arch_acceptance()` |
 
-### Что проверяют тесты
+### What the tests check
 
-| Именованный тест | Точные проверки и предел вывода |
+| Named test | Exact assertions and the limit of the conclusion |
 | --- | --- |
-| [test_review_artifact_lint.py](../../../scripts/test_review_artifact_lint.py): `test_select_risk_lane_cli_blocks_stale_or_removed_current_producer_target` | На временном Git-репозитории выбор записи линии рисков сначала возвращает `selected`. После правки целевого файла — код `1`, `state=blocked` и `current_review_proof_producer_mismatch`; после удаления файла — `current_review_proof_producer_or_support_unavailable`. Живой запуск ролей тест не делает |
-| [test_plan_status_oracle.py](../../../scripts/test_plan_status_oracle.py): `test_green_review_snapshot_mismatch_routes_to_reviewer_and_blocks_terminal_state` | Подменяет lint ревью находкой о несовпадении снимка (`current_bundle_target_snapshot_mismatch` или `dual_lane_target_snapshot_mismatch`) и ждёт `stale_green_review`, маршрут `reviewer_same_file_rewrite_required`, следующую роль Reviewer и `terminal_ready_state=blocked`. Сам lint ревью в этом тесте заменён |
-| [test_sibling_closeout.py](../../../scripts/test_sibling_closeout.py): `test_early_status_red_or_stale_review_and_owner_question_block` | Подменяет ответ Oracle: статус до приёмки, `stale_green_review`, `live_blocker`, открытый вопрос Owner или сработавшая защита маршрута. В каждом случае `handle_close()` с `--commit` отказывает, а HEAD, индекс и файл плана остаются прежними |
+| [test_review_artifact_lint.py](../../../scripts/test_review_artifact_lint.py): `test_select_risk_lane_cli_blocks_stale_or_removed_current_producer_target` | On a temporary Git repository, the risk lane record selection first returns `selected`. After an edit of the target file, it gives code `1`, `state=blocked`, and `current_review_proof_producer_mismatch`; after the file is deleted, `current_review_proof_producer_or_support_unavailable`. The test does not launch the roles live |
+| [test_plan_status_oracle.py](../../../scripts/test_plan_status_oracle.py): `test_green_review_snapshot_mismatch_routes_to_reviewer_and_blocks_terminal_state` | Replaces the review lint with one that reports a snapshot mismatch (`current_bundle_target_snapshot_mismatch` or `dual_lane_target_snapshot_mismatch`) and expects `stale_green_review`, the route `reviewer_same_file_rewrite_required`, Reviewer as the next role, and `terminal_ready_state=blocked`. The review lint itself is replaced in this test |
+| [test_sibling_closeout.py](../../../scripts/test_sibling_closeout.py): `test_early_status_red_or_stale_review_and_owner_question_block` | Substitutes the Oracle answer: a status before acceptance, `stale_green_review`, `live_blocker`, an open Owner question, or a triggered route guard. In each case, `handle_close()` with `--commit` refuses, and HEAD, the index, and the plan file stay unchanged |
 
-## Sibling: создание и обновление
+## Sibling: creation and upgrade
 
-Глава: [Sibling: создание и обновление](sibling-lifecycle.md).
+Chapter: [Sibling: creation and upgrade](sibling-lifecycle.md).
 
-### Где читать реализацию
+### Where to read the implementation
 
-| Вопрос | Файл и ключевой символ |
+| Question | File and key symbol |
 | --- | --- |
-| Человеческий слой выбора и следующего действия | [sibling_runbook.py](../../../scripts/sibling_runbook.py): `handle_init`, `handle_upgrade` |
-| Создание, проверка и перенос контракта | [consumer_contract.py](../../../scripts/consumer_contract.py): `init`, `upgrade`, `local_sections`, `notices`, `adaptation_plan`, `doctor` |
-| Почему `sibling upgrade` при остановке с кандидатом не показывает причину | [sibling_runbook.py](../../../scripts/sibling_runbook.py): `Context.call` при ненулевом коде показывает только stderr, а `main` в [consumer_contract.py](../../../scripts/consumer_contract.py) печатает JSON с `problems` и `candidate` в stdout |
-| Коммит плана, закрытие документов и готовность | [sibling_closeout.py](../../../scripts/sibling_closeout.py): `handle_close` показывает набор файлов, с `--commit` переводит принятый план в `Done` и коммитит его точный набор, а после хода Manager отдельным вызовом коммитит документы; `handle_ready` только читает состояние контракта, плана и закрытия документов |
+| The human layer of selection and the next action | [sibling_runbook.py](../../../scripts/sibling_runbook.py): `handle_init`, `handle_upgrade` |
+| Creating, checking, and carrying over the contract | [consumer_contract.py](../../../scripts/consumer_contract.py): `init`, `upgrade`, `local_sections`, `notices`, `adaptation_plan`, `doctor` |
+| Why `sibling upgrade` does not show the reason when it stops with a candidate | [sibling_runbook.py](../../../scripts/sibling_runbook.py): `Context.call` shows only stderr on a nonzero code, and `main` in [consumer_contract.py](../../../scripts/consumer_contract.py) prints JSON with `problems` and `candidate` to stdout |
+| Plan commit, docs closeout, and readiness | [sibling_closeout.py](../../../scripts/sibling_closeout.py): `handle_close` shows the bundle, with `--commit` moves the accepted plan to `Done` and commits its exact bundle, and after the Manager turn commits the documents in a separate call; `handle_ready` only reads the state of the contract, the plan, and the docs closeout |
 
-| Маршрут | Каноническая инструкция | Точка входа в реализацию |
+| Route | Canonical instructions | Entry point into the implementation |
 | --- | --- | --- |
-| Init | [Руководство по sibling](../stack-sibling.ru.md), создание проекта | [sibling_runbook.py](../../../scripts/sibling_runbook.py): `handle_init()` → [consumer_contract.py](../../../scripts/consumer_contract.py): `init()` |
-| Upgrade | [Руководство по sibling](../stack-sibling.ru.md), получение новой версии | [sibling_runbook.py](../../../scripts/sibling_runbook.py): `handle_upgrade()` → [consumer_contract.py](../../../scripts/consumer_contract.py): `upgrade()` и `adaptation_plan()` |
+| Init | [Stack sibling guide](../stack-sibling.md), project creation | [sibling_runbook.py](../../../scripts/sibling_runbook.py): `handle_init()` → [consumer_contract.py](../../../scripts/consumer_contract.py): `init()` |
+| Upgrade | [Stack sibling guide](../stack-sibling.md), getting a new version | [sibling_runbook.py](../../../scripts/sibling_runbook.py): `handle_upgrade()` → [consumer_contract.py](../../../scripts/consumer_contract.py): `upgrade()` and `adaptation_plan()` |
 
-Имена Python-функций в таблице — адреса для чтения реализации. Пользовательские вызовы берутся из guide и `planveyor_help`; внутренние helpers не следует превращать в альтернативный публичный интерфейс.
+The Python function names in the table are addresses for reading the implementation. User calls come from the guide and `planveyor_help`; do not turn internal helpers into an alternative public interface.
 
-### Что проверяют тесты
+### What the tests check
 
-| Именованный тест | Точные проверки и предел вывода |
+| Named test | Exact assertions and the limit of the conclusion |
 | --- | --- |
-| [test_consumer_contract.py](../../../scripts/test_consumer_contract.py): `test_compatible_upgrade_preserves_local_section_and_swaps_only_after_checks` | Проверяет неизменность original до swap, bytes секции в target и backup, наличие плана и результат `updated_pending_adaptation` |
-| [test_consumer_contract.py](../../../scripts/test_consumer_contract.py): `test_acceptance_refuses_uncommitted_candidate_and_preserves_original` | Требует отказ и прежнее состояние original; backup до принятия не появляется |
-| [test_consumer_contract.py](../../../scripts/test_consumer_contract.py): `test_acceptance_refuses_lost_local_text_and_preserves_original` | Требует `blocked`, сохранность original и retained candidate даже после его коммита |
-| [test_consumer_contract.py](../../../scripts/test_consumer_contract.py): `test_copier_and_lint_failures_retain_only_a_candidate` | При ошибке Copier ждёт `blocked` с `Copier exited 17`; при провале линтера созданного плана обновления — отказ `generated adaptation plan failed lint` и `candidate retained`. В обоих случаях original не меняется, candidate остаётся: план создаётся до замены каталогов |
-| [test_sibling_runbook.py](../../../scripts/test_sibling_runbook.py): `test_upgrade_inside_target_refuses_before_any_swap` | `sibling upgrade` из каталога внутри проекта завершается ненулевым кодом со словом «Выйдите» в stderr; HEAD проекта прежний, резервной копии нет |
-| [test_sibling_runbook.py](../../../scripts/test_sibling_runbook.py): `test_upgrade_from_outside_preserves_local_sections_and_selects_returned_plan` | Снаружи с `--project`: в выводе «адаптация ещё открыта», локальный текст сохранён, текущий план — `contract_upgrade_` со статусом `architect initial draft`, резервная копия одна |
+| [test_consumer_contract.py](../../../scripts/test_consumer_contract.py): `test_compatible_upgrade_preserves_local_section_and_swaps_only_after_checks` | Checks that the original is unchanged before the swap, the section bytes in the target and in the backup, the presence of the plan, and the result `updated_pending_adaptation` |
+| [test_consumer_contract.py](../../../scripts/test_consumer_contract.py): `test_acceptance_refuses_uncommitted_candidate_and_preserves_original` | Requires a refusal and the unchanged state of the original; no backup appears before the acceptance |
+| [test_consumer_contract.py](../../../scripts/test_consumer_contract.py): `test_acceptance_refuses_lost_local_text_and_preserves_original` | Requires `blocked`, an intact original, and a retained candidate even after its commit |
+| [test_consumer_contract.py](../../../scripts/test_consumer_contract.py): `test_copier_and_lint_failures_retain_only_a_candidate` | On a Copier error, expects `blocked` with `Copier exited 17`; when the generated upgrade plan fails the linter, the refusal `generated adaptation plan failed lint` and `candidate retained`. In both cases, the original does not change and the candidate stays: the plan is created before the directories are swapped |
+| [test_sibling_runbook.py](../../../scripts/test_sibling_runbook.py): `test_upgrade_inside_target_refuses_before_any_swap` | `sibling upgrade` from a directory inside the project exits with a nonzero code and the word `Выйдите` (leave) in stderr; the project HEAD is unchanged, and there is no backup |
+| [test_sibling_runbook.py](../../../scripts/test_sibling_runbook.py): `test_upgrade_from_outside_preserves_local_sections_and_selects_returned_plan` | From outside, with `--project`: the output has `адаптация ещё открыта` (the adaptation is still open), the local text is kept, the current plan is `contract_upgrade_` with the status `architect initial draft`, and there is one backup |
 
-Эти assertions устанавливают механику переноса на fixture. Они не принимают stack brief, не запускают реальные роли и не доказывают работоспособность вашего продукта.
+These assertions establish the carry-over mechanics on a fixture. They do not accept a stack brief, do not launch real roles, and do not prove that your product works.
 
-## Обмен изменениями с Planveyor
+## Exchanging changes with Planveyor
 
-Глава: [Обмен изменениями с Planveyor](change-packets.md).
+Chapter: [Exchanging changes with Planveyor](change-packets.md).
 
-### Где читать реализацию
+### Where to read the implementation
 
-| Вопрос | Файл и ключевой символ |
+| Question | File and key symbol |
 | --- | --- |
-| Формат извещения и его путь в план обновления | [Формат notice](../../contract_notices/README.md) и [consumer_contract.py](../../../scripts/consumer_contract.py): `validate_notice`, `notices`, `adaptation_plan` |
-| Импорт запроса и ACK | [upstream_request.py](../../../scripts/upstream_request.py): `cmd_import`, `cmd_ack`. `_ensure_source_local` сравнивает корень проекта с корнем движка; оба корня передаёт обёртка `_planveyor_upstream_request_helper_run` в [planveyor.zsh](../../../scripts/planveyor.zsh). `ack` не принимает ссылку на исполнение без ссылки на решение и не проверяет, существуют ли файлы по ссылкам (F28) |
-| Адресный пакет и итог получателя | [rollout_packet.py](../../../scripts/rollout_packet.py): `cmd_create`, `cmd_adoption_plan`, `cmd_outcome_set`, `cmd_ack`; полный словарь итогов — `CANONICAL_TARGET_OUTCOMES`, неизвестное значение отвергается |
-| Ownership между source и target | [Rollout ADR](../../adr/005-rollout-packet-is-handoff-not-execution.md) |
-| Почему проверка после слияния не создаёт пакетов для sibling | [post_merge_packetization_gate.py](../../../scripts/post_merge_packetization_gate.py): пустая таблица `EXPLICIT_TARGET_APPLICABILITY`; производственный код не выводит обязательство sibling по догадке |
+| The contract notice format and its path into the upgrade plan | [Notice format](../../contract_notices/README.md) (in Russian) and [consumer_contract.py](../../../scripts/consumer_contract.py): `validate_notice`, `notices`, `adaptation_plan` |
+| Request import and ACK | [upstream_request.py](../../../scripts/upstream_request.py): `cmd_import`, `cmd_ack`. `_ensure_source_local` compares the project root with the engine root; the wrapper `_planveyor_upstream_request_helper_run` in [planveyor.zsh](../../../scripts/planveyor.zsh) passes both roots. `ack` does not accept an execution reference without a decision reference and does not check whether the files at the references exist (F28) |
+| The rollout packet and the recipient's outcome | [rollout_packet.py](../../../scripts/rollout_packet.py): `cmd_create`, `cmd_adoption_plan`, `cmd_outcome_set`, `cmd_ack`; the full vocabulary of outcomes is `CANONICAL_TARGET_OUTCOMES`, and an unknown value is rejected |
+| Ownership between the source and the target | [Rollout ADR](../../adr/005-rollout-packet-is-handoff-not-execution.md) (in Russian) |
+| Why the post-merge check does not create packets for a sibling | [post_merge_packetization_gate.py](../../../scripts/post_merge_packetization_gate.py): the empty table `EXPLICIT_TARGET_APPLICABILITY`; the production code does not derive a sibling obligation from a guess |
 
-| Маршрут | Каноническая инструкция | Точка входа в реализацию |
+| Route | Canonical instructions | Entry point into the implementation |
 | --- | --- | --- |
-| Upstream | [CONTRIBUTING](../../../CONTRIBUTING.ru.md) и [Lifecycle и пакеты](../lifecycle-and-packets.ru.md) | [upstream_request.py](../../../scripts/upstream_request.py): `cmd_import()` и `cmd_ack()`; [шаблон запроса](../../upstream_packets/_template.md) |
-| Rollout | [Lifecycle/packets](../lifecycle-and-packets.ru.md) | [rollout_packet.py](../../../scripts/rollout_packet.py): `cmd_create()`, `cmd_adoption_plan()`, `cmd_outcome_set()`, `cmd_reconcile()` |
+| Upstream | [CONTRIBUTING](../../../CONTRIBUTING.md) and [Lifecycle and packets](../lifecycle-and-packets.md) | [upstream_request.py](../../../scripts/upstream_request.py): `cmd_import()` and `cmd_ack()`; [request template](../../upstream_packets/_template.md) |
+| Rollout | [Lifecycle and packets](../lifecycle-and-packets.md) | [rollout_packet.py](../../../scripts/rollout_packet.py): `cmd_create()`, `cmd_adoption_plan()`, `cmd_outcome_set()`, `cmd_reconcile()` |
 
-### Что проверяют тесты
+### What the tests check
 
-| Именованный тест | Точные проверки и предел вывода |
+| Named test | Exact assertions and the limit of the conclusion |
 | --- | --- |
-| [test_consumer_contract.py](../../../scripts/test_consumer_contract.py): `test_validate_notice_requires_five_clean_fields_and_every_array_item` | Проверяет формат всех пяти полей, включая каждую строку массива; семантическую полезность инструкции он не оценивает |
-| [test_consumer_contract.py](../../../scripts/test_consumer_contract.py): `test_unreadable_non_deleted_notice_refuses_upgrade_before_candidate_or_backup` | Нечитаемое извещение в диапазоне даёт отказ `cannot read notice in source history`; состояние source и target прежнее, ни candidate, ни backup не появляются |
-| [test_upstream_request.py](../../../scripts/test_upstream_request.py): `test_import_creates_source_local_process_row_and_updates_packet` | Требует PI-файл, статус `imported` и пустые decision/execution refs: import ещё не решение |
-| [test_upstream_request.py](../../../scripts/test_upstream_request.py): `test_import_rejects_wrong_root_without_mutation` | Импорт с корнем репозитория, отличным от корня Planveyor, завершается кодом 1 и сообщением `source-local only`; запрос не меняется, у цели не появляется `docs/process_improvements` |
-| [test_upstream_request.py](../../../scripts/test_upstream_request.py): `test_ack_rejects_execution_without_decision_and_does_not_mutate` | Требует отказ и неизменный request при execution ref без decision ref |
-| [test_rollout_packet.py](../../../scripts/test_rollout_packet.py): `test_target_inbox_json_exposes_imported_as_awaiting_target_outcome` | Явно проверяет ожидание target outcome после ACK import |
-| [test_rollout_packet.py](../../../scripts/test_rollout_packet.py): `test_reconcile_target_readback_accepts_only_structured_outcomes` | Принимает ровно соответствующий structured carrier, отвергает prose-only и несовпадающие id/path; bytes source и target остаются прежними |
+| [test_consumer_contract.py](../../../scripts/test_consumer_contract.py): `test_validate_notice_requires_five_clean_fields_and_every_array_item` | Checks the format of all five fields, including every line of an array; it does not assess the semantic usefulness of the instruction |
+| [test_consumer_contract.py](../../../scripts/test_consumer_contract.py): `test_unreadable_non_deleted_notice_refuses_upgrade_before_candidate_or_backup` | An unreadable notice in the range gives the refusal `cannot read notice in source history`; the state of the source and the target is unchanged, and neither a candidate nor a backup appears |
+| [test_upstream_request.py](../../../scripts/test_upstream_request.py): `test_import_creates_source_local_process_row_and_updates_packet` | Requires a PI file, the status `imported`, and empty decision/execution refs: an import is not yet a decision |
+| [test_upstream_request.py](../../../scripts/test_upstream_request.py): `test_import_rejects_wrong_root_without_mutation` | An import with a repository root other than the Planveyor root exits with code 1 and the message `source-local only`; the request does not change, and `docs/process_improvements` does not appear in the target |
+| [test_upstream_request.py](../../../scripts/test_upstream_request.py): `test_ack_rejects_execution_without_decision_and_does_not_mutate` | Requires a refusal and an unchanged request for an execution ref without a decision ref |
+| [test_rollout_packet.py](../../../scripts/test_rollout_packet.py): `test_target_inbox_json_exposes_imported_as_awaiting_target_outcome` | Explicitly checks that a target outcome is awaited after the import ACK |
+| [test_rollout_packet.py](../../../scripts/test_rollout_packet.py): `test_reconcile_target_readback_accepts_only_structured_outcomes` | Accepts exactly the matching structured carrier and rejects prose-only carriers and mismatching id/path; the source and target bytes stay unchanged |
 
-Это helper fixtures, не доказательство отправки GitHub issue, принятия fix или завершённого rollout в вашем проекте.
+These are helper fixtures, not proof that a GitHub issue was sent, a fix was accepted, or a rollout was completed in your project.
 
-## Что уже работает и что дальше
+## What works now and what comes next
 
-Глава: [Что уже работает и что дальше](capabilities-boundaries.md).
+Chapter: [What works now and what comes next](capabilities-boundaries.md).
 
-### Где читать реализацию
+### Where to read the implementation
 
-| Граница | Файл и ключевой символ |
+| Limit | File and key symbol |
 | --- | --- |
-| Какие версии Python пропускает проверка при запуске (3.10–3.12; поддерживается только 3.12) | [_pybin.sh](../../../scripts/_pybin.sh), `planveyor_pybin_validate_version()`; `requires-python` в [pyproject.toml](../../../pyproject.toml) |
-| Явное восстановление очереди (F23) | [planveyor.zsh](../../../scripts/planveyor.zsh), `planveyor_q_recover()`; [plan_queue.py](../../../scripts/plan_queue.py), команда `recover` |
-| Извещения при обновлении sibling (F27) | [consumer_contract.py](../../../scripts/consumer_contract.py), `validate_notice()`, `notices()`, `adaptation_plan()` |
-| Адресные пакеты (F29) | [rollout_packet.py](../../../scripts/rollout_packet.py); команды `planveyor_rollout_packet_*` в [planveyor.zsh](../../../scripts/planveyor.zsh) |
-| Деление путей при ревью диапазона (F43) | [range_review_risk_packet.py](../../../scripts/range_review_risk_packet.py), `RUNTIME_PREFIXES`, `classify_changed_paths()` |
-| Файлы настроек проверки после слияния в sibling | [merge_gate_policy.py](../../../scripts/merge_gate_policy.py), `POLICY_PATH`, `_policy_for_context()`; [review_range_scaffold_engine.py](../../../scripts/review_range_scaffold_engine.py), `_engaged_inputs()`; [contract_authority_context.py](../../../scripts/contract_authority_context.py), `read_declared_bytes()` |
-| Команды `planveyor sibling` | [sibling_runbook.py](../../../scripts/sibling_runbook.py): подкоманды `init`, `plan`, `architect`, `answer`, `run`, `close`, `ready`, `upgrade` |
-| Какой клиент допустим для какой роли | [planveyor.zsh](../../../scripts/planveyor.zsh), `planveyor_runner_set()`: Architect, Coder и Manager — только `codex`; Planner и Reviewer — `codex` или `claude` |
+| Which Python versions the launch check lets through (3.10–3.12; only 3.12 is supported) | [_pybin.sh](../../../scripts/_pybin.sh), `planveyor_pybin_validate_version()`; `requires-python` in [pyproject.toml](../../../pyproject.toml) |
+| Explicit queue recovery (F23) | [planveyor.zsh](../../../scripts/planveyor.zsh), `planveyor_q_recover()`; [plan_queue.py](../../../scripts/plan_queue.py), the `recover` command |
+| Contract notices during a sibling upgrade (F27) | [consumer_contract.py](../../../scripts/consumer_contract.py), `validate_notice()`, `notices()`, `adaptation_plan()` |
+| Rollout packets (F29) | [rollout_packet.py](../../../scripts/rollout_packet.py); the `planveyor_rollout_packet_*` commands in [planveyor.zsh](../../../scripts/planveyor.zsh) |
+| Splitting paths in a range review (F43) | [range_review_risk_packet.py](../../../scripts/range_review_risk_packet.py), `RUNTIME_PREFIXES`, `classify_changed_paths()` |
+| Settings files of the post-merge check in a sibling | [merge_gate_policy.py](../../../scripts/merge_gate_policy.py), `POLICY_PATH`, `_policy_for_context()`; [review_range_scaffold_engine.py](../../../scripts/review_range_scaffold_engine.py), `_engaged_inputs()`; [contract_authority_context.py](../../../scripts/contract_authority_context.py), `read_declared_bytes()` |
+| The `planveyor sibling` commands | [sibling_runbook.py](../../../scripts/sibling_runbook.py): the subcommands `init`, `plan`, `architect`, `answer`, `run`, `tui`, `close`, `ready`, `upgrade` |
+| Which agent harness is allowed for which role | [planveyor.zsh](../../../scripts/planveyor.zsh), `planveyor_runner_set()`: Architect, Coder, and Manager only `codex`; Planner and Reviewer `codex` or `claude` |
 
-### Что проверяют тесты
+### What the tests check
 
-| Именованный тест | Точные проверки и предел вывода |
+| Named test | Exact assertions and the limit of the conclusion |
 | --- | --- |
-| [test_consumer_contract.py](../../../scripts/test_consumer_contract.py): `test_validate_notice_requires_five_clean_fields_and_every_array_item` | Извещение без любого из пяти полей, с полем неверного типа, с пустым или многострочным `summary` отвергается с `invalid notice schema`. Тест проверяет форму извещения; когда извещение обязательно, он не определяет (F27) |
-| [test_planveyor_review_range_init.py](../../../scripts/test_planveyor_review_range_init.py): `test_local_v2_semantic_provenance_uses_current_content_metadata` | Помощник `_run_local_v2_render` сам записывает `review_range_policy.v1.json` во временный проект и только потом запускает подготовку ревью диапазона; тест ждёт код `0` и первым входом квитанции `policy_json`. В sibling, созданном из шаблона, этого файла нет |
+| [test_consumer_contract.py](../../../scripts/test_consumer_contract.py): `test_validate_notice_requires_five_clean_fields_and_every_array_item` | A notice that lacks any of the five fields, has a field of the wrong type, or has an empty or multiline `summary` is rejected with `invalid notice schema`. The test checks the form of the notice; it does not decide when a notice is required (F27) |
+| [test_planveyor_review_range_init.py](../../../scripts/test_planveyor_review_range_init.py): `test_local_v2_semantic_provenance_uses_current_content_metadata` | The helper `_run_local_v2_render` itself writes `review_range_policy.v1.json` into the temporary project and only then starts the range review preparation; the test expects code `0` and `policy_json` as the first input of the receipt. A sibling created from the template does not have this file |
 
-## Запуск: команды, обёртки, клиенты
+## Launch: commands, wrappers, agent harnesses
 
-Глава: [Запуск: команды, обёртки, клиенты](runtime-launch.md).
+Chapter: [Launch: commands, wrappers, agent harnesses](runtime-launch.md).
 
-### Где читать реализацию
+### Where to read the implementation
 
-| Что вы хотите понять | Где читать | Что искать |
+| What you want to understand | Where to read | What to look for |
 | --- | --- | --- |
-| Как выбираются движок и проект | [bin/planveyor](../../../bin/planveyor) | Обработка `--project`, отдельная ветка `sibling`, запуск дочернего `zsh -df` |
-| Как имя команды попадает в обработчик | [scripts/planveyor.zsh](../../../scripts/planveyor.zsh) | `planveyor_cli()` и `planveyor_sibling()` |
-| Как устроены обычные действия Owner | [scripts/sibling_runbook.py](../../../scripts/sibling_runbook.py) | `parser()`, `handle_init()`, `handle_answer()`, `handle_upgrade()`; `close` и `ready` — в [scripts/sibling_closeout.py](../../../scripts/sibling_closeout.py), `handle_close()` и `handle_ready()` |
-| Как `sibling architect` и `run` готовят сессию | [scripts/planveyor.zsh](../../../scripts/planveyor.zsh) | `_planveyor_sibling_ensure_native_session()`; проверка квитанции — `session_check()` в [scripts/sibling_runbook.py](../../../scripts/sibling_runbook.py) |
-| Как выглядит конкретный запуск Architect | [scripts/planveyor/role_runtime.zsh](../../../scripts/planveyor/role_runtime.zsh) | `planveyor_arch()`; это пример одного маршрута, не универсальный алгоритм всех ролей |
-| Как создаётся сессия роли | [scripts/planveyor/session_init.zsh](../../../scripts/planveyor/session_init.zsh) | `planveyor_arch_init()`, `planveyor_manager_init()` |
-| Откуда берётся инструкция фазы | [scripts/planveyor.zsh](../../../scripts/planveyor.zsh) | `_planveyor_role_prompt_body()`, первой строкой выводит `COMMIT_POLICY=…`; затем [architect_status_driven.md](../../tools/prompts/architect_status_driven.md) |
-| Какой клиент допустим для роли | [scripts/planveyor.zsh](../../../scripts/planveyor.zsh) | `planveyor_runner_set()`, `_planveyor_default_runner_for_role()`; вызов Claude Code — `_planveyor_private_provider_claude_direct_run()` в [scripts/planveyor/provider_runtime.zsh](../../../scripts/planveyor/provider_runtime.zsh) |
-| Как запускается Manager collab | [scripts/planveyor/role_runtime.zsh](../../../scripts/planveyor/role_runtime.zsh) | `planveyor_manager_collab_cmd()`; алгоритм Manager — [manager_collab_pipeline.md](../../tools/prompts/manager_collab_pipeline.md) |
-| Как читается состояние плана | [scripts/plan_status_oracle.py](../../../scripts/plan_status_oracle.py) | `oracle_result()`; публичный wrapper `planveyor_plan_status_oracle()` определён в `scripts/planveyor.zsh` |
+| How the runtime and the project are chosen | [bin/planveyor](../../../bin/planveyor) | The handling of `--project`, the separate `sibling` branch, the start of a child `zsh -df` |
+| How a command name reaches its handler | [scripts/planveyor.zsh](../../../scripts/planveyor.zsh) | `planveyor_cli()` and `planveyor_sibling()` |
+| How the ordinary Owner actions work | [scripts/sibling_runbook.py](../../../scripts/sibling_runbook.py) | `parser()`, `handle_init()`, `handle_answer()`, `handle_upgrade()`; `close` and `ready` are in [scripts/sibling_closeout.py](../../../scripts/sibling_closeout.py), `handle_close()` and `handle_ready()` |
+| How `sibling architect` and `run` prepare the session | [scripts/planveyor.zsh](../../../scripts/planveyor.zsh) | `_planveyor_sibling_ensure_native_session()`; the receipt check is `session_check()` in [scripts/sibling_runbook.py](../../../scripts/sibling_runbook.py) |
+| What a specific Architect launch looks like | [scripts/planveyor/role_runtime.zsh](../../../scripts/planveyor/role_runtime.zsh) | `planveyor_arch()`; this is an example of one route, not a universal algorithm for all roles |
+| How a role session is created | [scripts/planveyor/session_init.zsh](../../../scripts/planveyor/session_init.zsh) | `planveyor_arch_init()`, `planveyor_manager_init()` |
+| Where the phase prompt comes from | [scripts/planveyor.zsh](../../../scripts/planveyor.zsh) | `_planveyor_role_prompt_body()`, which prints `COMMIT_POLICY=…` as its first line; then [architect_status_driven.md](../../tools/prompts/architect_status_driven.md) (in Russian) |
+| Which agent harness is allowed for a role | [scripts/planveyor.zsh](../../../scripts/planveyor.zsh) | `planveyor_runner_set()`, `_planveyor_default_runner_for_role()`; the Claude Code call is `_planveyor_private_provider_claude_direct_run()` in [scripts/planveyor/provider_runtime.zsh](../../../scripts/planveyor/provider_runtime.zsh) |
+| How Manager collab is launched | [scripts/planveyor/role_runtime.zsh](../../../scripts/planveyor/role_runtime.zsh) | `planveyor_manager_collab_cmd()`; the Manager algorithm is [manager_collab_pipeline.md](../../tools/prompts/manager_collab_pipeline.md) |
+| How the plan state is read | [scripts/plan_status_oracle.py](../../../scripts/plan_status_oracle.py) | `oracle_result()`; the public wrapper `planveyor_plan_status_oracle()` is defined in `scripts/planveyor.zsh` |
 
-### Что проверяют тесты
+### What the tests check
 
-| Тест | Что проверяет код теста | Граница вывода |
+| Test | What the test code checks | Limit of the conclusion |
 | --- | --- | --- |
-| `test_collab_prompt_dispatches_the_configured_role_types` в [test_planveyor_codex_agent_roles.py](../../../scripts/test_planveyor_codex_agent_roles.py) | Prompt называет точные agent types, reuse-механизмы и допустимые collaboration API | Это проверка контракта текста, не фактического ответа модели |
-| `test_home_ensure_selects_consumer_home_without_rewriting_agent_roles` в [том же файле](../../../scripts/test_planveyor_codex_agent_roles.py) | Существующая конфигурация выбранного клиента сохраняется; отсутствующие role files не создаются автоматически | Изоляция настройки подтверждается для тестового окружения; аутентификация не проверяется |
-| `test_existing_home_startup_reconcile_preserves_root_model_runtime_and_extra_agents` в [том же файле](../../../scripts/test_planveyor_codex_agent_roles.py) | Настроенные Owner модель, runtime-параметры и дополнительные агенты остаются неизменными | Поддержка всех возможных конфигураций из одного теста не следует |
-| `test_runner_matrix_readback_and_unknown_runner_fail_closed` в [test_planveyor_init_capture.py](../../../scripts/test_planveyor_init_capture.py) | После `planveyor_runner_set` читает выбор пяти ролей: `claude` у Planner и Reviewer, `codex` у остальных; `coder bogus` даёт `Usage`, `coder claude` — `Unsupported runner for role=coder: claude` | Проверяет выбор клиента, сами клиенты не запускаются |
-| `test_custom_reviewer_lane_init_uses_distinct_session_keys_and_runner_matrix` в [том же файле](../../../scripts/test_planveyor_init_capture.py) | При клиенте `claude` у Reviewer две линии получают свои указатели `.planveyor.session.reviewer_code_risk` и `.planveyor.session.reviewer_code_contracts`, общего `.planveyor.session.reviewer` нет; вызов получает `--model`, `--effort`, `-p` и `--permission-mode acceptEdits` | Claude Code в тесте заменён заглушкой |
-| `test_architect_wrong_status_refuses_before_native_init` в [test_sibling_runbook.py](../../../scripts/test_sibling_runbook.py) | `sibling architect` при статусе `Ready for Coder` завершается с ошибкой, не вызывает init и не создаёт `.planveyor.session.architect` | Init и обёртки Architect в тесте заменены заглушками |
-| `test_actual_architect_cold_init_and_reused_resume_get_current_human_policy` в [том же файле](../../../scripts/test_sibling_runbook.py) | Три вызова `sibling architect` дают четыре вызова Codex: первый (init) идёт без `resume`, все следующие, включая ход в том же первом `sibling architect`, — с `resume`, `PLAN_PATH` и `PRE_STATUS_LINE`; во всех вызовах `COMMIT_POLICY=human_explicit` | Codex заменён заглушкой, которая записывает аргументы и сообщение |
-| `test_direct_native_after_human_call_ignores_ambient_selector_and_history` в [том же файле](../../../scripts/test_sibling_runbook.py) | Прямой `planveyor_arch` после `sibling architect` получает `COMMIT_POLICY=native_existing`, даже если в окружении `PLANVEYOR_SIBLING_COMMIT_POLICY=human_explicit`; в индексе Git ничего не появляется | Codex заменён той же заглушкой |
-| `test_direct_manager_resume_after_human_run_uses_fresh_native_policy` в [том же файле](../../../scripts/test_sibling_runbook.py) | Прямой `planveyor_manager_collab_cmd run <план>` после `sibling run` продолжает ту же сессию Manager, но с `COMMIT_POLICY=native_existing`, даже если в окружении `PLANVEYOR_SIBLING_COMMIT_POLICY=human_explicit`; файл очереди не появляется | Codex заменён той же заглушкой |
+| `test_collab_prompt_dispatches_the_configured_role_types` in [test_planveyor_codex_agent_roles.py](../../../scripts/test_planveyor_codex_agent_roles.py) | The prompt names the exact agent types, the reuse mechanisms, and the allowed collaboration APIs | This checks the text contract, not the actual model response |
+| `test_home_ensure_selects_consumer_home_without_rewriting_agent_roles` in [the same file](../../../scripts/test_planveyor_codex_agent_roles.py) | The existing configuration of the selected agent harness is kept; missing role files are not created automatically | The isolation of the setup is confirmed for the test environment; authentication is not checked |
+| `test_existing_home_startup_reconcile_preserves_root_model_runtime_and_extra_agents` in [the same file](../../../scripts/test_planveyor_codex_agent_roles.py) | The model, the execution settings, and the extra agents configured by Owner stay unchanged | Support for every possible configuration does not follow from one test |
+| `test_runner_matrix_readback_and_unknown_runner_fail_closed` in [test_planveyor_init_capture.py](../../../scripts/test_planveyor_init_capture.py) | After `planveyor_runner_set`, reads the choice for five roles: `claude` for Planner and Reviewer, `codex` for the others; `coder bogus` gives `Usage`, and `coder claude` gives `Unsupported runner for role=coder: claude` | Checks the choice of the agent harness; the agent harnesses themselves are not started |
+| `test_custom_reviewer_lane_init_uses_distinct_session_keys_and_runner_matrix` in [the same file](../../../scripts/test_planveyor_init_capture.py) | With the `claude` agent harness for Reviewer, the two lanes get their own pointers `.planveyor.session.reviewer_code_risk` and `.planveyor.session.reviewer_code_contracts`, and there is no shared `.planveyor.session.reviewer`; the call gets `--model`, `--effort`, `-p`, and `--permission-mode acceptEdits` | Claude Code is replaced with a stub in the test |
+| `test_architect_wrong_status_refuses_before_native_init` in [test_sibling_runbook.py](../../../scripts/test_sibling_runbook.py) | `sibling architect` in the `Ready for Coder` status exits with an error, does not call init, and does not create `.planveyor.session.architect` | Init and the Architect wrappers are replaced with stubs in the test |
+| `test_actual_architect_cold_init_and_reused_resume_get_current_human_policy` in [the same file](../../../scripts/test_sibling_runbook.py) | Three `sibling architect` calls give four Codex calls: the first one (init) goes without `resume`, and all the next ones, including the turn in the same first `sibling architect`, go with `resume`, `PLAN_PATH`, and `PRE_STATUS_LINE`; all calls have `COMMIT_POLICY=human_explicit` | Codex is replaced with a stub that records the arguments and the message |
+| `test_direct_native_after_human_call_ignores_ambient_selector_and_history` in [the same file](../../../scripts/test_sibling_runbook.py) | A direct `planveyor_arch` after `sibling architect` gets `COMMIT_POLICY=native_existing`, even if the environment has `PLANVEYOR_SIBLING_COMMIT_POLICY=human_explicit`; nothing appears in the Git index | Codex is replaced with the same stub |
+| `test_direct_manager_resume_after_human_run_uses_fresh_native_policy` in [the same file](../../../scripts/test_sibling_runbook.py) | A direct `planveyor_manager_collab_cmd run <plan>` after `sibling run` continues the same Manager session, but with `COMMIT_POLICY=native_existing`, even if the environment has `PLANVEYOR_SIBLING_COMMIT_POLICY=human_explicit`; no queue file appears | Codex is replaced with the same stub |
 
-## Как Planveyor меняет себя
+## How Planveyor changes itself
 
-Глава: [Как Planveyor меняет себя](self-development.md).
+Chapter: [How Planveyor changes itself](self-development.md).
 
-### Где читать реализацию
+### Where to read the implementation
 
-- [Prompts README](../../tools/prompts/README.md): shared corpus и declared target-local источники.
-- [Docs architecture](../../playbooks/docs_architecture.md): source ownership, delivery и производные outputs.
-- [planveyor.zsh](../../../scripts/planveyor.zsh): `_planveyor_prompt_file_for_role_phase` и публичные entrypoints.
-- [Runtime modules](../../../scripts/planveyor/README.ru.md): назначение и порядок загрузки модулей.
+- [Prompts README](../../tools/prompts/README.md): the shared corpus and the declared target-local sources.
+- [Docs architecture](../../playbooks/docs_architecture.md) (in Russian): source ownership, delivery, and derived outputs.
+- [planveyor.zsh](../../../scripts/planveyor.zsh): `_planveyor_prompt_file_for_role_phase` and the public entry points.
+- [Engine modules](../../../scripts/planveyor/README.md): the purpose and the loading order of the modules.
 - [check_planveyor_profile_contract.py](../../../scripts/check_planveyor_profile_contract.py): `EXACT_BUNDLE`, `INVARIANT_IDS`, `_check_doc_lint`.
-- [build_role_bundles.py](../../../scripts/build_role_bundles.py): сборка runtime-контекста из исходников.
-- [shared_docs_mirror_drift.py](../../../scripts/shared_docs_mirror_drift.py): declared mirror membership и read-only report.
-- [Collect](../../../scripts/process_improvements_collect.py) и [triage](../../../scripts/process_improvements_triage.py): сбор предложения и поля решения.
-- [Promote](../../../scripts/process_improvements_promote.py) и [reconcile](../../../scripts/process_improvements_reconcile.py): execution pointer и подтверждение состояния raw PI.
-- [Описание предложений по процессу](../../process_improvements/README.md): статусы строки PI, поля разбора, команды сбора, разбора, привязки и сверки.
-- [consumer_contract.py](../../../scripts/consumer_contract.py): `validate_notice()` проверяет пять полей извещения, `notices()` читает извещения диапазона коммитов, `adaptation_plan()` переносит в план обновления путь, коммит и `summary` извещения (в `## Scope`), `checks` (в `## Tests`) и `sibling_actions` (строками «Действие:» в `## Evidence`).
-- [docs_closeout.py](../../../scripts/docs_closeout.py): `classify_docs_closeout()`; правка общих промптов, плейбуков и ряда шаблонов при закрытии документов даёт `final_docs_commit_reason=canon_delta_requires_process_improvement`.
-- [Извещения контракта](../../contract_notices/README.md): где лежат извещения и как обновление их читает.
+- [build_role_bundles.py](../../../scripts/build_role_bundles.py): assembling the role context from the sources.
+- [shared_docs_mirror_drift.py](../../../scripts/shared_docs_mirror_drift.py): the declared mirror membership and the read-only report.
+- [Collect](../../../scripts/process_improvements_collect.py) and [triage](../../../scripts/process_improvements_triage.py): collecting a proposal and the decision fields.
+- [Promote](../../../scripts/process_improvements_promote.py) and [reconcile](../../../scripts/process_improvements_reconcile.py): the execution pointer and the confirmation of the raw PI state.
+- [Description of process improvements](../../process_improvements/README.md) (in Russian): the statuses of a PI row, the triage fields, and the commands for collection, triage, promotion, and reconciliation.
+- [consumer_contract.py](../../../scripts/consumer_contract.py): `validate_notice()` checks the five fields of a notice, `notices()` reads the notices of a commit range, and `adaptation_plan()` carries into the upgrade plan the path, the commit, and the `summary` of a notice (into `## Scope`), `checks` (into `## Tests`), and `sibling_actions` (as `Действие:` (action) lines in `## Evidence`).
+- [docs_closeout.py](../../../scripts/docs_closeout.py): `classify_docs_closeout()`; an edit of the shared prompts, playbooks, or some templates during the docs closeout gives `final_docs_commit_reason=canon_delta_requires_process_improvement`.
+- [Contract notices](../../contract_notices/README.md): where the notices are kept and how the upgrade reads them.
 
-### Что проверяют тесты
+### What the tests check
 
-В [test_check_planveyor_profile_contract.py](../../../scripts/test_check_planveyor_profile_contract.py) `test_doc_lint_rejects_comment_only_dispatch` заменяет owning вызов комментарием и требует finding `doc_lint_gate`.
-Это показывает, что наличие текста команды не считается достаточным dispatch contract.
-`test_doc_lint_rejects_unrelated_function_dispatch` также отвергает перенос нужного текста в постороннюю функцию.
-Эти fixtures не исполняют doc lint и не проверяют качество документов нового изменения.
+In [test_check_planveyor_profile_contract.py](../../../scripts/test_check_planveyor_profile_contract.py), `test_doc_lint_rejects_comment_only_dispatch` replaces the owning call with a comment and requires the finding `doc_lint_gate`.
+This shows that the presence of the command text does not count as a sufficient dispatch contract.
+`test_doc_lint_rejects_unrelated_function_dispatch` also rejects moving the needed text into an unrelated function.
+These fixtures do not run doc lint and do not check the quality of the documents of a new change.
 
-В [test_build_role_bundles.py](../../../scripts/test_build_role_bundles.py) `test_target_local_content_fails_closed_without_engaged_consumer_contract` требует код 3, отсутствие XML и отсутствие вызова `_build_context`.
-Assertion проверяет остановку до сборки fallback; он не доказывает, что client session получила правильную модель.
+In [test_build_role_bundles.py](../../../scripts/test_build_role_bundles.py), `test_target_local_content_fails_closed_without_engaged_consumer_contract` requires code 3, no XML, and no call of `_build_context`.
+The assertion checks the stop before a fallback is built; it does not prove that the agent harness session got the right model.
 
-В [test_shared_docs_mirror_drift.py](../../../scripts/test_shared_docs_mirror_drift.py) `test_generic_policy_has_no_implicit_target_or_mirror_set` требует generic set с нулём путей.
-`test_helper_is_read_only_against_target_files` сравнивает bytes target до и после report.
-Они подтверждают declared membership и отсутствие записи, а не доставку обновления.
+In [test_shared_docs_mirror_drift.py](../../../scripts/test_shared_docs_mirror_drift.py), `test_generic_policy_has_no_implicit_target_or_mirror_set` requires a generic set with zero paths.
+`test_helper_is_read_only_against_target_files` compares the target bytes before and after the report.
+They confirm the declared membership and the absence of writes, not the delivery of an update.
 
-В [test_process_improvements_promote.py](../../../scripts/test_process_improvements_promote.py) `test_promote_apply_requires_existing_repo_local_ref_and_never_scaffolds_it` требует отказ для missing plan, отсутствие созданного файла и сохранение `triaged`. Он проверяет привязку PI, а не исполнение предложения.
+In [test_process_improvements_promote.py](../../../scripts/test_process_improvements_promote.py), `test_promote_apply_requires_existing_repo_local_ref_and_never_scaffolds_it` requires a refusal for a missing plan, no created file, and an unchanged `triaged` status. It checks the PI promotion, not the execution of the proposal.
 
-В [test_sibling_contract_docs.py](../../../scripts/test_sibling_contract_docs.py) `test_template_copies_match_their_docs_sources_byte_for_byte` сравнивает каждую копию в `copier_template/` с её исходником в `docs/` или `skills/` побайтно и требует, чтобы каждый скопированный каталог был отмечен как полное или частичное зеркало.
-В [test_censor_prompt_contract.py](../../../scripts/test_censor_prompt_contract.py) `test_copier_censor_prompts_deliver_the_shared_final_readback_contract` делает то же для трёх промптов CENSOR.
+In [test_sibling_contract_docs.py](../../../scripts/test_sibling_contract_docs.py), `test_template_copies_match_their_docs_sources_byte_for_byte` compares every copy in `copier_template/` with its source in `docs/` or `skills/` byte for byte and requires every copied directory to be marked as a full or partial mirror.
+In [test_censor_prompt_contract.py](../../../scripts/test_censor_prompt_contract.py), `test_copier_censor_prompts_deliver_the_shared_final_readback_contract` does the same for the three CENSOR prompts.
 
-В [test_planveyor_profile_extraction.py](../../../scripts/test_planveyor_profile_extraction.py) `test_public_checker_uses_only_root_owners_and_passes_finite_fixture` запускает `check_planveyor_profile_contract` на корне Planveyor и ждёт пустой список замечаний; там же проверено, что правил девять. Через этот тест проверка профильного контракта входит в полный прогон юнит-тестов.
+In [test_planveyor_profile_extraction.py](../../../scripts/test_planveyor_profile_extraction.py), `test_public_checker_uses_only_root_owners_and_passes_finite_fixture` runs `check_planveyor_profile_contract` on the Planveyor root and expects an empty list of findings; the same test checks that there are nine rules. Through this test, the profile contract check is part of the full unit test run.
 
-В [test_consumer_contract.py](../../../scripts/test_consumer_contract.py) `test_validate_notice_requires_five_clean_fields_and_every_array_item` отвергает извещение без любого из пяти полей, с полем не того типа, с пустой или многострочной строкой.
-`test_unreadable_non_deleted_notice_refuses_upgrade_before_candidate_or_backup` проверяет, что нечитаемое извещение останавливает обновление: репозитории не меняются, кандидат и резервная копия не создаются.
-`test_current_notice_history_and_strict_notice_are_valid` проверяет все извещения в истории репозитория от корневого коммита до `HEAD` и все текущие файлы в `docs/contract_notices/`.
+In [test_consumer_contract.py](../../../scripts/test_consumer_contract.py), `test_validate_notice_requires_five_clean_fields_and_every_array_item` rejects a notice that lacks any of the five fields, has a field of the wrong type, or has an empty or multiline string.
+`test_unreadable_non_deleted_notice_refuses_upgrade_before_candidate_or_backup` checks that an unreadable notice stops the upgrade: the repositories do not change, and no candidate or backup is created.
+`test_current_notice_history_and_strict_notice_are_valid` checks all notices in the repository history from the root commit to `HEAD` and all current files in `docs/contract_notices/`.
 
-В [test_docs_closeout.py](../../../scripts/test_docs_closeout.py) `test_final_docs_commit_blocks_unowned_protected_review_canon_delta` меняет защищённый шаблон ревью после `Done` и ждёт `final_docs_commit=required` с причиной `canon_delta_requires_process_improvement`; путь шаблона попадает в `protected_docs_delta_paths` и в передачу Architect.
+In [test_docs_closeout.py](../../../scripts/test_docs_closeout.py), `test_final_docs_commit_blocks_unowned_protected_review_canon_delta` changes a protected review template after `Done` and expects `final_docs_commit=required` with the reason `canon_delta_requires_process_improvement`; the template path goes into `protected_docs_delta_paths` and into the handoff to Architect.
 
-## Проверка после слияния
+## Post-merge check
 
-Глава: [Проверка после слияния](postmerge.md).
+Chapter: [Post-merge check](postmerge.md).
 
-### Где читать реализацию
+### Where to read the implementation
 
-| Вопрос | Файл и символ |
+| Question | File and symbol |
 | --- | --- |
-| Как Manager ведёт шаги трекера | [manager_collab_merge_pipeline.md](../../tools/prompts/manager_collab_merge_pipeline.md), команда `MANAGER_CMD=merge_run` |
-| Какой шаг следующий | [merge_tracker_oracle.py](../../../scripts/merge_tracker_oracle.py) |
-| Как запускается режим merge | [role_runtime.zsh](../../../scripts/planveyor/role_runtime.zsh), `planveyor_merge_collab_cmd()` и `planveyor_merge_apply_collab_cmd()` |
-| Обёртки отдельных шагов | [planveyor.zsh](../../../scripts/planveyor.zsh): wrappers merge-шагов |
-| Почему проекту с маркером нужен файл политики шагов | [merge_gate_policy.py](../../../scripts/merge_gate_policy.py), `_policy_for_context()` |
-| Как создаётся range-review scaffold | [review_range_scaffold_engine.py](../../../scripts/review_range_scaffold_engine.py), `_host_family()` и `run()` |
-| Какие файлы ревью диапазона читает в проекте с маркером | [review_range_scaffold_engine.py](../../../scripts/review_range_scaffold_engine.py), `_engaged_inputs()` |
-| Где проверка артефакта отдельного шага | [post_merge_receipt_preflight.py](../../../scripts/post_merge_receipt_preflight.py): проверка артефакта отдельного шага |
-| Как строится отчёт о пакетах адресной доставки | [post_merge_packetization_gate.py](../../../scripts/post_merge_packetization_gate.py), `build_payload()` |
+| How Manager drives the tracker steps | [manager_collab_merge_pipeline.md](../../tools/prompts/manager_collab_merge_pipeline.md) (in Russian), the command `MANAGER_CMD=merge_run` |
+| Which step is next | [merge_tracker_oracle.py](../../../scripts/merge_tracker_oracle.py) |
+| How merge mode is launched | [role_runtime.zsh](../../../scripts/planveyor/role_runtime.zsh), `planveyor_merge_collab_cmd()` and `planveyor_merge_apply_collab_cmd()` |
+| Wrappers of separate steps | [planveyor.zsh](../../../scripts/planveyor.zsh): the wrappers of the merge steps |
+| Why a project with the marker needs a step policy file | [merge_gate_policy.py](../../../scripts/merge_gate_policy.py), `_policy_for_context()` |
+| How the range-review scaffold is created | [review_range_scaffold_engine.py](../../../scripts/review_range_scaffold_engine.py), `_host_family()` and `run()` |
+| Which files the range review reads in a project with the marker | [review_range_scaffold_engine.py](../../../scripts/review_range_scaffold_engine.py), `_engaged_inputs()` |
+| Where the artifact check of a separate step is | [post_merge_receipt_preflight.py](../../../scripts/post_merge_receipt_preflight.py): the artifact check of a separate step |
+| How the report on rollout packets is built | [post_merge_packetization_gate.py](../../../scripts/post_merge_packetization_gate.py), `build_payload()` |
 
-### Что проверяют тесты
+### What the tests check
 
-| Именованный тест | Точные проверки и предел вывода |
+| Named test | Exact assertions and the limit of the conclusion |
 | --- | --- |
-| [test_post_merge_receipt_preflight.py](../../../scripts/test_post_merge_receipt_preflight.py): `test_post_merge_audit_shared_range_requires_active_structural_packetization_report` | Отвергает missing, wrong-range, ambiguous и malformed report; зелёный fixture всё равно имеет `terminal_readiness=not_evaluated` |
-| [test_merge_policy_effect_boundaries.py](../../../scripts/test_merge_policy_effect_boundaries.py): `test_matching_generic_consumer_admits_merge_tracker` | Проект с маркером Planveyor и объявленным файлом политики получает трекер: код `0`, в шапке `POLICY_SCHEMA=planveyor_merge_gate_policy.v1` и `AUTHORITY_GENERATION`. Файл политики fixture создаёт сам |
-| [test_planveyor_review_range_init.py](../../../scripts/test_planveyor_review_range_init.py): `test_public_shell_generic_consumer_emits_lintable_matching_v2_receipt` | Проект с маркером Planveyor и файлом `review_range_policy.v1.json`: публичная команда `planveyor_review_range_init` даёт код `0`, план ревью несёт запись происхождения `review_range_semantic_provenance.v2` с identity проекта и проходит `plan_lint.py` с кодом `0`. Файл политики fixture создаёт сам |
-| [test_merge_gate_policy.py](../../../scripts/test_merge_gate_policy.py): `test_invalid_generic_engaged_consumer_never_falls_back_to_legacy_policy` | Проект с маркером, у которого identity равна `default`, содержит недопустимые символы или расходится с маркером, получает `merge_policy_capability_required`; к встроенному списку шагов движок не откатывается |
+| [test_post_merge_receipt_preflight.py](../../../scripts/test_post_merge_receipt_preflight.py): `test_post_merge_audit_shared_range_requires_active_structural_packetization_report` | Rejects missing, wrong-range, ambiguous, and malformed reports; a green fixture still has `terminal_readiness=not_evaluated` |
+| [test_merge_policy_effect_boundaries.py](../../../scripts/test_merge_policy_effect_boundaries.py): `test_matching_generic_consumer_admits_merge_tracker` | A project with the Planveyor marker and a declared policy file gets the tracker: code `0`, and the header has `POLICY_SCHEMA=planveyor_merge_gate_policy.v1` and `AUTHORITY_GENERATION`. The fixture creates the policy file itself |
+| [test_planveyor_review_range_init.py](../../../scripts/test_planveyor_review_range_init.py): `test_public_shell_generic_consumer_emits_lintable_matching_v2_receipt` | A project with the Planveyor marker and the file `review_range_policy.v1.json`: the public command `planveyor_review_range_init` gives code `0`, and the review plan carries the provenance record `review_range_semantic_provenance.v2` with the project identity and passes `plan_lint.py` with code `0`. The fixture creates the policy file itself |
+| [test_merge_gate_policy.py](../../../scripts/test_merge_gate_policy.py): `test_invalid_generic_engaged_consumer_never_falls_back_to_legacy_policy` | A project with the marker whose identity equals `default`, contains invalid characters, or differs from the marker gets `merge_policy_capability_required`; the engine does not fall back to the built-in list of steps |
 
-## Тесты движка
+## Engine tests
 
-Глава: [Тесты движка](engine-tests.md).
+Chapter: [Engine tests](engine-tests.md).
 
-### Где читать реализацию
+### Where to read the implementation
 
-| Вопрос | Файл и ключевой символ |
+| Question | File and key symbol |
 | --- | --- |
-| Какие цели запускают тесты и проверки | [Makefile](../../../Makefile): `test-scripts`, `verify`, `verify-full`, `doc-lint` |
-| Как выбирается Python и проверяется его версия | [_pybin.sh](../../../scripts/_pybin.sh), `planveyor_pybin_resolve()`, `planveyor_pybin_validate_version()` |
-| Как фасад запускает проверки целостности | [planveyor.zsh](../../../scripts/planveyor.zsh), `planveyor_verify()` |
-| Как модули регистрируются и выбираются | [verify_suite.py](../../../scripts/verify_suite.py), `register()`, `_REGISTRY`, `_load_modules()` |
-| Какие проверки входят в модуль `portability` и когда добавляется поиск тестов | [verify_suite.py](../../../scripts/verify_suite.py), `PortabilityModule.run()`, `check_test_scripts()` |
-| Как считаются итог и код возврата | [verify_suite.py](../../../scripts/verify_suite.py), `Result`, `main()`, `_render_plain()`, `_render_json()` |
-| Какие корни и ссылки проверяет линтер документации | [planveyor.zsh](../../../scripts/planveyor.zsh), `planveyor_doc_lint()`; [doc_lint.py](../../../scripts/doc_lint.py), `main()`, `lint_file()` |
-| Что проверяет пример теста сводки передачи | [plan_handoff_digest.py](../../../scripts/plan_handoff_digest.py), `build_digest()`, `_read_code_draft_host()` |
-| Общие помощники фикстур | [process_contract_fixtures.py](../../../scripts/test_support/process_contract_fixtures.py), `run_zsh_fixture()`; [test_contract_authority_support.py](../../../scripts/test_contract_authority_support.py), `AuthorityFixture` |
+| Which targets run the tests and the checks | [Makefile](../../../Makefile): `test-scripts`, `verify`, `verify-full`, `doc-lint` |
+| How Python is chosen and its version is checked | [_pybin.sh](../../../scripts/_pybin.sh), `planveyor_pybin_resolve()`, `planveyor_pybin_validate_version()` |
+| How the facade runs the integrity checks | [planveyor.zsh](../../../scripts/planveyor.zsh), `planveyor_verify()` |
+| How modules are registered and selected | [verify_suite.py](../../../scripts/verify_suite.py), `register()`, `_REGISTRY`, `_load_modules()` |
+| Which checks the `portability` module includes and when test discovery is added | [verify_suite.py](../../../scripts/verify_suite.py), `PortabilityModule.run()`, `check_test_scripts()` |
+| How the result and the exit code are computed | [verify_suite.py](../../../scripts/verify_suite.py), `Result`, `main()`, `_render_plain()`, `_render_json()` |
+| Which roots and links the documentation linter checks | [planveyor.zsh](../../../scripts/planveyor.zsh), `planveyor_doc_lint()`; [doc_lint.py](../../../scripts/doc_lint.py), `main()`, `lint_file()` |
+| What the example test of the handoff digest checks | [plan_handoff_digest.py](../../../scripts/plan_handoff_digest.py), `build_digest()`, `_read_code_draft_host()` |
+| Shared fixture helpers | [process_contract_fixtures.py](../../../scripts/test_support/process_contract_fixtures.py), `run_zsh_fixture()`; [test_contract_authority_support.py](../../../scripts/test_contract_authority_support.py), `AuthorityFixture` |
 
-### Что проверяют тесты
+### What the tests check
 
-| Файл и тест | Подготовка и assertion | Зачем он нужен |
+| File and test | Setup and assertion | Why it is needed |
 | --- | --- | --- |
-| [test_plan_handoff_digest.py](../../../scripts/test_plan_handoff_digest.py), `test_missing_code_draft_fails_closed` | Создаёт временные plan и review без draft; ожидает `state == "missing"` и blocker с `host == "code_draft"` | Сводка handoff сохраняет остановку при недостающем источнике |
-| [test_planveyor_shared_corpus_contract.py](../../../scripts/test_planveyor_shared_corpus_contract.py), `test_generic_reviews_preserve_supplied_spec_and_diff_transport` | В двух playbooks каждый маркер SPEC/DIFF встречается ровно один раз; начало стоит перед концом | Контекст задания и diff имеют однозначные границы |
-| [test_verify_suite.py](../../../scripts/test_verify_suite.py), `test_discovery_matches_makefile_and_streams_combined_transcript` | Подставляет процесс с exit `1`, одним ERROR и семью тестами; проверяет argv discovery и `Result(..., "fail", "Ran 7 tests, 1 FAIL/ERROR", ...)` | Агрегатор правильно формирует вызов discovery и интерпретирует transcript подставного процесса |
-| [test_verify_suite.py](../../../scripts/test_verify_suite.py), `test_default_run_keeps_fast_integrity_checks_but_omits_unselected_inputs` | Проверяет список обычных integrity checks; discovery и проверки невыбранных plan/archive не вызываются | Быстрая проверка не расширяет своё заявление на отсутствующие входы |
-| [test_verify_suite.py](../../../scripts/test_verify_suite.py), `test_full_run_adds_discovery_once_and_omits_portability_module_overlap` | `check_test_scripts` вызван ровно один раз; старый отдельный обход portability-тестов отсутствует | Полный маршрут имеет одну каноническую точку discovery |
-| [test_planveyor_admission_integration.py](../../../scripts/test_planveyor_admission_integration.py), `test_real_downstream_na_admission_and_public_refusal_are_state_safe` | Публичный lint принимает fixture с carrier (exit `0`), отклоняет её без carrier (exit `1`); queue и state snapshots совпадают до и после отказа | Проверка допуска работает через facade и сохраняет состояние при отказе |
+| [test_plan_handoff_digest.py](../../../scripts/test_plan_handoff_digest.py), `test_missing_code_draft_fails_closed` | Creates a temporary plan and review without a draft; expects `state == "missing"` and a blocker with `host == "code_draft"` | The handoff digest still stops when a source is missing |
+| [test_planveyor_shared_corpus_contract.py](../../../scripts/test_planveyor_shared_corpus_contract.py), `test_generic_reviews_preserve_supplied_spec_and_diff_transport` | In two playbooks, each SPEC/DIFF marker occurs exactly once; the start comes before the end | The task context and the diff have unambiguous boundaries |
+| [test_verify_suite.py](../../../scripts/test_verify_suite.py), `test_discovery_matches_makefile_and_streams_combined_transcript` | Substitutes a process with exit `1`, one ERROR, and seven tests; checks the discovery argv and `Result(..., "fail", "Ran 7 tests, 1 FAIL/ERROR", ...)` | The aggregator builds the discovery call correctly and interprets the transcript of the substituted process |
+| [test_verify_suite.py](../../../scripts/test_verify_suite.py), `test_default_run_keeps_fast_integrity_checks_but_omits_unselected_inputs` | Checks the list of the usual integrity checks; discovery and the checks of an unselected plan/archive are not called | The fast check does not extend its claim to absent inputs |
+| [test_verify_suite.py](../../../scripts/test_verify_suite.py), `test_full_run_adds_discovery_once_and_omits_portability_module_overlap` | `check_test_scripts` is called exactly once; the old separate pass over the portability tests is gone | The full route has one canonical discovery point |
+| [test_planveyor_admission_integration.py](../../../scripts/test_planveyor_admission_integration.py), `test_real_downstream_na_admission_and_public_refusal_are_state_safe` | The public lint accepts the fixture with a carrier (exit `0`) and rejects it without a carrier (exit `1`); the queue and state snapshots match before and after the refusal | The admission check works through the facade and keeps the state on a refusal |

@@ -5,6 +5,12 @@
 This file gives short pointers to entry points. It does not choose the status,
 queue mode, runner, or target-local contract in place of the current plan.
 
+The prompts also name `memory-finalize/docs-closeout`, but it has no separate
+supported Golden Path anchor. Follow the [launch guide](launch-and-role-modes.md)
+for docs closeout. For harvest work, use the existing
+`docs/guides/golden_paths.md#post-merge-plan-harvest` carrier below. If no existing
+row fits the task, record a follow-up or `N/A (why=...)`; do not invent an anchor.
+
 ## Post-merge audit
 
 - **When:** after a delivery wave, when a durable audit is needed before cleanup.

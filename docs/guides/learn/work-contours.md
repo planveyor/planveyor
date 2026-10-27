@@ -1,61 +1,63 @@
-# Разработка, анализ и декомпозиция
+# Development, analysis, and decomposition
 
-Planveyor различает три вида работы, или контура: разработку, анализ и декомпозицию. Разработка сразу меняет файлы проекта. Анализ сначала отвечает на вопрос и выбирает, что делать дальше, а декомпозиция делит большую цель на несколько планов. Роли и статусы у всех трёх общие, различаются результат и то, чем заканчивается план.
+**English** · [Русский](work-contours.ru.md)
 
-## Три контура работы
+Planveyor distinguishes three kinds of work, or contours: development, analysis, and decomposition. Development changes the project files right away. Analysis first answers a question and chooses what to do next, and decomposition splits a large goal into several plans. All three share the roles and the statuses; they differ in the result and in how the plan ends.
 
-| Контур | Когда выбирать | Что получается на выходе | Отметка в `plan_meta` |
+## Three work contours
+
+| Contour | When to choose it | What comes out | Marker in `plan_meta` |
 | --- | --- | --- | --- |
-| Разработка | Результат и границы понятны: можно назвать файлы и условия приёмки | Изменённые файлы, результаты проверок, ревью и коммит | Нет, это контур по умолчанию |
-| Анализ | Нужно ответить на узкий вопрос по файлам репозитория и сравнить варианты | Проверенная таблица анализа и решение Architect о следующей работе | `wave_family = "analysis_wave"` |
-| Декомпозиция | Большая цель принята, но в один план не помещается | Зонтичный план, дочерние планы с порядком выполнения и отложенные задачи | `phase_overlay = "decomposition_wave"` и `phase_state` |
+| Development | The result and the scope are clear: you can name the files and the acceptance conditions | Changed files, check results, a review, and a commit | None: this is the default contour |
+| Analysis | You need to answer a narrow question based on the repository files and compare options | A checked analysis pack and the decision of Architect about the next work | `wave_family = "analysis_wave"` |
+| Decomposition | A large goal is accepted but does not fit into one plan | An umbrella plan, child plans with the execution order, and follow-ups | `phase_overlay = "decomposition_wave"` and `phase_state` |
 
-Отметки стоят в объекте `plan_meta` блока `## Meta` плана. У декомпозиции поле `phase_state` равно `active`, пока цель делят, и `parked`, когда деление принято. Зонтичный план — главный план декомпозиции: в нём постановка задачи, карта дочерних планов и их порядок, а кода он не меняет.
+The markers are in the `plan_meta` object of the `## Meta` block of the plan. For decomposition, the `phase_state` field is `active` while the goal is being split and `parked` when the split is accepted. The umbrella plan is the main plan of a decomposition: it holds the problem statement, the map of the child plans, and their order, and it does not change code.
 
-Разработка — выбор по умолчанию, в том числе для небольших правок. Делить задачу стоит, когда один план перестаёт её удерживать: например, его несколько раз переписывают, а условия так и не устоялись. Длинное описание цели само по себе такой причиной не считается. [Плейбук декомпозиции](../../playbooks/decomposition_wave.md) предлагает заранее оценить число частей. Если часть одна, почти всегда хватает обычного плана разработки. Две-три части дают облегчённую декомпозицию, четыре и больше — полную, с долгоживущим зонтичным планом и отдельным ревью планов.
+Development is the default choice, small edits included. Split a task when one plan stops holding it: for example, the plan is rewritten several times, and the conditions still have not settled. A long goal description is not such a reason by itself. The [decomposition playbook](../../playbooks/decomposition_wave.md) (in Russian) suggests estimating the number of parts in advance. With one part, an ordinary development plan is almost always enough. Two or three parts give a light decomposition; four or more give a full one, with a long-lived umbrella plan and a separate review of the plans.
 
-Анализ отвечает на вопрос, который можно проверить по файлам репозитория: документам, планам, коду. Открытое исследование рынка без таких источников в анализ не входит.
+Analysis answers a question that can be checked against the repository files: documents, plans, code. Open market research without such sources is not part of analysis.
 
-![Три контура: после ревью и решения Architect разработку закрывают коммитом, анализ даёт решение о следующей работе, а зонтичный план декомпозиции паркуется, и работа идёт в дочерних планах](assets/work-contours-1.svg)
+![Three contours: after the review and the decision of Architect, development is closed with a commit, analysis gives a decision about the next work, and the umbrella plan of a decomposition is parked, with the work going on in the child plans](assets/work-contours-1.svg)
 
-План разработки и план анализа после приёмки закрывают обычным путём: коммит, затем закрытие документов. Зонтичный план Architect паркует: ставит `phase_state = "parked"` и обычно статус `Ready for Planner`, и план остаётся справкой, пока идут дочерние планы. В `Done` Architect переводит его отдельным решением, когда все дочерние планы закончены.
+After acceptance, a development plan and an analysis plan are closed the usual way: a commit, then the docs closeout. Architect parks the umbrella plan: it sets `phase_state = "parked"` and usually the `Ready for Planner` status, and the plan stays as a reference while the child plans run. Architect moves it to `Done` by a separate decision when all child plans are finished.
 
-Граница между контурами записана в [ADR 007](../../adr/007-planning-dev-contour-boundary.md). Планы анализа и декомпозиции меняют только документы: таблицу анализа, планы и записи отложенных задач. Код продукта меняется только в планах разработки. Если посреди разработки выясняется, что нужен широкий анализ или деление на части, роль останавливается и возвращает работу Architect статусом `Ready for Architect response`.
+The boundary between the contours is recorded in [ADR 007](../../adr/007-planning-dev-contour-boundary.md) (in Russian). Analysis and decomposition plans change only documents: the analysis pack, plans, and follow-up records. Product code changes only in development plans. If in the middle of development it turns out that a broad analysis or a split into parts is needed, the role stops and returns the work to Architect with the `Ready for Architect response` status.
 
-## Как работают роли
+## How the roles work
 
-Роли здесь те же сессии ИИ-клиента, что и в разработке ([«Роли и файлы задачи»](roles-artifacts.md)), и Manager ведёт их по тем же статусам. Coder в планах анализа и декомпозиции пишет таблицу анализа или планы, код продукта он не трогает.
+The roles here are the same agent harness sessions as in development ([Roles and task files](roles-artifacts.md)), and Manager drives them through the same statuses. In analysis and decomposition plans, Coder writes the analysis pack or plans; it does not touch product code.
 
-| Роль | В анализе | В декомпозиции |
+| Role | In analysis | In decomposition |
 | --- | --- | --- |
-| Architect | Ставит вопрос, цель и ограничения; после ревью выбирает исход | Описывает задачу целиком: результат, для кого он, что мешает сейчас и что не входит; выбирает, по какому признаку делить |
-| Planner | Решает, какие источники читать и как должна выглядеть таблица анализа | Описывает каждую часть: что она получает и отдаёт, от чего зависит, как её проверить; задаёт порядок частей |
-| Coder | Читает источники и записывает в таблицу варианты, допущения и рекомендацию | Создаёт зонтичный план, дочерние планы и записи отложенных задач |
-| Reviewer | Проверяет источники, неподтверждённые допущения и ясность рекомендации | Проверяет, что части покрывают цель, не дублируют друг друга и каждую можно принять отдельно |
+| Architect | Sets the question, the goal, and the constraints; after the review, chooses the outcome | Describes the whole task: the result, whom it is for, what is in the way now, and what is out of scope; chooses the criterion for the split |
+| Planner | Decides which sources to read and what the analysis pack should look like | Describes each part: what it receives and hands over, what it depends on, how to check it; sets the order of the parts |
+| Coder | Reads the sources and records the options, the assumptions, and the recommendation in the pack | Creates the umbrella plan, the child plans, and the follow-up records |
+| Reviewer | Checks the sources, the unconfirmed assumptions, and the clarity of the recommendation | Checks that the parts cover the goal, do not duplicate each other, and each can be accepted separately |
 
-В зонтичном плане `Ready for Review` означает, что написаны зонтичный и дочерние планы, а `Ready for Arch review` — что эти планы прошли ревью ([правила планов](../../plans/README.md)). Каждый дочерний план Coder создаёт по шаблону со статусом `Ready for Planner`: с него начинается собственный цикл этого плана.
+In an umbrella plan, `Ready for Review` means that the umbrella plan and the child plans are written, and `Ready for Arch review` means that these plans have passed the review ([plan rules](../../plans/README.md), in Russian). Coder creates each child plan from the template with the `Ready for Planner` status: the plan's own cycle starts from it.
 
-Таблица анализа — раздел `## Analysis pack`. До статуса `Planner finalize` Architect и Planner заполняют её прямо в плане. При переходе на `Planner finalize` Planner переносит таблицу в отдельный файл `docs/analysis_packs/<plan_stem>.md` (`<plan_stem>` — имя файла плана без `.md`) и оставляет в плане одну строку со ссылкой, `analysis_pack_ref`. Дальше этот файл — единственный целевой файл черновика кода: Coder его заполняет, Reviewer проверяет. Перенос нужен потому, что план меняется во время ревью (см. [«План и его статусы»](plan-lifecycle.md)). Если после переноса оставить в плане строки `recommendation`, `route_recommendation`, `execution_budget` или `stale_trigger`, линтер плана выдаст ошибку `operational_duplicate`. Что делать, если статус уже поставили, а таблицу не перенесли, описывает [плейбук анализа](../../playbooks/analysis_wave.md).
+The analysis pack is the `## Analysis pack` section. Until the `Planner finalize` status, Architect and Planner fill it in right in the plan. When the plan goes to `Planner finalize`, Planner moves the pack to a separate file `docs/analysis_packs/<plan_stem>.md` (`<plan_stem>` is the plan file name without `.md`) and leaves one line with the link in the plan, `analysis_pack_ref`. From then on, this file is the only target file of the code draft: Coder fills it in, and Reviewer checks it. The move is needed because the plan changes during the review (see [The plan and its statuses](plan-lifecycle.md)). If the `recommendation`, `route_recommendation`, `execution_budget`, or `stale_trigger` rows stay in the plan after the move, the plan linter reports the `operational_duplicate` error. The [analysis playbook](../../playbooks/analysis_wave.md) (in Russian) describes what to do if the status is already set but the pack has not been moved.
 
-Хранение таблицы анализа и запуск дочерних планов ещё дорабатывают, см. главу [«Что уже работает и что дальше»](capabilities-boundaries.md).
+How the analysis pack is stored and how child plans are launched is still being refined; see the [What works now and what comes next](capabilities-boundaries.md) chapter.
 
-## Пять исходов анализа
+## Five analysis outcomes
 
-Coder заканчивает анализ рекомендацией (`route_recommendation`): какой из пяти исходов он предлагает и почему. Рекомендация ещё не решение, и Manager по ней ничего не запускает. Исход выбирает Architect при приёмке (`Architect arch review`) и записывает его в раздел плана `## Promoted route artifact`.
+Coder ends the analysis with a recommendation (`route_recommendation`): which of the five outcomes it proposes and why. A recommendation is not a decision yet, and Manager does not start anything based on it. Architect chooses the outcome at acceptance (`Architect arch review`) and records it in the `## Promoted route artifact` section of the plan.
 
-| Исход | `accepted_route` | Что появляется | Следующий шаг |
+| Outcome | `accepted_route` | What appears | Next step |
 | --- | --- | --- | --- |
-| Разработка | `developer_wave` | Новый план разработки со ссылкой на план анализа (`seed_dev_plan`); он начинается с `Architect initial draft` | Обычный цикл нового плана |
-| Декомпозиция | `decomposition_wave` | Зонтичный план декомпозиции (`decomposition_umbrella`) | Роли делят цель на дочерние планы |
-| Вопрос Owner | `human_gate` | Вопрос или запрос одобрения в журнале вопросов (`owner_gate`) | Работа ждёт решения Owner |
-| Отложить | `defer` | Запись отложенной задачи в `docs/followups/` с ответственным и причиной (`followup`) | Тему поднимают, когда выполнится записанное условие |
-| Отклонить | `reject` | Запись об отказе с причиной (`rejection_receipt`) | Ничего не запускается |
+| Development | `developer_wave` | A new development plan with a link to the analysis plan (`seed_dev_plan`); it starts at `Architect initial draft` | The usual cycle of the new plan |
+| Decomposition | `decomposition_wave` | An umbrella plan of the decomposition (`decomposition_umbrella`) | The roles split the goal into child plans |
+| Owner question | `human_gate` | A question or an approval request in the Q&A log (`owner_gate`) | The work waits for the decision of Owner |
+| Defer | `defer` | A follow-up record in `docs/followups/` with the responsible party and the reason (`followup`) | The topic comes back when the recorded condition is met |
+| Reject | `reject` | A rejection record with the reason (`rejection_receipt`) | Nothing starts |
 
-Последние три исхода новой работы ролям сейчас не дают. Их выбирают, когда проверенная таблица анализа показывает, что начинать разработку или декомпозицию сейчас не стоит. У вопроса Owner и отложенной задачи должен быть записан повод вернуться к теме (`revisit_when`), иначе линтер плана выдаст ошибку. Пока у принятого исхода нет записи (`promoted_artifact_ref`) и следующего шага (`next_action`), план анализа не закроется.
+The last three outcomes give the roles no new work for now. They are chosen when the checked analysis pack shows that starting development or decomposition now is not worth it. An Owner question and a follow-up must have a recorded trigger to come back to the topic (`revisit_when`); otherwise, the plan linter reports an error. Until the accepted outcome has a record (`promoted_artifact_ref`) and a next step (`next_action`), the analysis plan does not close.
 
-## Как это выглядит в плане
+## How it looks in the plan
 
-Задача GetReorderCandidates из сквозного примера — обычная разработка. Owner заранее принял все решения, и в разделе «Как я понял задачу» Architect записал: «открытых решений к согласованию нет». Метки контуров в `plan_meta` пустые:
+The GetReorderCandidates task from the running example is ordinary development. Owner made all the decisions in advance, and in the `## Как я понял задачу` section (how I understood the task), Architect wrote: “there are no open decisions to agree on.” The contour markers in `plan_meta` are empty:
 
 ```json
 "wave_family": null,
@@ -63,7 +65,7 @@ Coder заканчивает анализ рекомендацией (`route_rec
 "phase_state": null,
 ```
 
-Разделы шаблона для анализа и декомпозиции план закрывает явным `N/A` с причиной:
+The plan closes the template sections for analysis and decomposition with an explicit `N/A` and the reason, quoted as written in the project, in Russian:
 
 ```markdown
 ## Business decomposition framing
@@ -79,7 +81,7 @@ N/A (why=не analysis wave).
 N/A (why=не analysis wave).
 ```
 
-Настоящего плана анализа пока нет ни в репозитории Planveyor, ни в SQL-проектах на нём. Его устройство задаёт [шаблон плана](../../plans/_template.md); так начинается таблица анализа в шаблоне (часть строк пропущена):
+There is no real analysis plan yet, either in the Planveyor repository or in the SQL projects built on it. Its structure is set by the [plan template](../../plans/_template.md) (in Russian); this is how the analysis pack starts in the template (some rows are omitted):
 
 ```markdown
 ## Analysis pack
@@ -97,9 +99,9 @@ N/A (why=не analysis wave).
 …
 ```
 
-Предмет и цель анализа (`analysis_subject`, `desired_outcome`) записывает Architect. Coder записывает, какие источники он действительно открыл и прочитал (`scope_refs`), какие варианты рассмотрел и что рекомендует. После приёмки Architect заполняет раздел `## Promoted route artifact`: принятый исход (`accepted_route`), вид и путь созданного файла (`promoted_artifact_kind`, `promoted_artifact_ref`) и следующий шаг (`next_action`).
+Architect records the subject and the goal of the analysis (`analysis_subject`, `desired_outcome`). Coder records which sources it actually opened and read (`scope_refs`), which options it considered, and what it recommends. After acceptance, Architect fills in the `## Promoted route artifact` section: the accepted outcome (`accepted_route`), the kind and the path of the created file (`promoted_artifact_kind`, `promoted_artifact_ref`), and the next step (`next_action`).
 
-Декомпозицию пробовали в другом SQL-проекте на Planveyor, и она не завершена. Зонтичный план «аудит истории цен товаров» остановился на ревью (`Ready for Review`), три дочерних плана ждут Planner (`Ready for Planner`). Его отметки и ссылки на дочерние планы:
+Decomposition was tried in another SQL project on Planveyor, and it is not finished. The umbrella plan “product price history audit” stopped at the review (`Ready for Review`), and three child plans wait for Planner (`Ready for Planner`). Its markers and links to the child plans:
 
 ```json
 "phase_overlay": "decomposition_wave",
@@ -112,24 +114,24 @@ N/A (why=не analysis wave).
 ],
 ```
 
-Первый дочерний план создаёт таблицу истории цен, второй — триггер, который записывает изменения цены, третий — две процедуры чтения истории. Второй план ждёт первого, третий идёт после второго. Части три, поэтому деление облегчённое. Полная карта дочерних планов лежит в разделе `## Child plan map` зонтичного плана, порядок — в `## Execution queue`.
+The first child plan creates the price history table, the second one creates a trigger that records price changes, and the third one creates two procedures that read the history. The second plan waits for the first, and the third comes after the second. There are three parts, so the split is light. The full map of the child plans is in the `## Child plan map` section of the umbrella plan, and the order is in `## Execution queue`.
 
-Подробные правила описывают плейбуки [анализа](../../playbooks/analysis_wave.md) и [декомпозиции](../../playbooks/decomposition_wave.md), допустимые значения отметок и исходов перечисляет [словарь плана](../../_meta/plan_vocab.json). Какие документы перечитать роли, вернувшись к такому плану после перерыва, перечисляет [короткая памятка](../planning_contour_continuity.ru.md).
+The detailed rules are in the [analysis](../../playbooks/analysis_wave.md) and [decomposition](../../playbooks/decomposition_wave.md) playbooks, and the [plan vocabulary](../../_meta/plan_vocab.json) lists the allowed values of the markers and outcomes. A [short reminder](../planning_contour_continuity.md) lists which documents the roles should reread when they come back to such a plan after a break.
 
-## Что делает Owner
+## What Owner does
 
-- Заводя план через `$planveyor-plan-draft`, опишите, что нужно получить: изменение, ответ на вопрос или разбиение большой цели. Тип плана скилл выбирает вместе с Architect, окончательно контур определяет Architect ([руководство по sibling](../stack-sibling.ru.md#следующая-задача-и-готовность)).
-- План анализа ведите обычными командами `planveyor sibling architect`, `answer` и `run`, а после приёмки закройте как обычный план ([«Закрытие задачи»](closeout.md)).
-- Только после этого сделайте текущим новый план, если Architect его создал: `planveyor sibling plan docs/plans/YYMMDD_HHMM_topic.md`. Первым шагом будет `planveyor sibling architect`.
-- Для декомпозиции [плейбук](../../playbooks/decomposition_wave.md) предлагает отдельный вход, обёртку `planveyor_decomposition_collab_tui`. При таком запуске `Done` ставит и коммитит сам Architect ([«Кто делает коммит»](review-acceptance.md#кто-делает-коммит)). Продолжать декомпозицию можно командой `run`, но как довести её до конца командами sibling, пока не описано (см. [«Что уже работает и что дальше»](capabilities-boundaries.md)).
-- Дочерние планы проходят каждый свой цикл. Очередь из них `planveyor sibling run` не создаёт: это отдельный режим Manager, его описывает [руководство запуска](../launch-and-role-modes.ru.md).
+- When you create a plan with `$planveyor-plan-draft`, describe what you need to get: a change, an answer to a question, or a split of a large goal. The skill chooses the plan type together with Architect, and Architect makes the final decision on the contour ([stack sibling guide](../stack-sibling.md#next-task-and-readiness)).
+- Run an analysis plan like an ordinary plan: in TUI mode or with the `planveyor sibling architect`, `answer`, and `run` commands of manual mode, and after acceptance, close it like an ordinary plan ([Task closeout](closeout.md)).
+- Only after that, make the new plan current if Architect created one: `planveyor sibling plan docs/plans/YYMMDD_HHMM_topic.md`. The first step is the discussion with Architect: in the Manager window or with `planveyor sibling architect`.
+- For decomposition, the [playbook](../../playbooks/decomposition_wave.md) suggests a separate entry point, the `planveyor_decomposition_collab_tui` wrapper. With such a launch, Architect itself sets `Done` and commits ([Who makes the commit](review-acceptance.md#who-makes-the-commit)). You can continue a decomposition with `run`, but how to finish it with the sibling commands is not described yet (see [What works now and what comes next](capabilities-boundaries.md)).
+- Each child plan goes through its own cycle. `planveyor sibling run` does not create a queue of them: that is a separate Manager mode, described in the [launch guide](../launch-and-role-modes.md).
 
-## Частые ошибки
+## Common mistakes
 
-- Делить задачу потому, что её будет выполнять небольшая модель. Выбор модели не повод для декомпозиции.
-- Создавать дочерние планы внутри обычного плана разработки. Сначала Architect переводит работу в декомпозицию.
-- Считать запаркованный зонтичный план выполненной задачей. Работа продолжается в дочерних планах.
+- Splitting a task because a small model will do it. The choice of model is not a reason for decomposition.
+- Creating child plans inside an ordinary development plan. First, Architect moves the work to decomposition.
+- Treating a parked umbrella plan as a finished task. The work goes on in the child plans.
 
-Функции и тесты, о которых шла речь, — в [справочнике по коду](code-map.md#разработка-анализ-и-декомпозиция).
+The functions and tests discussed here are in the [code map](code-map.md#development-analysis-and-decomposition).
 
-Дальше: [«Ревью и приёмка»](review-acceptance.md).
+Next: [Review and acceptance](review-acceptance.md).

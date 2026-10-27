@@ -24,7 +24,8 @@ The default route keeps the registered non-unittest integrity checks and does no
 
 First-release work is supported on macOS with a prepared Python 3.12 environment and dependencies from `requirements-dev.lock`, Git, zsh, and ripgrep available. The source-identity loader technically accepts Python 3.10–3.12; this does not expand first-release support. The configured CI matrix targets Python 3.10 and 3.12 on macOS; configuration alone is not a hosted-run result. Windows and Linux native validation have not been completed.
 
-Use `planveyor_help` to discover the modules available in the installed version. For consumer-project work, select the project explicitly through the facade before the command when that module is designed to inspect the consumer tree.
+The JSON report from `planveyor_verify --format json` names the modules run by
+the installed version; pass a reported name to `--module` to select it. For consumer-project work, select the project explicitly through the facade before the command when that module is designed to inspect the consumer tree.
 
 ## What the result means
 

@@ -1,7 +1,7 @@
 flowchart TB
-A["Sibling: проверенный запрос"] --> B["Owner разрешает отправить issue"]
-B --> C["Planveyor: импорт запроса как PI"]
-C --> D["Architect самого Planveyor решает, нужен ли план"]
-D --> E["ACK: ссылка на решение (и на исполнение, если есть)"]
-E -->|"изменение принято"| F["Новая версия (с извещением, если меняется контракт)"]
-F --> G["Sibling: обновление и проверка исправления"]
+A["Sibling: checked request"] --> B["Owner allows sending the issue"]
+B --> C["Planveyor: request imported as PI"]
+C --> D["Planveyor's Architect decides if a plan is needed"]
+D --> E["ACK: decision link (and execution link, if any)"]
+E -->|"change accepted"| F["New version (with a notice if the contract changes)"]
+F --> G["Sibling: upgrade and fix check"]

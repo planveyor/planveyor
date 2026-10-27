@@ -10,7 +10,8 @@ You install the agent harness, sign in, and configure it yourself. Planveyor sta
 
 | Route | Agent harness |
 | --- | --- |
-| `planveyor sibling architect` and `planveyor sibling run` | Codex CLI |
+| Sibling, TUI mode: the Manager window `planveyor sibling tui` | Codex CLI |
+| Sibling, manual console mode: `planveyor sibling architect` and `planveyor sibling run` | Codex CLI |
 | Manager collab: `planveyor_manager_collab_tui`, `planveyor_manager_collab_cmd` | Codex CLI |
 | Single-role launch and custom pipeline | Codex CLI; Claude Code for Planner and both Reviewer lanes |
 | Direct ZCode Manager route | ZCode, only in the Planveyor root |
@@ -20,7 +21,12 @@ The first version supports no other agent harnesses. We will extend the support 
 
 ## Codex CLI
 
-Codex CLI serves the supported sibling route. `planveyor sibling architect` runs Architect in its own session, a separate `codex exec`. `planveyor sibling run` starts Manager collab, where Manager starts the five roles as Codex subagents. Planveyor starts Codex with the Codex home from `PLANVEYOR_CODEX_HOME`, or with `~/.codex` when the variable is not set. If the `codex` command is not on `PATH`, a role command stops with `Codex CLI is required; install it and authenticate in the consumer-owned home first`.
+Codex CLI serves both modes of a sibling; their paths differ, see [Two ways to work on a plan](stack-sibling.md#two-ways-to-work-on-a-plan).
+
+- **TUI mode.** `planveyor sibling tui` opens the interactive Codex CLI window of Manager for the whole plan; it calls `planveyor_manager_collab_tui`. The roles are nested Codex subagents of this session and live while the window is open. Nested subagents in an interactive window are a feature of Codex CLI.
+- **Manual console mode.** `planveyor sibling architect` runs Architect in its own session, a separate `codex exec`. Each `planveyor sibling run` is one non-interactive turn of Manager collab, where Manager starts the five roles as Codex subagents and exits after the accepted Arch Review.
+
+Planveyor starts Codex with the Codex home from `PLANVEYOR_CODEX_HOME`, or with `~/.codex` when the variable is not set. If the `codex` command is not on `PATH`, a role command stops with `Codex CLI is required; install it and authenticate in the consumer-owned home first`.
 
 The settings are described in the [Codex setup](launch-and-role-modes.md#codex-setup) section of the launch guide; the [last section](#what-you-configure) of this page lists its parts.
 
@@ -42,7 +48,7 @@ Every role uses `codex` by default. Both Reviewer lanes take the choice of the `
 
 For a sibling, pass `--project /absolute/path/to/sibling` before the command, as in [Project selection](launch-and-role-modes.md#project-selection).
 
-The choice applies where a wrapper starts the role: single-role launches and the custom pipeline. It does not change the Codex subagents of Manager collab and does not add Claude Code to `planveyor sibling run`.
+The choice applies where a wrapper starts the role: single-role launches and the custom pipeline. It does not change the Codex subagents of Manager collab and does not add Claude Code to either sibling mode: in the first version, Claude Code works only for Planner and Reviewer, in a single-role launch and in the custom pipeline.
 
 Claude Code needs the installed CLI and its usual sign-in. Planveyor reads three variables:
 

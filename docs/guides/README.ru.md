@@ -1,4 +1,4 @@
-<!-- i18n: pair=docs/guides/README.md pair-sha256=2baa287081f48ddcd3fb348c6c012fecbf9a96415b3d648310cb4b46df143cba self-sha256=b1ca28ec1cd2909a31ca353c97a8daeedf56e97b9760b458420e684fcfeff2ac -->
+<!-- i18n: pair=docs/guides/README.md pair-sha256=34b8ef9b7f00d5b4bdb101861382fe2776f6449460dafb2268db305166602fe0 self-sha256=c28431be1fa92eb5268dc50df2390370d53b90156275827a32d442e91c02fa4a -->
 # Руководства
 
 [English](README.md) · **Русский**
@@ -14,3 +14,4 @@
 - [Реестр повторяемых потоков](golden_paths.ru.md)
 - [Непрерывность контура планирования](planning_contour_continuity.ru.md)
 - [Краткое руководство Owner](../../planveyor_owner_book.ru.md)
+- [Как работает Planveyor](learn/README.ru.md): учебный раздел

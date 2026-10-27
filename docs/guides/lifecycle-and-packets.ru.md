@@ -1,4 +1,4 @@
-<!-- i18n: pair=docs/guides/lifecycle-and-packets.md pair-sha256=02992116d1c74d42f7c6826aeb474b3071b29b6abc5ff48e177e4ddc3f374136 self-sha256=9006b94cd0102d0a8cde2f7900c5a4f5186b1b7899d814ec53066bdd6072a13c -->
+<!-- i18n: pair=docs/guides/lifecycle-and-packets.md pair-sha256=462b46d4e3b8f4baffdeea6065b680d471a58ca7044d91ce610790ff3e095b89 self-sha256=85b79c68a9a3ce2bb3a3cea51910aa1e08f9fa434ae435dd1a155c080fa52eb7 -->
 # Жизненный цикл и пакеты
 
 [English](lifecycle-and-packets.md) · **Русский**
@@ -14,7 +14,7 @@
   planveyor_plan_status_oracle --json docs/plans/<plan>.md
 ```
 
-До передачи работы запустите линтер плана и проверки целевого проекта, которых требуют выбранный проект и текущий план. Состояние очереди создают только явные вспомогательные скрипты `planveyor_q_*`. Указатель активного плана не заменяет источник истины об очереди. Прежде чем заменить или очистить очередь, прочитайте её состояние, а затем используйте явно заданный режим Manager.
+До передачи работы запустите линтер плана и проверки целевого проекта, которых требуют выбранный проект и текущий план. Состояние очереди создают только явные вспомогательные скрипты `planveyor_q_*`. Указатель активного плана не заменяет источник истины об очереди. Прежде чем заменить или очистить очередь, прочитайте её состояние через `planveyor_q_show`. Для `planveyor_q_set` и `planveyor_q_append` явно передайте `--for-manager-mode`; `planveyor_q_clear` режима Manager не принимает и допускает только необязательный флаг `--json`.
 
 Точный набор файлов, файл ревью и CENSOR остаются отдельными записями доказательств. Положительный текст в ответе роли, старая квитанция или широкое статическое сканирование не закрывают текущий набор файлов без соответствующего чтения состояния.
 
@@ -61,7 +61,7 @@ ACK создаёт указатель на `docs/plans/<target-adoption>.md`, н
 
 Для чтения состояния и состояния планирования используйте `planveyor_rollout_packet_lint`, `planveyor_rollout_packet_inbox`, `planveyor_rollout_packet_adoption_plan`, `planveyor_rollout_packet_query` и `planveyor_rollout_packet_reconcile`. Запрос в Planveyor (upstream request) — отдельная запись. В публичном жизненном цикле с ним работают `planveyor_upstream_request_show`, `planveyor_upstream_request_import`, `planveyor_upstream_request_ack` и `planveyor_upstream_request_query`.
 
-Проверка в режиме отчёта и повторного использования читает точный диапазон и не меняет пакет:
+Проверка в режиме отчёта и повторного использования не меняет пакет, но создаёт новый отчёт `docs/reviews/*_packetization_gate_range_*.md` и при стандартном пути вывода помечает прежние отчёты того же диапазона как заменённые. При блокирующих строках код выхода — 2. В режиме отчёта `--range` необязателен, если диапазон уже сохранён; в примере он выбран явно:
 
 ```zsh
 ./bin/planveyor planveyor_post_merge_packetization_gate --range BASE..HEAD

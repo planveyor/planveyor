@@ -4,7 +4,7 @@
 
 A sibling is a separate Git repository for your code, plans, and stack rules. The Planveyor engine stays in an external checkout. This guide takes you from project creation to the first product task, and then applies to every next task.
 
-The main commands are `planveyor sibling …`. They find the project from the current directory, take the selected plan, and check the engine version in effect. You choose the task, answer the questions of the roles, and confirm the commits.
+The main commands are `planveyor sibling …`. They find the project from the current directory, take the selected plan, and check the engine version in effect. You choose the task, answer the questions of the roles, and approve the commits. A plan can be run in one of two modes: in the Manager window, TUI mode, which is the main path, or with separate commands, manual console mode; see [Two ways to work on a plan](#two-ways-to-work-on-a-plan).
 
 ## One-time setup: environment and project creation
 
@@ -22,7 +22,7 @@ export PATH="$PWD/bin:$PATH"
 
 This line uses the current checkout and does not change your shell config. A new tab needs the same selected checkout on `PATH`. From its root, the direct call is `./bin/planveyor`; no separate command installer is needed.
 
-You can run the commands in your own terminal or ask an agent in a Codex chat to run them. The folder in which the chat is open sets the chat sandbox, and the sandbox may stop a command from writing where it needs to: `architect` and `run` write role sessions to the Codex home, and `init` and `close --commit` write to `.git`. For `init`, open the chat in the parent directory of the new project; for the other commands, open a new chat in the project root. You grant access beyond the sandbox for a specific operation. On a refusal, read the command's message: `planveyor sibling` also returns code 3 when its own checks refuse in the ordinary way, so code 3 alone does not prove an access denial.
+You can run the commands in your own terminal or ask an agent in a Codex chat to run them. The folder in which the chat is open sets the chat sandbox, and the sandbox may stop a command from writing where it needs to: `architect`, `run`, and the Manager window write role sessions to the Codex home, and `init` and `close --commit` write to `.git`. For `init`, open the chat in the parent directory of the new project; for the other commands, open a new chat in the project root. You grant access beyond the sandbox for a specific operation. On a refusal, read the command's message: `planveyor sibling` also returns code 3 when its own checks refuse in the ordinary way, so code 3 alone does not prove an access denial.
 
 Choose the directory of the new project. In the example, it is `~/my-stack`; replace only the project name with yours:
 
@@ -40,6 +40,30 @@ planveyor sibling init ~/my-stack --author-name "Your Name" --author-email "you@
 ```
 
 After a successful creation, the command checks the contract and reports the result. `init` does not create a plan or a filled-in stack brief yet.
+
+## Two ways to work on a plan
+
+A plan can be run in two modes. Their paths differ, so choose the mode before the first role launch.
+
+- **TUI mode** is the main path. One interactive Codex CLI window of Manager serves the whole plan, from the draft to the end of the docs closeout. Manager asks you its questions in this window, and you answer there. The roles are nested subagents of the Manager session: the same roles do the work and the docs closeout. Architect commits the implementation and, if the closeout requires it, the documents. The description is based on how the engine works. The corresponding route has been checked by live passes in Planveyor itself.
+- **Manual console mode.** You run separate commands: `planveyor sibling plan`, `architect`, `answer`, `run`, `close`, `close --commit`, and `ready`. Each command is a separate launch that finishes and exits; `run` is one Manager turn up to the accepted Arch Review. You make the commits yourself with `close --commit` after the `close` preview: the implementation and, if the docs closeout requires it, the documents.
+
+| | TUI mode | Manual console mode |
+| --- | --- | --- |
+| Start | `planveyor_manager_init`, the approval step in `planveyor_manager_resume`, then `planveyor sibling tui` | A separate `planveyor sibling …` command for each step |
+| Who drives the plan | Manager, in one window from the draft to the end of the docs closeout | You, command by command; `run` drives the roles up to the accepted Arch Review and exits |
+| Who answers the questions | You, in the window; questions already open in the plan before the window, with `planveyor sibling answer` | You, with `planveyor sibling answer` |
+| Who commits | Architect: the implementation after the Arch Review and, if the docs closeout requires it, the documents | You, with `planveyor sibling close --commit` after the `close` preview |
+| Sessions | Live while the window is open; the roles keep their memory through the commits | After each commit, the next command starts a new Manager and new roles |
+| When to choose | Working on a plan | An agent without an interactive window, automation, single actions: creating a plan and answering Architect |
+
+You can combine the modes: create the plan and discuss it with Architect through the commands, then run the plan itself in TUI mode.
+
+### Sessions and commits
+
+A Manager session in a sibling is bound to the state of the repository, that is, HEAD and the index, and to the engine it was started from. A commit changes the state of the repository. Inside one open window, the change does not matter: Manager continues with the same roles. After a commit, the entry points behave differently. `planveyor sibling run` and `planveyor sibling tui` check the session themselves and start a new Manager with new roles. `tui` creates the new session without command approval requests, so before `tui`, create the new session yourself and switch the approvals on, as in [Run the plan in TUI mode](#run-the-plan-in-tui-mode). The low-level commands `planveyor_manager_collab_tui` and `planveyor_manager_collab_cmd` refuse with `receipt_authority_mismatch` and do not start a new Manager: you can continue only with a new session. In all cases, the new roles do not remember the plan.
+
+The docs closeout is how the roles write down what they learned during the task. In manual console mode, new roles do it after the commit and know the plan only from its files. In TUI mode, the same roles do it, so keep the window open until the end of the docs closeout. Keeping a session through its own commit is the open item [F13](../release_backlog.md#f13) of the release backlog (in Russian).
 
 ## Adaptation to your stack
 
@@ -66,7 +90,7 @@ Add the facts you know about your stack to the same message. The skill and Archi
 9. who runs the live targets: the roles with network access, or a person;
 10. what is out of scope.
 
-An example of such a block for SQL Server is section 6 of the guide in the `planveyor-mssql` repository (in Russian).
+An example of such a block for SQL Server is in the «Первый план: адаптация стека» (first plan: stack adaptation) section of the [docs/tools/mssql_walkthrough.md](https://github.com/planveyor/planveyor-mssql/blob/main/docs/tools/mssql_walkthrough.md) guide in the `planveyor-mssql` repository (in Russian).
 
 The skill creates the plan and the stack brief, and the plan scope includes the stack harness, the root `README.md` of the project, and the local role rules. Coder then implements the code in scope.
 
@@ -85,6 +109,8 @@ planveyor sibling plan "docs/plans/<plan>.md"
 ```
 
 The command does not pick a task by the latest file date.
+
+In TUI mode, open the Manager window as described in [Run the plan in TUI mode](#run-the-plan-in-tui-mode) once `planveyor sibling plan` lists no open questions: while the plan has open Owner questions, `planveyor sibling tui` refuses. Answer such questions first with the commands below: `answer`, then the printed `architect`. In the window, Manager continues the discussion with Architect and asks new questions there. The commands below are manual console mode. They also fit if you want to agree on the plan with Architect first and then run it in TUI mode.
 
 Start the discussion with Architect:
 
@@ -115,7 +141,7 @@ planveyor sibling answer Q2
 
 Type the answer as plain text; the command formats the log entry and the time itself. Empty input and cancellation do not confirm the suggested option. After it saves the answer, the command prints `Ответ сохранён. Следующий шаг: planveyor sibling architect` (answer saved; next step) or the same line with `run`. Run the printed step. While the plan is in the `Architect initial draft` status, the answer waits for the next Architect turn, and a second `answer` before that turn is refused with `Уже есть ожидающий Owner payload. Завершите соответствующий ход роли; существующие ответы сохранены.` (a pending Owner payload already exists; finish the matching role turn; the existing answers are kept). So in this status, answer several questions one at a time and run the printed step, `planveyor sibling architect`, after each answer. Default answers to common questions are in the [Common Architect questions](#common-architect-questions) section.
 
-Repeat the discussion until Architect has agreed on the needed decisions. Extra role permissions and acceptance conditions need your explicit decision. When no choices are left for Owner, Architect moves the plan to the `Architect draft` status itself, and `planveyor sibling run` becomes the next step. Architect does not ask for a confirmation at this point: the pipeline is designed to work without a person.
+Repeat the discussion until Architect has agreed on the needed decisions. Extra role permissions and acceptance conditions need your explicit decision. When no choices are left for Owner, Architect moves the plan to the `Architect draft` status itself, and `planveyor sibling run` becomes the next step. Architect does not ask for a confirmation at this point: the pipeline is designed to work without a person. The commands print the next step of manual console mode; in TUI mode, open the Manager window with `planveyor sibling tui` instead of `run`.
 
 ### The task understanding section
 
@@ -129,7 +155,7 @@ If the section differs from your assignment, do not start `run`. After the move 
 
 To confirm the section yourself, add this to the skill request: “До перевода плана в Architect draft покажи мне раздел «Как я понял задачу» и дождись подтверждения” (before moving the plan to Architect draft, show me the «Как я понял задачу» section and wait for confirmation). Architect then usually opens a question, and you confirm the section through `planveyor sibling answer`. This is model behavior; the engine does not guarantee it.
 
-If an agent runs the commands, ask it to print the section in the chat before every `run`. In the interactive Manager mode (`planveyor_manager_collab_tui`, see [Roles and entry points](launch-and-role-modes.md#roles-and-entry-points)), you talk to Manager directly and can ask it to print the section at the move to Planner. This mode uses `COMMIT_POLICY=native_existing`: Architect performs the closeout and the commit itself, without `close --commit`. You do not preview the commit, and this is the main difference from `planveyor sibling run`.
+If an agent runs the commands, ask it to print the section in the chat before every `run`. In TUI mode, you talk to Manager directly and can ask it to print the section before the move to Planner.
 
 ## Common Architect questions
 
@@ -173,7 +199,7 @@ An answer from the table does not replace the checks. A red result returns the w
 
 ## Run the plan
 
-Before the first `run`, everything that the roles do not do themselves must be in place. This is your part of the work; the agent in the chat helps you prepare it:
+Before the first role launch, in either mode, everything that the roles do not do themselves must be in place. This is your part of the work; the agent in the chat helps you prepare it:
 
 - the environment from [One-time setup: environment and project creation](#one-time-setup-environment-and-project-creation): Python 3.12 first in `PATH`, in a login shell too, and `TMPDIR` outside Git;
 - Codex CLI with a completed sign-in and the Manager collab roles in the selected Codex home or in the project `.codex/` directory; see [Codex setup](launch-and-role-modes.md#codex-setup); Codex applies the project directory only in a trusted project; see [Project `.codex/` directory](launch-and-role-modes.md#project-codex-directory);
@@ -186,17 +212,7 @@ The next two paragraphs describe the credentials and the access to the dev envir
 
 For a stack with credentials, the stack brief names the keys and the protected file, and after the adaptation the local `README.md` does. Enter the values in a local editor; secrets do not go into the chat, plans, or reports. `.env.local` needs mode 0600, must be ignored by Git, and must not be tracked. The harness reads the file, and the roles call only the accepted stack commands. The administrator prepares the dev environment with the needed markers and permissions; the harness must check it before writing.
 
-If the roles need access to the dev environment, agree on one variant in the stack brief: network access for the selected Codex home, or live commands run by a person. The variant where the roles run the live targets themselves needs network access in their sandbox: it is enabled in the Codex home configuration before the first `run`; see the [Access to the dev environment](launch-and-role-modes.md#access-to-the-dev-environment) section of the launch guide. Planveyor itself does not open the network or change the Codex home. In the operator-only variant, the role stops with a specific command; after the command has run, pass the actual result through `answer`. A red result needs a fix and a repeated check.
-
-When the Architect intake is complete, start Manager in collab mode:
-
-```sh
-planveyor sibling run
-```
-
-Manager drives the Architect, Planner, Coder, and Reviewer roles by the plan status. The command prepares the needed sessions; you do not need to remember their ids or refresh them after a commit. As after `architect`, the last `Следующий шаг: …` line of the output is the one in effect.
-
-If Manager waits for your decision, run `planveyor sibling answer`, then the next step that this command prints. If Manager reaches its step limit, repeat the same `run`. A failed check returns the work to the responsible role; agreeing with an earlier green result cannot replace it.
+If the roles need access to the dev environment, agree on one variant in the stack brief: network access for the selected Codex home, or live commands run by a person. The variant where the roles run the live targets themselves needs network access in their sandbox: it is enabled in the Codex home configuration before the first `run`; see the [Access to the dev environment](launch-and-role-modes.md#access-to-the-dev-environment) section of the launch guide. Planveyor itself does not open the network or change the Codex home. In the operator-only variant, the role stops with a specific command; after the command has run, pass the actual result: in TUI mode, in the Manager window, and in manual console mode, through `answer`. A red result needs a fix and a repeated check.
 
 During the adaptation, the roles create the stack harness, its checks, and its rules. The rules live in two local sections of eight files; an upgrade preserves exactly these sections:
 
@@ -211,9 +227,43 @@ During the adaptation, the roles create the stack harness, its checks, and its r
 | Range review | `docs/playbooks/review_merge_range.md` |
 | Post-merge audit | `docs/playbooks/post_merge_audit.md` |
 
+### Run the plan in TUI mode
+
+From the sibling root, start a new Manager session, switch it to command approval requests, and open the Manager window for the selected plan:
+
+```sh
+planveyor --project "$PWD" planveyor_manager_init
+planveyor --project "$PWD" planveyor_manager_resume
+planveyor sibling tui
+```
+
+The first two are low-level engine commands. Without `--project`, they work on the engine itself, so the sibling is named explicitly. `planveyor_manager_init` creates the session without command approval requests, so they are switched on in the second step: `planveyor_manager_resume` opens an empty window of the same session; type `/permissions` in it, choose "Ask for approval", and exit. Keep this order for every new Manager session.
+
+`planveyor sibling tui` takes no flags: the command answers any argument with a refusal. It opens the Manager window for the plan selected with `planveyor sibling plan`; the plan must allow collab mode, and it must have no open Owner questions. If the session was created for another project or from another Planveyor checkout, the command refuses and does not replace the session. After the window closes, the command prints no next step; `planveyor sibling plan` shows the state. The `Следующий шаг: …` (next step) line of `plan`, `answer`, `close`, and `ready` names the commands of manual console mode and never `tui`: in TUI mode, open the window with `planveyor sibling tui` instead of `run`.
+
+Before opening the window, the command checks the Manager session. If the receipt matches, `tui` takes the session as it is, also one that `run` or an earlier `tui` created without command approval requests. If there is no session, or its receipt no longer matches HEAD, the index, or the engine of the same Planveyor checkout, the command runs `planveyor_manager_init` itself and opens the window at once; the output of `planveyor_manager_init` then appears in the terminal before the window. Such a session has no command approval requests, and Manager starts the work without a pause. So before the first window of a plan and in a new clone, create the session with the first two commands; do not change files or the index between the three commands; and if you open the window again after a commit or an upgrade, run all three again. If `tui` created the session itself after all, wait until the current turn ends, exit the window, and start again with the first two commands.
+
+Manager reads the selected plan and drives the Architect, Planner, Coder, and Reviewer roles by its status. In the `Architect initial draft` status, it starts with the discussion with Architect. After the accepted Arch Review, Architect commits the implementation, and the same roles do the docs closeout; then, if the closeout requires a docs commit, Architect commits the documents. The policy in this mode is `COMMIT_POLICY=native_existing`: there is no pause for the `close` preview, and `close --commit` is not needed.
+
+The role sandbox keeps `.git` read-only, so Architect asks for elevated permission, and you approve the request in the window. Approval applies to a specific call, not to the whole task closeout: when a task was closed in Planveyor itself, the window asked separately about `planveyor_plan_bundle --stage`, `planveyor_plan_closeout_preflight`, their repeated runs, and `git commit`. The window shows "Would you like to run the following command?", the reason, and the exact command. Each time, choose the one-time "Yes, proceed", not the item with "don't ask again": it sets a permanent rule. To look at the set first, run `planveyor sibling close` in another terminal: this call only shows the state and does not touch the session. Planveyor does not configure such approvals in Codex for you. The description is based on how the engine works. The corresponding route has been checked by live passes in Planveyor itself.
+
+If Manager waits for your decision, answer in the window. On the step limit, Manager stops and returns the turn to you: tell it to continue, in the same window and only after such an explicit stop. Silence in the window does not mean that it hangs; do not interrupt a turn in progress. To stop the work, wait until the turn ends and decide what to do next. Do not close the window before the end of the docs closeout: after a commit, you can continue only with a new session and new roles; see [Sessions and commits](#sessions-and-commits).
+
+### Run the plan in manual console mode
+
+When the Architect intake is complete, start Manager in collab mode:
+
+```sh
+planveyor sibling run
+```
+
+Manager drives the Architect, Planner, Coder, and Reviewer roles by the plan status and exits after the accepted Arch Review. The command prepares the needed sessions; you do not need to remember their ids or refresh them after a commit: the next `run` after a commit starts a new Manager with new roles itself. As after `architect`, the last `Следующий шаг: …` line of the output is the one in effect.
+
+If Manager waits for your decision, run `planveyor sibling answer`, then the next step that this command prints. If Manager reaches its step limit, repeat the same `run`. A failed check returns the work to the responsible role; agreeing with an earlier green result cannot replace it.
+
 ### Stop `run` and continue the same plan
 
-Stop when the work goes in circles: for example, review returns a finding on the same topic to Coder for the third time. Owner decides whether to stop `run` and whether to continue the same plan later.
+This section is about manual console mode; in TUI mode, see [the section above](#run-the-plan-in-tui-mode). Stop when the work goes in circles: for example, review returns a finding on the same topic to Coder for the third time. Owner decides whether to stop `run` and whether to continue the same plan later.
 
 1. Stop `run` with one SIGINT signal: press Ctrl-C in its terminal. An agent sends SIGINT to the process group of this `run`. Do not use `kill -9`. The command exits with a nonzero code, and the role may not have finished its turn.
 2. Record the state without fixing anything:
@@ -242,6 +292,8 @@ Do not edit the plan, the review, the statuses, or the receipts while `run` is s
 
 ## Commit and docs closeout
 
+In TUI mode, the commits and the docs closeout happen in the Manager window; see [Run the plan in TUI mode](#run-the-plan-in-tui-mode). This section describes manual console mode.
+
 When Architect has accepted the final review and Manager proposes the closeout, first look at the preparation:
 
 ```sh
@@ -258,7 +310,7 @@ The `--commit` flag is your explicit confirmation to commit the checked current 
 
 `close` reads the acceptance of Architect in the review file. The file must have exactly one `## Архитектурное ревью` section (or `## Arch review`), and the first non-empty line of that section must be `Вердикт: принято.` (verdict: accepted). The heading from the template, `## Архитектурное ревью (Architect; optional)`, does not match: Architect removes the note in parentheses. Otherwise, `close` answers `Нужна одна секция «Архитектурное ревью» в review artifact. Следующий шаг: planveyor sibling architect.` (the review artifact needs exactly one such section) or `Первый вердикт Architect не даёт однозначной приёмки…` (the first verdict of Architect is not a clear acceptance). Run `planveyor sibling architect`, then `close` again. This is a technical return to Architect; no Owner answer is needed.
 
-After the plan commit, the command prints `План закоммичен. Следующий шаг: planveyor sibling run для документов.` (the plan is committed; next step: `planveyor sibling run` for the documents). The docs closeout is a separate Manager turn:
+After the plan commit, the command prints `План закоммичен. Следующий шаг: planveyor sibling run для документов.` (the plan is committed; next step: `planveyor sibling run` for the documents). The docs closeout is a separate Manager turn, and after the commit, a new Manager with new roles does it; see [Sessions and commits](#sessions-and-commits):
 
 ```sh
 planveyor sibling run
@@ -267,7 +319,7 @@ planveyor sibling close
 
 If the documents need a separate commit, `close` prints `Документы готовы. Следующий шаг: planveyor sibling close --commit.` (the documents are ready; next step) and shows their set. Review it and run `planveyor sibling close --commit`: this is your separate confirmation of the already shown set. The first `--commit` does not start the roles and does not confirm documents that do not exist yet. After the documents commit, the command checks the closeout right away; if an obligation remains, repeat the step it names.
 
-The work is finished after the message `План и документы закрыты. Можно начать следующую задачу.` (the plan and the documents are closed; you can start the next task). While the closeout is not complete, `close` may also exit with code 0 but print a different text, for example `Документы ещё не закрыты: <reason>. Следующий шаг: planveyor sibling run.` (the documents are not closed yet). Look at the text, not only at the exit code. `close` reports other incomplete states as a refusal with code 3, for example `Нет однозначного receipt-owned docs bundle; следующий шаг: planveyor sibling run.` (there is no unambiguous receipt-owned docs bundle). A `Done` status alone, the first commit, or a successful doctor does not yet mean that the whole step is complete. With several closeout cycles, the command asks you to name the actual cycle; it does not pick an arbitrary directory. A separate post-merge audit may stay open if the plan provides for it.
+The work is finished after the message `План и документы закрыты. Можно начать следующую задачу.` (the plan and the documents are closed; you can start the next task). While the closeout is not complete, `close` may also exit with code 0 but print a different text, for example `Документы ещё не закрыты: <reason>. Следующий шаг: planveyor sibling run.` (the documents are not closed yet). Look at the text, not only at the exit code. This also holds for the line `general_pi_format_correction_state=retryable` or `general_pi_format_correction_state=blocked`: `run`, `close`, `ready`, and `plan` can print it with code 0, and the closeout is blocked then; see [If a command stops](#if-a-command-stops). `close` reports other incomplete states as a refusal with code 3, for example `Нет однозначного receipt-owned docs bundle; следующий шаг: planveyor sibling run.` (there is no unambiguous receipt-owned docs bundle). A `Done` status alone, the first commit, or a successful doctor does not yet mean that the whole step is complete. With several closeout cycles, the command asks you to name the actual cycle; it does not pick an arbitrary directory. A separate post-merge audit may stay open if the plan provides for it.
 
 ## Next task and readiness
 
@@ -293,7 +345,7 @@ The skill checks whether an open deferred task covers the same topic and links i
 
 The skill may leave the pointer on the earlier plan. Check the selection with `planveyor sibling plan` and, if needed, select the new plan by the path from the skill's answer, as in the [adaptation](#adaptation-to-your-stack).
 
-Repeat the cycle: `architect`; for each question, `answer` and the step it prints, usually `architect` again; then `run` → `close` → a separate `close --commit`; for the documents, `run` → `close` → a separate `close --commit` when an obligation is shown; finally `ready`. Before the next task, finish the docs closeout of the current one. This sequence describes the expected steps, not a completed pass.
+Repeat the cycle. In TUI mode: answers to the open Owner questions of the new plan, if any, with `answer` and the printed `architect`; then a new Manager session, the approval step, and its window, `planveyor sibling tui`, for the whole plan, until the end of the docs closeout, then `ready`. In manual console mode: `architect`; for each question, `answer` and the step it prints, usually `architect` again; then `run` → `close` → a separate `close --commit`; for the documents, `run` → `close` → a separate `close --commit` when an obligation is shown; finally `ready`. Before the next task, finish the docs closeout of the current one. This sequence describes the expected steps, not a completed pass.
 
 For a large task, the usual [analysis](../playbooks/analysis_wave.md) (in Russian) and [decomposition](../playbooks/decomposition_wave.md) (in Russian) routes remain. Ask the plan skill to choose the matching plan type with Architect. Separate low-level entry points and the queue are described in [Launch and role modes](launch-and-role-modes.md); `sibling run` works with the selected plan and does not create a queue itself.
 
@@ -321,7 +373,7 @@ A sibling works with the engine version it is pinned to. If you continue working
    planveyor --project "$PWD" planveyor_consumer_doctor
    ```
 
-   When they match, the command exits with code 0, its output has `"state": "ok"`, and `source_commit` equals `runtime_commit`. When they differ, the exit code is 3, `state` is `blocked`, and `problems` has the line `runtime commit … differs from contract …`. In this case `planveyor sibling ready` does not confirm readiness either: it prints `Consumer contract требует разбора; готовность не подтверждена.` (the consumer contract needs a review; readiness is not confirmed). If the checkout does not have this version, the command also exits with code 3 and names the cause in the `reason` field.
+   When they match, the command exits with code 0, its output has `"state": "ok"`, and `source_commit` equals `runtime_commit`. When they differ, the exit code is 3, `state` is `blocked`, and `problems` has the line `runtime commit … differs from contract …`. In this case, `planveyor sibling ready` also exits with code 3 and writes the doctor's diagnostic JSON to stderr with the `planveyor sibling:` prefix. It does not print a separate readiness message or a next command. If the checkout does not have this version, the command also exits with code 3 and names the cause in the `reason` field.
 
 To move to a newer Planveyor version, first finish and close the current task, then select the new checkout and run the upgrade by the [Get a new Planveyor version](#get-a-new-planveyor-version) section. Start the new task after the upgrade plan is closed.
 
@@ -337,7 +389,7 @@ From an outside directory, select your project:
 planveyor --project ~/my-stack sibling upgrade
 ```
 
-On a successful upgrade, the command gets the new version itself, checks that the local rules are preserved, and prints the paths of the backup and of the upgrade plan. The notices go into this plan, but the command does not print them separately. It creates the upgrade plan and selects it. Open the sibling again and run this plan through the same `architect` → `run` → `close` cycle. A message about the updated contract does not yet mean an accepted adaptation.
+On a successful upgrade, the command gets the new version itself, checks that the local rules are preserved, and prints the paths of the backup and of the upgrade plan. The notices go into this plan, but the command does not print them separately. It creates the upgrade plan and selects it. Open the sibling again and run this plan like any other: in TUI mode, or through the `architect` → `run` → `close` cycle of manual console mode. A message about the updated contract does not yet mean an accepted adaptation.
 
 The `sibling upgrade` output calls this same plan “план адаптации” or “adaptation plan”. This guide calls it an “upgrade plan” to distinguish it from the first stack adaptation plan of a new sibling.
 
@@ -355,13 +407,13 @@ The selected engine version must stay the same. A loss of local sections, an amb
 
 You change the rules of your stack in the sibling. A shared problem of the engine or the process goes to Planveyor as an upstream request. This is the second public exchange scenario: a proposal from the sibling, a decision in the source, and the return of the fix through an upgrade.
 
-In a regular sibling chat, ask for a request from `docs/upstream_packets/_template.md`: the symptom, the process gap, the suggested fix, and links to your task and to the place where the problem was found. Move the facts of your stack into `Target-Specific Facts To Filter`; secrets, server addresses, and absolute paths do not go into the request. The prepared request goes through checks and your review; asking to prepare the file does not yet authorize sending it.
+In a regular sibling chat, ask for a request from `docs/upstream_packets/_template.md`: the symptom, the process gap, the suggested fix, and links to your task and to the place where the problem was found. Move the facts of your stack into `Target-Specific Facts To Filter`; secrets, server addresses, and absolute paths do not go into the request. The agent checks the prepared request against the template, then you review it. The first version has no standard request-format check in a sibling. Asking to prepare the file does not yet authorize sending it.
 
 After the request is accepted and committed, separately authorize sending the issue. This uses the installed and authorized GitHub CLI `gh` and the usual command `gh issue create --body-file <request file> --repo planveyor/planveyor --title "<request topic>"` with the exact prepared file. The `--repo` flag is required: without it, `gh` takes the repository from the remote of the current directory, that is, from your sibling, and stops if there is no remote. Ask the agent to show the ready command and the public body; you do not need to copy the text by hand or fill in technical ids. If `gh` is not set up, sending stops with a clear prerequisite. Creating an issue by itself does not mean that the proposal is accepted.
 
 The Planveyor maintainer takes in the request with the standard source-local `planveyor_upstream_request_import` and `planveyor_upstream_request_ack`: they work only in the physical source root and are not run from a sibling. The decision and the fix go through an ordinary source plan. A change of the contract or behavior comes with a notice in `docs/contract_notices/` with checks and actions for the sibling.
 
-After the selected version is published, run `sibling upgrade`. The created upgrade plan includes the notice and an update of the local copy of the request. The roles check the result on your stack; finish both commits and the docs closeout. The packet format and the low-level readbacks are described in [Lifecycle and packets](lifecycle-and-packets.md).
+After the selected version is published, run `sibling upgrade`. The created upgrade plan includes the notice and an update of the local copy of the request. The roles check the result on your stack; finish the commits and the docs closeout. The packet format and the low-level readbacks are described in [Lifecycle and packets](lifecycle-and-packets.md).
 
 ### Example: SQL Server sibling → provenance fix → upgrade
 
@@ -380,7 +432,18 @@ Ask for a request from the template with the actual links to the plan and the re
 
 Prepare and review the request, then separately authorize sending the issue with the same `gh issue create --body-file … --repo planveyor/planveyor` command. The source maintainer imports the request, makes a decision, and runs an ordinary fix plan. The notice in the [existing format](../contract_notices/README.md) (in Russian) includes a provenance check through the facade and `planveyor_consumer_doctor`; the sibling actions are to check its own SQL rules and to update the local copy of the request. Source-only ACK records the real decision/execution refs and the `decided` state in the source; ACK itself does not update the sibling.
 
-After the publication, select the new Planveyor version and run `sibling upgrade`. In the upgrade plan, Coder checks the provenance and the real checks of your SQL stack, and reconciles the fields and refs of the local request with the notice. This target-local change goes through review, two exact commits, and the docs closeout; the source-only ACK is not called from the sibling. With a blocked candidate, first analyze its real cause. An issue, the source `decided` state, and a successful Copier run do not replace the acceptance of the adaptation.
+After the publication, select the new Planveyor version and run `sibling upgrade`. In the upgrade plan, Coder checks the provenance and the real checks of your SQL stack, and reconciles the fields and refs of the local request with the notice. This target-local change goes through review, the exact task commit, and the docs closeout, with a documents commit if the closeout requires one; the source-only ACK is not called from the sibling. With a blocked candidate, first analyze its real cause. An issue, the source `decided` state, and a successful Copier run do not replace the acceptance of the adaptation.
+
+## Publish your sibling
+
+When Planveyor creates a sibling, it copies documents, roles, prompts, playbooks, ADRs, and plan skills into it from its template. So a published sibling contains Planveyor files, and Planveyor itself is licensed under the Apache License, Version 2.0. The license lists the conditions for redistribution in section 4. Among them:
+
+- give recipients a copy of the license (section 4(a));
+- include the attribution notices from the Planveyor `NOTICE` file (section 4(d)).
+
+Take both texts from the `LICENSE` and `NOTICE` files in the root of your Planveyor checkout: project creation does not copy them into the sibling. If the sibling contains third-party examples or data, include their licenses and notices as well.
+
+You choose the license for your own code. Keep the Planveyor texts separate from it, for example in `third_party/planveyor/`. Then, with a different license, the root `LICENSE` of the project does not look as if it covers the whole project.
 
 ## If a command stops
 
@@ -392,14 +455,22 @@ After the publication, select the new Planveyor version and run `sibling upgrade
 | An Owner question is open | `planveyor sibling answer`, then the next step that this command prints. |
 | `Уже есть ожидающий Owner payload…` after `answer` | The previous answer has not reached the role yet. Run the step printed then, usually `planveyor sibling architect`, and then answer the next question. |
 | `Открытых Owner вопросов нет.` after `answer` | There is no question for you. In `Architect draft`, the `## Как я понял задачу` section has no standard fix; see [the section about it](#the-task-understanding-section). |
-| Manager reached its step limit | Repeat `planveyor sibling run`. |
+| Manager reached its step limit | In manual console mode, repeat `planveyor sibling run`. In TUI mode, after this explicit stop, tell Manager in the same window to continue. |
+| `planveyor_manager_collab_tui`, started directly, refuses with `receipt_authority_mismatch` | HEAD, the index, or the engine changed after `planveyor_manager_init`, for example after a commit, an upgrade, or a start from another Planveyor checkout. Run the first two commands of [Run the plan in TUI mode](#run-the-plan-in-tui-mode) again, then open the window with `planveyor sibling tui`. |
+| The Manager window was closed after the implementation commit, before the end of the docs closeout | Stop and preserve the output, plan state, and docs-closeout evidence. Do not start a new `sibling tui` or `run` automatically: a new invocation does not restore the previous roles or a spent correction attempt. Owner chooses the next step from the actual closeout state. If only the documentation commit remains, first preview it with `sibling close`; use `close --commit` only after explicit Owner authorization. |
+| Architect asks in the window for permission to write to `.git` | Look at the set, for example with `planveyor sibling close` in another terminal, and approve this call in the window with the one-time "Yes, proceed". |
+| `tui` exits with code 3 and prints `planveyor sibling:` with the Oracle JSON, where `"manager_mode_admitted": false` | The `plan_meta.required_manager_mode` field of the plan is missing, invalid, or requires another Manager mode; `manager_mode_reason` names the case. `tui` and `run` work only in collab mode: the field must be `either` or `manager-collab`, as in the plan template. Fix the field in the plan, then repeat `tui`. |
+| `Сначала завершите canonical Owner Q&A текущего plan.` after `tui` | The plan has open Owner questions; `planveyor sibling plan` shows them. Answer each with `planveyor sibling answer`. If it prints `planveyor sibling architect`, run it; if it prints `planveyor sibling run`, do not run it in TUI mode. When `plan` shows no open questions, run `tui` again. |
+| `Receipt принадлежит другому project/runtime; сессия не заменена.` after `tui`, `run`, or `architect` | The session was created for another project, for example before the sibling directory was moved or copied, or from another Planveyor checkout; the command does not replace it. Check which checkout the commands come from; see [Return to work in an existing sibling](#return-to-work-in-an-existing-sibling). To work from the current one, create the session yourself: for `tui`, the first two commands of [Run the plan in TUI mode](#run-the-plan-in-tui-mode), then `tui`; for `run`, `planveyor --project "$PWD" planveyor_manager_init`; for `architect`, `planveyor --project "$PWD" planveyor_arch_init`. |
 | Review returns the work on the same topic again and again | Stop `run` by the steps in [Stop `run` and continue the same plan](#stop-run-and-continue-the-same-plan); Owner decides whether to continue. |
 | The review or the evidence is stale | Return to the named role; an old green result does not confirm new changes. |
 | There is no single `## Архитектурное ревью` section, or its first line is not `Вердикт: принято.` | Run `planveyor sibling architect`, then `close` again. |
 | The index has unrelated files | Sort them out separately; `close` does not clean up or commit unrelated work. |
 | A commit is required | Review the `close` preview, then explicitly run and confirm `close --commit`. |
 | The documents are not closed yet | Run the named Manager turn or closeout; start the next task after it completes. |
-| `Consumer contract требует разбора; готовность не подтверждена.` after `ready` | Check the contract and the engine version with `planveyor --project "$PWD" planveyor_consumer_doctor`; see [Return to work in an existing sibling](#return-to-work-in-an-existing-sibling). |
+| `general_pi_format_correction_state=retryable` after `run`, `close`, `ready`, or `plan` | The PI section of a role answer has a format error. Only the same running Manager may ask the same role for one correction, through the same role instance; neither a new `run` nor a new window restores this right, and the closeout stays blocked. If the Manager window is still open, let Manager finish its turn there. If that Manager has already exited, as after `run` in manual console mode, stop: Owner decides. Keep the output of that Manager turn with the collector refusal and the output of this command; see [Process improvements](learn/self-development.md#process-improvements-pis). |
+| `general_pi_format_correction_state=blocked` after `run`, `close`, `ready`, or `plan` | The correction is blocked; the next line, `Коррекция PI заблокирована (<reason>)…`, names the reason in parentheses. Stop: Owner decides. Keep the original refusal; repeating `run` or `close` is not the next step. |
+| `ready` exits with code 3 and writes the doctor's diagnostic JSON to stderr with the `planveyor sibling:` prefix | Check the contract and the engine version with `planveyor --project "$PWD" planveyor_consumer_doctor`; see [Return to work in an existing sibling](#return-to-work-in-an-existing-sibling). |
 | `ready` exited with code 0 but without the closeout result | The task is not finished: run the printed next step. |
 | The runtime version differs from the sibling | Select the pinned version by [Return to work in an existing sibling](#return-to-work-in-an-existing-sibling) or run the upgrade plan. |
 | The upgrade kept a candidate or a backup | On code 3, find the candidate and resolve its actual problems by the steps above; after success, check the upgrade plan and keep the backup until the plan is accepted. Do not replace the original by hand. |
@@ -409,6 +480,10 @@ Help is available through the usual `planveyor sibling --help` command. It does 
 ## When an agent runs the pass
 
 This section is for an agent that runs the pass on behalf of Owner. A person does not need to read it.
+
+### Choice of the mode
+
+Run the plan in TUI mode if you can keep an interactive terminal window open for the whole plan, read it, and type into it: then you answer the questions of Manager and the approval requests in the window, as a person does, and follow the same rules as in [Run the plan in TUI mode](#run-the-plan-in-tui-mode). Without such a window, use manual console mode. Creating a plan and the discussion with Architect may go through the commands in either case.
 
 ### Deferred tasks for a new plan
 

@@ -80,6 +80,78 @@
     {
       "source": "docs/guides/harnesses.md",
       "copy": "docs/guides/harnesses.ru.md"
+    },
+    {
+      "source": "docs/guides/learn/README.md",
+      "copy": "docs/guides/learn/README.ru.md"
+    },
+    {
+      "source": "docs/guides/learn/roles-artifacts.md",
+      "copy": "docs/guides/learn/roles-artifacts.ru.md"
+    },
+    {
+      "source": "docs/guides/learn/sql-example.md",
+      "copy": "docs/guides/learn/sql-example.ru.md"
+    },
+    {
+      "source": "docs/guides/learn/plan-lifecycle.md",
+      "copy": "docs/guides/learn/plan-lifecycle.ru.md"
+    },
+    {
+      "source": "docs/guides/learn/work-contours.md",
+      "copy": "docs/guides/learn/work-contours.ru.md"
+    },
+    {
+      "source": "docs/guides/learn/review-acceptance.md",
+      "copy": "docs/guides/learn/review-acceptance.ru.md"
+    },
+    {
+      "source": "docs/guides/learn/closeout.md",
+      "copy": "docs/guides/learn/closeout.ru.md"
+    },
+    {
+      "source": "docs/guides/learn/testing-evidence.md",
+      "copy": "docs/guides/learn/testing-evidence.ru.md"
+    },
+    {
+      "source": "docs/guides/learn/sibling-lifecycle.md",
+      "copy": "docs/guides/learn/sibling-lifecycle.ru.md"
+    },
+    {
+      "source": "docs/guides/learn/change-packets.md",
+      "copy": "docs/guides/learn/change-packets.ru.md"
+    },
+    {
+      "source": "docs/guides/learn/capabilities-boundaries.md",
+      "copy": "docs/guides/learn/capabilities-boundaries.ru.md"
+    },
+    {
+      "source": "docs/guides/learn/runtime-launch.md",
+      "copy": "docs/guides/learn/runtime-launch.ru.md"
+    },
+    {
+      "source": "docs/guides/learn/self-development.md",
+      "copy": "docs/guides/learn/self-development.ru.md"
+    },
+    {
+      "source": "docs/guides/learn/postmerge.md",
+      "copy": "docs/guides/learn/postmerge.ru.md"
+    },
+    {
+      "source": "docs/guides/learn/engine-tests.md",
+      "copy": "docs/guides/learn/engine-tests.ru.md"
+    },
+    {
+      "source": "docs/guides/learn/glossary.md",
+      "copy": "docs/guides/learn/glossary.ru.md"
+    },
+    {
+      "source": "docs/guides/learn/code-map.md",
+      "copy": "docs/guides/learn/code-map.ru.md"
+    },
+    {
+      "source": "docs/guides/learn/examples/sql/README.md",
+      "copy": "docs/guides/learn/examples/sql/README.ru.md"
     }
   ]
 }

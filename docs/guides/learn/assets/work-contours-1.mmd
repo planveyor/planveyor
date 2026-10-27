@@ -1,10 +1,10 @@
 flowchart TB
-I["Цель Owner"] --> D["Разработка: результат и границы понятны"]
-I --> A["Анализ: сначала ответить на вопрос и сравнить варианты"]
-I --> S["Декомпозиция: цель не умещается в один план"]
-D --> R["Ревью и решение Architect"]
+I["Owner goal"] --> D["Development: result and scope are clear"]
+I --> A["Analysis: first answer a question and compare options"]
+I --> S["Decomposition: goal does not fit in one plan"]
+D --> R["Review and Architect decision"]
 A --> R
 S --> R
-R --> CD["Разработка: коммит и закрытие документов"]
-R --> CA["Анализ: коммит плана и решение о следующей работе"]
-R --> CS["Декомпозиция: зонтичный план паркуется, работа идёт в дочерних планах"]
+R --> CD["Development: commit and docs closeout"]
+R --> CA["Analysis: plan commit, decision on the next work"]
+R --> CS["Decomposition: umbrella plan is parked, work goes on in child plans"]

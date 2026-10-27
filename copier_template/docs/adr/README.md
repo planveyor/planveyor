@@ -11,6 +11,8 @@
 - правило именования shared/package: `NNN-topic.md`
 - `planveyor/docs/adr/*` = общие process/package decisions; target-repo `adr/*` = repo-local product/runtime decisions и не зеркалятся обратно как второй канон
 
+Справочный материал по оформлению ADR: [MADR](https://adr.github.io/madr/).
+
 ## Когда создавать ADR
 - решение меняет или закрепляет инвариант канона (`AGENTS.md`, `docs/adr/*`, `docs/api.md`, shared playbooks/prompts/contracts`);
 - решение ограничивает будущие изменения (“не добавлять второй механизм X без пересмотра этого решения”);

@@ -13,3 +13,4 @@ Canonical Owner-facing instructions and operating guides for Planveyor.
 - [Golden paths](golden_paths.md)
 - [Planning-contour continuity](planning_contour_continuity.md)
 - [Owner guide](../../planveyor_owner_book.md)
+- [How Planveyor works](learn/README.md): the learning section

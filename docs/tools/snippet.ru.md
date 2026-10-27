@@ -1,4 +1,4 @@
-<!-- i18n: pair=docs/tools/snippet.md pair-sha256=3a14bed82f5bd156cdc0ba6a34f2b1202cf13d2d35c391bfdc15dd0e10ba431a self-sha256=6e4de821e021ee47531d030dcd6edfb349752aa04a12d5103822c4bfa3f36d1f -->
+<!-- i18n: pair=docs/tools/snippet.md pair-sha256=816f6e26333a4d4be86ffd633b52c0e0cafbb4aa01673fab664fd59c5471a6be self-sha256=37f23b18e7a5a6010e1a02e67712c4abf32cd1723be38024b7b256998b21221e -->
 # Сниппеты Planveyor
 
 [English](snippet.md) · **Русский**
@@ -24,8 +24,9 @@
 ./bin/planveyor --project /absolute/path/to/consumer <planveyor_function> [args…]
 ~~~
 
-Не подключайте через `source` shell-скрипты реализации. Один вызов ничего не
-меняет надолго: ни текущий каталог, ни учётные данные, ни локальное состояние.
+Не подключайте через `source` shell-скрипты реализации. Фасад не меняет
+текущий каталог и окружение родительской оболочки; изменения файлов и состояния,
+предусмотренные командой, могут сохраняться после завершения дочернего процесса.
 
 ## Быстрая диагностика
 
@@ -59,7 +60,7 @@ SID или вызов роли. Сохранённый указатель пла
 
 ~~~bash
 ./bin/planveyor planveyor_merge_range_stats_json BASE HEAD
-./bin/planveyor planveyor_review_range_init --range BASE..HEAD
+./bin/planveyor planveyor_review_range_init BASE HEAD
 git diff --check BASE..HEAD
 rg -n "^<<<<<<< |^======= |^>>>>>>> " .
 ~~~
@@ -74,7 +75,7 @@ rg -n "^<<<<<<< |^======= |^>>>>>>> " .
 ~~~bash
 rg -n "<anchor-token>" docs
 ./bin/planveyor planveyor_docs_index_build all
-./bin/planveyor planveyor_docs_retrieve --corpus canon "<anchor-token>"
+./bin/planveyor planveyor_docs_retrieve canon "<anchor-token>"
 ./bin/planveyor planveyor_docs_context_check --corpus plans --format text
 ~~~
 

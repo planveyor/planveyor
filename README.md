@@ -8,7 +8,7 @@ Planveyor is a standalone, repo-backed toolkit for plan-driven work with Archite
 
 First install Planveyor as described in [Install Planveyor](docs/guides/install.md): the requirements, an example environment, and the checks. [Agent harnesses](docs/guides/harnesses.md) shows which agent harness each route uses.
 
-For a project under your own stack, follow the permanent [stack sibling runbook](docs/guides/stack-sibling.md): create the sibling, draft a plan, answer Architect, run Manager, preview and explicitly commit each exact set. The human commands use one group, `planveyor sibling`; project, selected plan and source version are discovered from the chosen facade and project context.
+For a project under your own stack, follow the permanent [stack sibling runbook](docs/guides/stack-sibling.md): create the sibling, draft a plan, and run it in one of two modes. TUI mode, the main path, is one Manager window for the whole plan, where Architect makes the commits. In manual console mode, you answer Architect, run Manager, and preview and explicitly commit each exact set with separate commands. These human commands use one group, `planveyor sibling`; project, selected plan and source version are discovered from the chosen facade and project context.
 
 Run commands from the Planveyor root through the child-only facade:
 
@@ -56,6 +56,7 @@ The focused public guides are:
 - [Lifecycle and packets](docs/guides/lifecycle-and-packets.md)
 - [Golden paths](docs/guides/golden_paths.md)
 - [Owner guide](planveyor_owner_book.md)
+- [How Planveyor works](docs/guides/learn/README.md): the learning section
 - [Verification suite](docs/tools/verify_suite.md)
 - [First-release backlog](docs/release_backlog.md)
 - [Role definitions](docs/roles/index.md)

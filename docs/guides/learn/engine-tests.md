@@ -1,79 +1,81 @@
-# Тесты движка
+# Engine tests
 
-Эта глава для тех, кто меняет сам Planveyor: его скрипты, правила ролей, промпты и шаблоны. Перед ревью такой правки запускают тесты движка и проверки документации, а команду и результат записывают в ревью, если они важны для приёмки ([CONTRIBUTING](../../../CONTRIBUTING.ru.md)). Тесты вашего продукта живут в sibling и в этот набор не входят.
+**English** · [Русский](engine-tests.ru.md)
 
-## Как собран набор
+This chapter is for those who change Planveyor itself: its scripts, role rules, prompts, and templates. Before the review of such a change, you run the engine tests and the documentation checks and record the command and the result in the review if they matter for acceptance ([CONTRIBUTING](../../../CONTRIBUTING.md)). The tests of your product live in the sibling and are not part of this suite.
 
-Тесты движка написаны на стандартном Python `unittest` и лежат рядом с кодом, в файлах `scripts/test_*.py`; сейчас таких файлов больше сотни. Цель `make test-scripts` находит их обычным поиском тестов:
+## How the suite is built
+
+The engine tests are written with the standard Python `unittest` and lie next to the code, in `scripts/test_*.py` files; there are more than a hundred such files now. The `make test-scripts` target finds them with the ordinary test discovery:
 
 ```sh
 "$PYBIN" -m unittest discover -s scripts -p "test_*.py" -v
 ```
 
-Новый файл `test_<тема>.py` в `scripts/` попадает в набор сам, править [Makefile](../../../Makefile) для этого не нужно. Интерпретатор для целей Makefile берётся из переменной `PYBIN`, а если она не задана, из активированного окружения или `python3` в `PATH`. Выбор и проверку версии делает скрипт `scripts/_pybin.sh`.
+A new `test_<topic>.py` file in `scripts/` joins the suite by itself; you do not need to edit the [Makefile](../../../Makefile) for that. The Makefile targets take the interpreter from the `PYBIN` variable, or, if it is not set, from the activated environment or `python3` on `PATH`. The `scripts/_pybin.sh` script makes this choice and checks the version.
 
-В наборе три вида тестов:
+The suite has three kinds of tests:
 
-| Вид | Пример входа и что смотрят | Что можно заключить |
+| Kind | Example input and what is checked | What you can conclude |
 | --- | --- | --- |
-| Тест вспомогательного скрипта | Временный план без черновика кода; JSON результата | Скрипт замечает, что обязательного файла нет, и называет блокер |
-| Контрактный тест документов и промптов | Текст плейбука или промпта; обязательные маркеры | Инструкция сохранила нужную структуру и границы передачи контекста |
-| Интеграционный тест | Временные Git-репозитории; настоящий `bin/planveyor` и линтер | Компоненты согласованы между собой; после отказа файлы очереди планов не меняются |
+| Helper script test | A temporary plan without a code draft; the result JSON | The script notices that a required file is missing and names the blocker |
+| Contract test of documents and prompts | The text of a playbook or prompt; the required markers | The instruction kept the needed structure and the boundaries of context passing |
+| Integration test | Temporary Git repositories; the real `bin/planveyor` and linter | The components agree with each other; after a refusal, the plan queue files do not change |
 
-Контрактные тесты читают документы самого репозитория. Почти все остальные создают проект или Git-репозиторий во временном каталоге. Общий помощник интеграционных тестов `AuthorityFixture` копирует исходники движка в новый временный репозиторий и не трогает ни исходную копию, ни репозиторий владельца. Если тесту нужен клиент Codex, вместо него ставят поддельный скрипт, который записывает полученные аргументы.
+Contract tests read the documents of the repository itself. Almost all the others create a project or a Git repository in a temporary directory. The shared integration test helper `AuthorityFixture` copies the engine sources into a new temporary repository and touches neither the source checkout nor the owner's repository. If a test needs the Codex client, a fake script that records the arguments it receives stands in for it.
 
-Живой запуск роли и проверки продукта в набор не входят. Чтобы сказать «роль выполнила работу», нужен настоящий вызов настроенного клиента и результат в файле, который объявил план; чтобы сказать «продукт работает», нужна обвязка sibling. Подробнее — в главе [«Тесты и доказательства: чему можно доверять»](testing-evidence.md).
+A live role launch and the product checks are not part of the suite. To say “the role did the work”, you need a real call of a configured agent harness and the result in the file that the plan declared; to say “the product works”, you need the sibling harness. See the [Tests and evidence: what you can trust](testing-evidence.md) chapter for details.
 
-## Как запускать
+## How to run it
 
-Команды запускают из корня копии Planveyor, в активированном окружении с Python 3.12 и зависимостями из `requirements-dev.lock`. Окружение вы создаёте сами, а `make bootstrap-python` один раз ставит в него зависимости. [Маршруты проверки](../../tools/verify_suite.ru.md) отделяют поддерживаемую среду первой версии, macOS/Python 3.12, от технического диапазона загрузчика Python 3.10–3.12 ([«Что уже работает и что дальше»](capabilities-boundaries.md#границы-первой-версии)).
+Run the commands from the root of the Planveyor checkout, in an activated environment with Python 3.12 and the dependencies from `requirements-dev.lock`. You create the environment yourself, and `make bootstrap-python` installs the dependencies into it once. The [verification routes](../../tools/verify_suite.md) separate the supported environment of the first version, macOS/Python 3.12, from the technical range of the loader, Python 3.10–3.12 ([What works now and what comes next](capabilities-boundaries.md#limits-of-the-first-version)).
 
-| Команда | Что выполняет |
+| Command | What it runs |
 | --- | --- |
-| `make verify` или `./bin/planveyor planveyor_verify` | Быстрый режим: проверки целостности, без тестов |
-| `make test-scripts` | Все тесты движка одним поиском |
-| `make verify-full` или `./bin/planveyor planveyor_verify --full` | Проверки целостности и один поиск тестов |
-| `./bin/planveyor planveyor_verify --module portability` | Только названный модуль проверок |
-| `./bin/planveyor planveyor_doc_lint` | Ссылки и упоминания файлов в документации |
+| `make verify` or `./bin/planveyor planveyor_verify` | Quick mode: integrity checks, no tests |
+| `make test-scripts` | All engine tests in one discovery |
+| `make verify-full` or `./bin/planveyor planveyor_verify --full` | Integrity checks and one test discovery |
+| `./bin/planveyor planveyor_verify --module portability` | Only the named check module |
+| `./bin/planveyor planveyor_doc_lint` | Links and file mentions in the documentation |
 
-Начинайте с самого маленького маршрута, который проверяет изменённое. Чтобы проверить всё целиком, выберите что-то одно, `make test-scripts` или `make verify-full`: подряд они прогонят все тесты дважды. Флаги `--full` и `--module` вместе передать нельзя, команда завершится с ошибкой. Один файл тестов запускают тем же поиском, сузив шаблон; в активированном окружении это `python3 -m unittest discover -s scripts -p "test_verify_suite.py" -v`.
+Start with the smallest route that checks what you changed. To check everything, choose one of them, `make test-scripts` or `make verify-full`: run one after the other, they run all the tests twice. You cannot pass the `--full` and `--module` flags together: the command exits with an error. To run one test file, use the same discovery with a narrower pattern; in an activated environment, this is `python3 -m unittest discover -s scripts -p "test_verify_suite.py" -v`.
 
-### Проверки целостности
+### Integrity checks
 
-`make verify`, `make verify-full` и `planveyor_verify` запускают [verify_suite.py](../../../scripts/verify_suite.py). Он собирает результаты нескольких модулей проверок в один отчёт. Модули регистрируются в нём декоратором `register()`, а `_load_modules()` выбирает все модули или названные в `--module`. Сейчас модуль один, `portability`. Без флагов он ищет в отслеживаемых файлах токены, ключи, адреса почты и серверов и личные пути, проверяет, не ссылаются ли документы на Python из Homebrew, и ищет следы неудачной автозамены. С `--full` к этим проверкам добавляется один поиск тестов с теми же параметрами, что у `make test-scripts`.
+`make verify`, `make verify-full`, and `planveyor_verify` run [verify_suite.py](../../../scripts/verify_suite.py). It collects the results of several check modules into one report. Modules register in it with the `register()` decorator, and `_load_modules()` selects all modules or the ones named in `--module`. For now, there is one module, `portability`. Without flags, it searches the tracked files for tokens, keys, email and server addresses, and private paths, checks whether the documents refer to Python from Homebrew, and looks for traces of a failed automatic replacement. With `--full`, these checks also run one test discovery, adding the Python flag `-B` to the parameters used by `make test-scripts`.
 
-Выбранные планы и архивный снимок документов модуль проверяет, только если их передали явно, флагами `--portability-plan` и `--archive-snapshot`. Иначе отчёт прямо говорит, что эти входы не выбраны и ничего о них не утверждает.
+The module checks selected plans and the archived snapshot of documents only if they were passed explicitly, with the `--portability-plan` and `--archive-snapshot` flags. Otherwise, the report says plainly that these inputs were not selected and claims nothing about them.
 
-### Линтер документации
+### Documentation linter
 
-`./bin/planveyor planveyor_doc_lint` проверяет `AGENTS.md`, `docs/roles`, `docs/playbooks`, `docs/guides` и `docs/arch.md`: битые относительные ссылки и пути файлов в обратных кавычках, например `scripts/verify_suite.py`. Ещё он проверяет, что в группах связанных документов на месте обязательные общие фразы: например, `reviewability preflight receipt` в десяти промптах и документах ролей. `make doc-lint` запускает тот же [doc_lint.py](../../../scripts/doc_lint.py) с корнями по умолчанию: без `docs/guides` и без проверки путей в обратных кавычках.
+`./bin/planveyor planveyor_doc_lint` checks `AGENTS.md`, `docs/roles`, `docs/playbooks`, `docs/guides`, and `docs/arch.md` for broken relative links and file paths in backticks, for example `scripts/verify_suite.py`. It also checks that the required shared phrases are in place in groups of related documents: for example, `reviewability preflight receipt` in ten prompts and role definitions. `make doc-lint` runs the same [doc_lint.py](../../../scripts/doc_lint.py) with the default roots and without the check of paths in backticks.
 
-Сейчас `planveyor_doc_lint` в корне движка красный. Пути, которые есть только в sibling, он ищет в самом Planveyor (пункт F25 в [«Обязательствах первого релиза»](../../release_backlog.md)). Пока F25 открыт, ошибки про такие пути ожидаемы; ошибок в изменённых вами файлах быть не должно.
+For now, `planveyor_doc_lint` is red in the engine root. It looks for paths that exist only in a sibling in Planveyor itself (item F25 in the [First-release backlog](../../release_backlog.md), in Russian). While F25 is open, errors about such paths are expected; there must be no errors in the files you changed.
 
-## Как читать результат
+## How to read the result
 
-Каждая проверка `planveyor_verify` возвращает `pass`, `warn` или `fail`. Обычный вывод устроен так (в угловых скобках — подстановки):
+Each `planveyor_verify` check returns `pass`, `warn`, or `fail`. The plain output looks like this (placeholders in angle brackets):
 
 ```text
-== verify-suite: <модулей> module(s), <проверок> check(s) ==
-[portability] <проверка> ........ PASS  (<метрика>)
+== verify-suite: <number of modules> module(s), <number of checks> check(s) ==
+[portability] <check> ........ PASS  (<metric>)
 ---
 VERDICT: GREEN
 INTERPRETATION [portability]:
-  <пояснение модуля>
+  <module interpretation>
 ```
 
-С `--format json` тот же результат выходит одним JSON-объектом с полями `verdict` и `modules`.
+With `--format json`, the same result comes out as one JSON object with the `verdict` and `modules` fields.
 
-Код возврата `2` значит, что хотя бы одна проверка дала `fail` или команду вызвали с неверными аргументами. Код `0` значит, что провалов нет. `GREEN` бывает и с предупреждениями `WARN`, поэтому прочитайте метрику, подробности и пояснение, прежде чем считать работу готовой. У поиска тестов метрика — число запущенных тестов и число строк `FAIL` или `ERROR`, а полный вывод `unittest` уходит в поток ошибок.
+Exit code `2` means that at least one check gave `fail` or that the command was called with wrong arguments. Code `0` means that there are no failures. `GREEN` can come with `WARN` warnings too, so read the metric, the details, and the interpretation before you consider the work ready. For the test discovery, the metric is the number of tests run and the number of `FAIL` or `ERROR` lines, and the full `unittest` output goes to the error stream.
 
-Запуск ролей, тесты целевого проекта, приёмку ревью и закрытие задачи `planveyor_verify` не проверяет ([маршруты проверки](../../tools/verify_suite.ru.md)). После исправления запустите упавший модуль снова: `--module <имя>`.
+`planveyor_verify` does not check role launches, the tests of the target project, the review acceptance, or the task closeout ([verification routes](../../tools/verify_suite.md)). After a fix, run the failed module again: `--module <name>`.
 
-## Примеры из набора
+## Examples from the suite
 
-### Тест вспомогательного скрипта
+### A helper script test
 
-`test_missing_code_draft_fails_closed` из [test_plan_handoff_digest.py](../../../scripts/test_plan_handoff_digest.py) проверяет сводку передачи работы (handoff digest). Это скрипт, который собирает в один ответ состояние плана, черновика кода и ревью вместе с ответами Oracle и проверки набора файлов. Сам он ничего не решает, только читает. Тест создаёт во временном каталоге план и ревью без черновика, вместо Oracle и проверки набора файлов подставляет заглушки и ждёт отказа:
+`test_missing_code_draft_fails_closed` from [test_plan_handoff_digest.py](../../../scripts/test_plan_handoff_digest.py) checks the handoff digest. This is a script that collects into one answer the state of the plan, the code draft, and the review, together with the answers of Oracle and the bundle check. It decides nothing by itself; it only reads. The test creates a plan and a review without a draft in a temporary directory, puts stubs in place of Oracle and the bundle check, and expects a refusal:
 
 ```python
 self.assertEqual(payload["state"], "missing")
@@ -81,11 +83,11 @@ self.assertEqual(payload["truth_hosts"]["code_draft"]["state"], "missing")
 self.assertIn("code_draft", {blocker["host"] for blocker in payload["blockers"]})
 ```
 
-Без черновика сводка останавливается и называет недостающий источник.
+Without a draft, the digest stops and names the missing source.
 
-### Контрактный тест
+### A contract test
 
-Плейбуки ревью получают текст задачи и diff между маркерами. `test_generic_reviews_preserve_supplied_spec_and_diff_transport` из [test_planveyor_shared_corpus_contract.py](../../../scripts/test_planveyor_shared_corpus_contract.py) следит, чтобы маркеры не потерялись:
+The review playbooks receive the task text and the diff between markers. `test_generic_reviews_preserve_supplied_spec_and_diff_transport` from [test_planveyor_shared_corpus_contract.py](../../../scripts/test_planveyor_shared_corpus_contract.py) makes sure that the markers are not lost:
 
 ```python
 for name in ("review_staged_or_commit.md", "review_docs_staged_or_commit.md"):
@@ -97,25 +99,25 @@ for name in ("review_staged_or_commit.md", "review_docs_staged_or_commit.md"):
         self.assertLess(text.index("<<DIFF>>"), text.index("<<END_DIFF>>"))
 ```
 
-Каждый маркер должен встретиться ровно один раз, а начало стоять перед концом. Правку, которая сломает границы, тест поймает. Хорошо ли модель прочитает текст между маркерами, он не проверяет.
+Each marker must occur exactly once, and each start must come before its end. The test catches a change that breaks the boundaries. It does not check whether the model reads the text between the markers well.
 
-### Интеграционный тест
+### An integration test
 
-`test_real_downstream_na_admission_and_public_refusal_are_state_safe` из [test_planveyor_admission_integration.py](../../../scripts/test_planveyor_admission_integration.py) проверяет допуск плана через фасад [bin/planveyor](../../../bin/planveyor), общий вход во все команды движка. Тест копирует настоящий `bin/planveyor` во временную копию Planveyor, создаёт временный проект и дважды запускает линтер плана: `--project <проект> planveyor_plan_lint <план>`. Планы различаются одной записью `machine_authority_decision` в `plan_meta`. Эта запись обязательна, прежде чем план передадут дальше. Черновик кода в тесте остаётся прежним, поэтому причина отказа однозначна. С записью линтер возвращает `0`. Без неё он возвращает `1` и печатает ровно одну строку `ERROR:` с `missing_required_carrier`. Файлы очереди планов и каталог состояния движка после отказа совпадают с тем, что было до него. Настоящие здесь фасад и линтер; модель и база в тесте не участвуют.
+`test_real_downstream_na_admission_and_public_refusal_are_state_safe` from [test_planveyor_admission_integration.py](../../../scripts/test_planveyor_admission_integration.py) checks plan admission through the [bin/planveyor](../../../bin/planveyor) facade, the common entry to all engine commands. The test copies the real `bin/planveyor` into a temporary Planveyor checkout, creates a temporary project, and runs the plan linter twice: `--project <project> planveyor_plan_lint <plan>`. The plans differ in one carrier, `machine_authority_decision` in `plan_meta`. This carrier is required before the plan is handed on. The code draft in the test stays the same, so the reason for the refusal is unambiguous. With the carrier, the linter returns `0`. Without it, the linter returns `1` and prints exactly one `ERROR:` line with `missing_required_carrier`. After the refusal, the plan queue files and the engine state directory are the same as before it. The facade and the linter are real here; no model and no database take part in the test.
 
-### Тест самого набора проверок
+### A test of the check suite itself
 
-`test_discovery_matches_makefile_and_streams_combined_transcript` из [test_verify_suite.py](../../../scripts/test_verify_suite.py) подменяет процесс поиска тестов результатом с кодом `1`, семью тестами и одной ошибкой. Тест ждёт вызов с теми же параметрами, что у `make test-scripts`, и итог `fail` с метрикой `Ran 7 tests, 1 FAIL/ERROR`. Так `verify_suite.py` проверяют, не запуская настоящий набор тестов.
+`test_discovery_matches_makefile_and_streams_combined_transcript` from [test_verify_suite.py](../../../scripts/test_verify_suite.py) replaces the test discovery process with a result that has code `1`, seven tests, and one error. The test expects the discovery parameters of `make test-scripts` with the additional Python flag `-B` and the result `fail` with the metric `Ran 7 tests, 1 FAIL/ERROR`. This way, `verify_suite.py` is tested without running the real test suite.
 
-## Как добавить тест
+## How to add a test
 
-Положите в `scripts/` файл `test_<тема>.py` с классом `unittest.TestCase`, и поиск найдёт его сам. Проект для теста создавайте во временном каталоге, вне рабочей копии. В SQL-примере тест обвязки, который смотрел в настоящий каталог проекта, нашёл там отчёт красного прогона и упал. Помощники уже есть: `run_zsh_fixture()` из `scripts/test_support/process_contract_fixtures.py` запускает zsh только с тем окружением, которое передал тест, а `AuthorityFixture` собирает временные копии Planveyor и проекта. Назовите в имени теста правило и проверьте, кроме разрешённого случая, отказ.
+Put a `test_<topic>.py` file with a `unittest.TestCase` class into `scripts/`, and the discovery finds it by itself. Create the project for the test in a temporary directory, outside the working copy. In the SQL example, a harness test that looked into the real project directory found the report of a red run there and failed. Helpers already exist: `run_zsh_fixture()` from `scripts/test_support/process_contract_fixtures.py` runs zsh only with the environment that the test passed, and `AuthorityFixture` builds a temporary Planveyor checkout and a temporary project. Name the rule in the test name, and besides the allowed case, check the refusal.
 
-## Частые ошибки
+## Common mistakes
 
-- Считать `make verify` полной проверкой. Без `--full` тесты не запускаются.
-- Читать только `VERDICT: GREEN` и пропускать строки `WARN`.
+- Treating `make verify` as a full check. Without `--full`, the tests do not run.
+- Reading only `VERDICT: GREEN` and skipping the `WARN` lines.
 
-Функции и тесты, о которых шла речь, — в [справочнике по коду](code-map.md#тесты-движка).
+The functions and tests discussed here are in the [code map](code-map.md#engine-tests).
 
-Это последняя глава раздела. Остальные главы перечислены в [карте раздела](README.md#карта-раздела).
+This is the last chapter of the section. The other chapters are listed in the [section map](README.md#section-map).

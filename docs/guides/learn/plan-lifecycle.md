@@ -1,97 +1,101 @@
-# План и его статусы
+# The plan and its statuses
 
-План — файл задачи в `docs/plans/`. В нём записаны цель, границы задачи, решения, вопросы и журнал проверок. Статус в шапке плана показывает, чей сейчас ход: по нему координатор Manager запускает следующую роль, а вы, владелец задачи (Owner), видите, где она.
+**English** · [Русский](plan-lifecycle.ru.md)
 
-## Файл плана
+A plan is the task file in `docs/plans/`. It records the goal, the scope, the decisions, the questions, and the evidence log. The status in the plan header shows whose turn it is now: Manager, the coordinator, uses it to launch the next role, and you, the task owner (Owner), see where the task is.
 
-Имя файла — дата и время создания и тема: `docs/plans/YYMMDD_HHMM_topic.md`. Так планы сортируются по времени создания и не путаются. План задачи «какие товары пора пополнить» называется `260928_0006_get_reorder_candidates.md`: его создали 28 сентября 2026 года в 00:06. Черновик кода и ревью получают то же имя: `260928_0006_get_reorder_candidates__code_draft.md` в `docs/code_drafts/` и `260928_0006_get_reorder_candidates.md` в `docs/code_reviews/`.
+## The plan file
 
-План заводит скилл `$planveyor-plan-draft` в чате Codex: он создаёт план по [шаблону](../../plans/_template.md) со статусом `Architect initial draft`. Черновик кода Planner позже делает по [своему шаблону](../../code_drafts/_template.md). Роли Architect, Planner, Coder и Reviewer и разделы, которые пишет каждая, описывает глава [«Роли и файлы задачи»](roles-artifacts.md); полный словарь статусов приводят [правила планов](../../plans/README.md).
+The file name is the creation date and time and the topic: `docs/plans/YYMMDD_HHMM_topic.md`. This way, plans sort by creation time and do not get mixed up. The plan of the task “which products to reorder” is named `260928_0006_get_reorder_candidates.md`: it was created on September 28, 2026, at 00:06. The code draft and the review get the same name: `260928_0006_get_reorder_candidates__code_draft.md` in `docs/code_drafts/` and `260928_0006_get_reorder_candidates.md` in `docs/code_reviews/`.
 
-Задачу ведут командами `planveyor sibling …` в [sibling](glossary.md). Команды работают с одним текущим планом, а сделать текущим другой можно командой `planveyor sibling plan docs/plans/YYMMDD_HHMM_topic.md`. Очередь из нескольких планов — отдельный режим Manager, его описывает [руководство запуска](../launch-and-role-modes.ru.md).
+The `$planveyor-plan-draft` skill in a Codex chat sets up the plan: it creates the plan from the [template](../../plans/_template.md) (in Russian) with the `Architect initial draft` status. Later, Planner makes the code draft from [its own template](../../code_drafts/_template.md) (in Russian). The roles Architect, Planner, Coder, and Reviewer and the sections that each of them writes are described in the [Roles and task files](roles-artifacts.md) chapter; the full status vocabulary is given in the [plan rules](../../plans/README.md) (in Russian).
 
-## Статусы и кто их ставит
+In a [sibling](glossary.md), the task is driven in one of two modes: in the Manager window (TUI mode) or with the `planveyor sibling …` commands (manual console mode). Both work with one current plan, and you can make another plan current with `planveyor sibling plan docs/plans/YYMMDD_HHMM_topic.md`. A queue of several plans is a separate Manager mode, described in the [launch guide](../launch-and-role-modes.md).
 
-![Обычный путь плана: статусы по порядку от Architect initial draft через шаги Planner, Coder и Reviewer до Done](assets/plan-lifecycle-1.svg)
+## Statuses and who sets them
 
-Статус вида `Ready for …` передаёт работу следующей роли. Остальные статусы обычно ставит роль, которая сейчас работает.
+![The usual path of a plan: the statuses in order from Architect initial draft through the Planner, Coder, and Reviewer steps to Done](assets/plan-lifecycle-1.svg)
 
-| Статус | Кто ставит | Что происходит |
+A status of the form `Ready for …` hands the work over to the next role. The other statuses are usually set by the role that is working now.
+
+| Status | Who sets it | What happens |
 | --- | --- | --- |
-| `Architect initial draft` | Architect | Architect обсуждает задачу с Owner и пишет раздел «Как я понял задачу» |
-| `Architect draft` | Architect | Решений Owner больше не нужно, Architect оформляет план по шаблону |
-| `Ready for Planner` | Architect | Решения записаны, план передан Planner |
-| `Planner intake`, `Planner finalize` | Planner | Planner задаёт вопросы, затем составляет черновик кода |
-| `Ready for Coder` | Planner | Черновик готов, предварительная проверка точного набора файлов плана пройдена |
-| `Coder intake`, `In progress` | Coder | Coder задаёт вопросы, затем пишет код и запускает проверки |
-| `Ready for Review` | Coder | Код и результаты проверок готовы к ревью |
-| `Ready for Arch review` | Reviewer | Ревью записано, ход Architect |
-| `Architect arch review` | Architect | Architect проверяет ревью и решает, принять ли работу |
-| `Done` | Architect или команда `planveyor sibling close --commit` | Работа принята и закоммичена |
+| `Architect initial draft` | Architect | Architect discusses the task with Owner and writes the `## Как я понял задачу` section (how I understood the task) |
+| `Architect draft` | Architect | No more Owner decisions are needed; Architect writes up the plan by the template |
+| `Ready for Planner` | Architect | The decisions are recorded; the plan is handed over to Planner |
+| `Planner intake`, `Planner finalize` | Planner | Planner asks questions, then writes the code draft |
+| `Ready for Coder` | Planner | The draft is ready; the preflight of the exact bundle of the plan has passed |
+| `Coder intake`, `In progress` | Coder | Coder asks questions, then writes the code and runs the checks |
+| `Ready for Review` | Coder | The code and the check results are ready for review |
+| `Ready for Arch review` | Reviewer | The review is recorded; it is the turn of Architect |
+| `Architect arch review` | Architect | Architect checks the review and decides whether to accept the work |
+| `Done` | Architect or the `planveyor sibling close --commit` command | The work is accepted and committed |
 
-Работа может вернуться. С вопросом по смыслу задачи роль ставит `Ready for Architect response`; Architect отвечает в статусе `Architect response` и возвращает план в `Ready for Planner`. Пробел в плане Reviewer возвращает Planner статусом `Planner finalize`, ошибку реализации — Coder статусом `In progress`, а Architect при приёмке возвращает работу Coder статусом `Coder intake`. У Reviewer есть промежуточные статусы, например `Reviewer visual review` для задач с интерфейсом. План, который заменил новый, Architect помечает `Superseded`; планы в `Done` и `Superseded` не возобновляют. Порядок возвратов описывают [правила Manager](../../roles/manager.md).
+Work can go back. With a question about the meaning of the task, a role sets `Ready for Architect response`; Architect answers in the `Architect response` status and returns the plan to `Ready for Planner`. Reviewer returns a gap in the plan to Planner with the `Planner finalize` status and an implementation error to Coder with the `In progress` status, and Architect, at acceptance, returns the work to Coder with the `Coder intake` status. Reviewer has intermediate statuses, for example `Reviewer visual review` for tasks with a user interface. A plan replaced by a new one is marked `Superseded` by Architect; plans in `Done` and `Superseded` are not resumed. The order of returns is described in the [Manager rules](../../roles/manager.md).
 
-`Done` записывают вместе с коммитом: статус ставят прямо перед коммитом, а если коммит не получился, возвращают `Architect arch review`. Когда роли запущены командами `planveyor sibling`, это делает `planveyor sibling close --commit` после вашего просмотра, при других запусках — сам Architect (раздел [«Кто делает коммит»](review-acceptance.md#кто-делает-коммит)).
+`Done` is written together with the commit: the status is set right before the commit, and if the commit fails, `Architect arch review` is restored. When the roles are launched with the `planveyor sibling` commands, `planveyor sibling close --commit` does this after your preview; in other launches, Architect does it (the [Who makes the commit](review-acceptance.md#who-makes-the-commit) section).
 
-Закрытие идёт в два шага: коммит задачи и закрытие документов. Во втором шаге роли переносят в общие документы проекта то, что стоит закрепить, и предлагают отложенные задачи. Задача закончена, когда `close` ответит «План и документы закрыты»; порядок команд — в главе [«Закрытие задачи»](closeout.md). Сам план удаляют после слияния в основную ветку, по решению Owner.
+Closeout takes two steps: the task commit and the docs closeout. In the second step, the roles carry over into the shared project documents what is worth keeping, and propose follow-ups. The task is finished when `close` answers `План и документы закрыты` (the plan and the documents are closed); the order of commands is in the [Task closeout](closeout.md) chapter. The plan itself is deleted after the merge into the main branch, when Owner decides so.
 
-## Что читает и сообщает Oracle
+## What Oracle reads and reports
 
-Oracle — скрипт `scripts/plan_status_oracle.py`, из командной строки его вызывает `planveyor_plan_status_oracle`. Oracle читает план и связанные с ним файлы и ничего в них не меняет. По его ответу Manager выбирает следующую роль, а вы видите тот же ответ в сжатом виде через `planveyor sibling plan`.
+Oracle is the `scripts/plan_status_oracle.py` script; from the command line, `planveyor_plan_status_oracle` calls it. Oracle reads the plan and the files linked to it and changes nothing in them. Manager chooses the next role by its answer, and you see the same answer in a short form through `planveyor sibling plan`.
 
-Статус Oracle берёт только из шапки, из единственной строки `**Status:**`; если таких строк две, он завершается с кодом 3 и печатает обе. Запись `Done` в журнале или в сообщении роли статус не меняет. Ещё Oracle читает журнал вопросов, файл ревью и служебный блок `## Meta`. В этом блоке Architect записывает решение `machine_authority_decision`: появляется ли в задаче новая машиночитаемая запись или формат, по которым скрипты Planveyor сами пропускают, направляют, записывают или закрывают работу. Обычной задаче хватает короткой формы `not_applicable` с причиной; в GetReorderCandidates это `no_machine_authority_change`. Полная форма описывает саму запись: где она лежит, кто её пишет и читает, что будет при ошибке. Её подтверждает Owner ответом в журнале вопросов. Пока решения нет, оно не подтверждено, отклонено или записано дважды, линтер плана и Oracle не пускают план к Planner ([формат](../../plans/README.md#machine-authority-admission)).
+Oracle takes the status only from the header, from the single `**Status:**` line; if there are two such lines, it exits with code 3 and prints both. A `Done` entry in a log or in a role's message does not change the status. Oracle also reads the Q&A log, the review file, and the service block `## Meta`. In this block, Architect records the `machine_authority_decision`: whether the task brings a new machine-readable record or format by which Planveyor scripts admit, route, record, or close work on their own. An ordinary task needs only the short form `not_applicable` with a reason; in GetReorderCandidates, the reason is `no_machine_authority_change`. The full form describes the record itself: where it lies, who writes and reads it, and what happens on an error. Owner confirms it with an answer in the Q&A log. While the decision is missing, unconfirmed, rejected, or recorded twice, the plan linter and Oracle do not let the plan go to Planner ([format](../../plans/README.md#machine-authority-admission)).
 
-В ответе с ключом `--json` чаще всего смотрят на статус (`status_norm`), открытые вопросы к Owner (`open_owner_questions`) и состояние ревью (`review_readback_state`). Поле `route_guard_triggered` значит, что Oracle нашёл противоречие и по текущему статусу работать дальше нельзя; причину и роль, к которой вернётся работа, называют `route_guard_reason` и `route_guard_next_owner`. Как вызвать Oracle для своего проекта, показывает руководство [«Lifecycle и пакеты»](../lifecycle-and-packets.ru.md).
+In the answer with the `--json` flag, the fields people look at most often are the status (`status_norm`), the open questions to Owner (`open_owner_questions`), and the review state (`review_readback_state`). The `route_guard_triggered` field means that Oracle has found a contradiction and the work cannot go on by the current status; `route_guard_reason` and `route_guard_next_owner` name the reason and the role to which the work will return. The [Lifecycle and packets](../lifecycle-and-packets.md) guide shows how to call Oracle for your project.
 
-## Набор файлов и две его проверки
+## The bundle and its two checks
 
-Точный набор файлов плана — ровно те пути, которые проверяют вместе; в коммит задачи из них попадают изменённые. Скрипт `planveyor_plan_bundle` собирает его только из явно названных путей:
+The exact bundle of a plan is precisely the paths that are checked together; the changed ones among them go into the task commit. The `planveyor_plan_bundle` script builds it only from explicitly named paths:
 
-- целевые файлы из `code_draft_meta.targets` в черновике кода и удаляемые файлы из `code_draft_meta.deleted_paths`: их на диске уже может не быть, но они должны быть в последнем коммите;
-- сам план и черновик кода;
-- файл ревью из раздела плана `## Review artifacts`;
-- приложения к ревью: файлы из `docs/code_reviews/assets/…`, на которые ссылается ревью, и отчёт линии рисков, на который ссылается журнал проверок.
+- the target files from `code_draft_meta.targets` in the code draft and the files to delete from `code_draft_meta.deleted_paths`: these may already be gone from the disk, but they must be in the last commit;
+- the plan itself and the code draft;
+- the review file from the `## Review artifacts` section of the plan;
+- the review assets: the files from `docs/code_reviews/assets/…` that the review links to, and the risk lane report that the evidence log links to.
 
-Другие изменённые файлы рабочей копии в коммит задачи не войдут. Это решение записано в [ADR 004](../../adr/004-exact-bundle-truth-and-closeout.md).
+Other changed files of the working tree do not go into the task commit. This decision is recorded in [ADR 004](../../adr/004-exact-bundle-truth-and-closeout.md) (in Russian).
 
-План входит в набор, но целевым файлом не бывает: Reviewer фиксирует контрольную сумму целевых файлов ([как она устроена](review-acceptance.md#файл-ревью)) и сам же дописывает в журнал проверок запись своей линии, так что сумма плана сразу бы устарела. Линтер плана (скрипт `scripts/plan_lint.py`, команда `planveyor_plan_lint`) отклоняет такой черновик с ошибкой `origin_plan_in_review_targets` ([правило](../../plans/README.md#planner-finalize-exact-executable-bundle-sync)).
+The plan is part of the bundle but is never a target file: Reviewer records the checksum of the target files ([how it works](review-acceptance.md#the-review-file)) and then itself appends the entry of its lane to the evidence log, so the checksum of the plan would go stale at once. The plan linter (the `scripts/plan_lint.py` script, the `planveyor_plan_lint` command) rejects such a draft with the `origin_plan_in_review_targets` error ([rule](../../plans/README.md#planner-finalize-exact-executable-bundle-sync)).
 
-Набор проверяют дважды. Предварительная проверка находит расхождения в списке до того, как Coder начнёт работу. Финальная после ревью подтверждает, что на месте всё, что пойдёт в коммит.
+The bundle is checked twice. The preflight finds mismatches in the list before Coder starts work. The final check, after review, confirms that everything that goes into the commit is in place.
 
-| | Предварительная проверка | Финальная проверка |
+| | Preflight | Final check |
 | --- | --- | --- |
-| Команда | `planveyor_plan_bundle --preflight` | `planveyor_plan_bundle --check` |
-| Кто и когда запускает | Planner перед `Ready for Coder` | Reviewer и Architect после ревью |
-| Файл ревью | может ещё не существовать, помечается `PLANNED` | должен существовать |
-| Целевые файлы, план, черновик | должны существовать | должны существовать |
+| Command | `planveyor_plan_bundle --preflight` | `planveyor_plan_bundle --check` |
+| Who runs it and when | Planner before `Ready for Coder` | Reviewer and Architect after review |
+| Review file | may not exist yet, marked `PLANNED` | must exist |
+| Target files, plan, draft | must exist | must exist |
 
-Если объявленного файла нет на диске, проверка помечает его `MISSING-PATH` и завершается с ошибкой. На предварительной проверке это целевой файл, которого ещё нет или уже нет: список в черновике разошёлся с диском. Planner либо исправляет список, либо создаёт на месте нового файла заглушку со ссылкой на план и пометкой `replace before Ready for Review`, и Coder заменяет её до ревью. На финальной проверке обязательным становится и ревью: без его файла задача не закроется, пока Reviewer его не напишет.
+If a declared file is not on disk, the check marks it `MISSING-PATH` and exits with an error. At the preflight, this is a target file that does not exist yet or no longer exists: the list in the draft has diverged from the disk. Planner either fixes the list or, in place of a new file, creates a stub with a link to the plan and the `replace before Ready for Review` mark, and Coder replaces it before review. At the final check, the review becomes required too: without its file, the task will not close until Reviewer writes it.
 
-## Журнал проверок и вопросы
+Besides these two checks, Reviewer runs `planveyor_plan_bundle --scope-check` before the diff. This command checks only the composition and the integrity of the bundle and prints one JSON document `planveyor_plan_bundle_scope.v1`. Exit code 0 means only `scope_ok=true`: the bundle does not become green from it, and the check gives no right to hand off the work or to commit; an ordinary scope problem, for example a missing target file, gives code 1. A review file that is declared but not written yet, and a red or stale review remain a debt of the task. The strict final `--check` after review stays as before.
 
-Раздел `## Evidence` — журнал проверок: роли дописывают в его конец, что запускали и с каким результатом. Пункт в разделе `## Acceptance criteria / DoD` отмечают `[x]` только по записи в журнале или файлу с результатом.
+## The evidence log and questions
 
-Вопросы пишут в журнал вопросов, раздел `## Q&A log`: номер, кому вопрос, блокирует ли он работу (`blocker`), нужен ли Owner (`needs_owner`) и `status=open`. Закрывает вопрос обычно роль, которая его задала, строкой `status=closed`, а переформулированный вопрос — строкой `status=superseded`. Ответ в чате закрытием не считается, и с открытыми вопросами линтер не пустит план в `Done`.
+The `## Evidence` section is the evidence log: roles append to its end what they ran and with what result. An item in the `## Acceptance criteria / DoD` section is marked `[x]` only on the basis of an entry in the log or a file with the result.
 
-Вопрос к вам закрывает команда `planveyor sibling answer`: она запишет ваш ответ в журнал вопросов с отметкой времени. Если вопросов несколько, назовите номер, например `planveyor sibling answer Q2`; текст ответа команда попросит ввести. Если открытых вопросов нет, а план ещё в `Architect initial draft`, команда покажет раздел «Как я понял задачу» и передаст ваше решение Architect к следующему ходу, который запускает `planveyor sibling architect`.
+Questions go into the Q&A log, the `## Q&A log` section: the number, whom the question is for, whether it blocks the work (`blocker`), whether Owner is needed (`needs_owner`), and `status=open`. Usually the role that asked the question closes it with a `status=closed` line, and closes a reworded question with a `status=superseded` line. An answer in the chat does not count as closing, and with open questions, the linter does not let the plan into `Done`.
 
-## Как это было: план GetReorderCandidates
+For an ordinary question to you, `planveyor sibling answer` writes your answer into the Q&A log with a timestamp and closes the question. If the question is reserved for confirming `machine_authority_decision`, the command passes your answer to Architect without closing the question itself. If there are several questions, name the number, for example `planveyor sibling answer Q2`; the command asks you to type the answer text. If there are no open questions and the plan is still in `Architect initial draft`, the command shows the `## Как я понял задачу` section and passes your decision to Architect for the next turn, which `planveyor sibling architect` starts.
 
-Задачу вели 28 сентября 2026 года, до команд `planveyor sibling`: `Done` и коммит делал сам Architect. Кто что сделал, рассказано в главе [«Роли и файлы задачи»](roles-artifacts.md); здесь — как менялся сам план.
+## How it went: the GetReorderCandidates plan
 
-| Время | Статус | Что произошло |
+The task ran on September 28, 2026, before the `planveyor sibling` commands existed: Architect set `Done` and made the commit itself. Who did what is told in the [Roles and task files](roles-artifacts.md) chapter; here is how the plan itself changed.
+
+| Time | Status | What happened |
 | --- | --- | --- |
-| 00:06 | `Architect initial draft` | Architect создал план |
-| 00:13 | `Ready for Planner` | Линтер прошёл со второй попытки; решать с Owner было нечего, и план передан без `Architect draft` |
-| 00:21 | `Ready for Coder` | Planner прошёл `Planner intake` и `Planner finalize`; предварительная проверка насчитала 19 файлов |
-| 01:05 | `In progress` | Coder написал код; статус остался `In progress` до проверки на dev-базе |
-| 01:40 | `Ready for Review` | Второй прогон на dev-базе прошёл, Coder передал работу |
-| 01:54 | `Ready for Arch review` | Ревью без замечаний; финальная проверка насчитала 22 файла |
-| 01:58 | `Architect arch review` | Линтер не пустил план в `Done` из-за раздела `## Post-merge gate` |
-| 02:03–02:09 | `Done`, затем снова `Architect arch review` | Первая попытка закрытия не создала коммит, Architect вернул статус |
-| 02:14–02:17 | `Done` | Вторая попытка: коммит `70526ee` с планом в статусе `Done` |
+| 00:06 | `Architect initial draft` | Architect created the plan |
+| 00:13 | `Ready for Planner` | The linter passed on the second attempt; there was nothing to decide with Owner, and the plan was handed over without `Architect draft` |
+| 00:21 | `Ready for Coder` | Planner went through `Planner intake` and `Planner finalize`; the preflight counted 19 files |
+| 01:05 | `In progress` | Coder wrote the code; the status stayed `In progress` until the check on the dev database |
+| 01:40 | `Ready for Review` | The second run on the dev database passed, and Coder handed over the work |
+| 01:54 | `Ready for Arch review` | A review without findings; the final check counted 22 files |
+| 01:58 | `Architect arch review` | The linter did not let the plan into `Done` because of the `## Post-merge gate` section |
+| 02:03–02:09 | `Done`, then `Architect arch review` again | The first closeout attempt did not create a commit, and Architect restored the status |
+| 02:14–02:17 | `Done` | The second attempt: commit `70526ee` with the plan in the `Done` status |
 
-Первые передачи остались в журнале так (rc — код возврата команды; отрывки сокращены):
+The first handoffs remained in the log like this, quoted as written in the project, in Russian (rc is the return code of a command; the excerpts are shortened):
 
 ```markdown
 - 2026-09-28 00:13 MSK: первый `planveyor_plan_lint` rc1 указал три недостатка формы
@@ -107,21 +111,21 @@ Oracle — скрипт `scripts/plan_status_oracle.py`, из командной
   artifact `PLANNED`. …
 ```
 
-Линтер плана дважды остановил передачу из-за формы. Сначала он нашёл три недочёта в плане Architect. Потом Planner записал в плане «предложений нет» (`NO SUGGESTIONS`), а в черновике кода не поставил ответную отметку, которую линтер в таком случае требует. Оба раза роль исправила файл и повторила проверку, и обе попытки остались в журнале. Записи Oracle подтверждают статус и то, что блокировок и открытых вопросов к Owner нет.
+The plan linter stopped the handoff twice because of the form. First, it found three form defects in the plan of Architect. Then Planner wrote “no suggestions” (`NO SUGGESTIONS`) in the plan but did not put the matching mark in the code draft, which the linter requires in this case. Both times, the role fixed the file and repeated the check, and both attempts remained in the log. The Oracle entries confirm the status and that there are no blocks and no open questions to Owner.
 
-Двух новых SQL-файлов на этом шаге ещё не было, и предварительная проверка отметила бы их `MISSING-PATH`, поэтому Planner создал на их месте заглушки.
+The two new SQL files did not exist yet at this step, and the preflight would have marked them `MISSING-PATH`, so Planner created stubs in their place.
 
-К финальной проверке набор вырос с 19 до 22 файлов за счёт трёх приложений к ревью:
+By the final check, the bundle had grown from 19 to 22 files because of three review assets:
 
-| Откуда путь | Предварительная проверка, 00:19 | Финальная проверка, после ревью |
+| Where the path comes from | Preflight, 00:19 | Final check, after review |
 | --- | --- | --- |
-| `code_draft_meta.targets`: 6 изменяемых и 10 неизменных файлов, от которых зависит проверка | 16 | 16 |
-| План и черновик кода | 2 | 2 |
-| Файл ревью из `## Review artifacts` | 1, помечен `PLANNED` | 1 |
-| Приложения: квитанция оператора о прогоне на dev-базе, отчёт JUnit, отчёт линии рисков Reviewer | — | 3 |
-| Всего | 19 | 22 |
+| `code_draft_meta.targets`: 6 files to change and 10 unchanged files that the check depends on | 16 | 16 |
+| The plan and the code draft | 2 | 2 |
+| The review file from `## Review artifacts` | 1, marked `PLANNED` | 1 |
+| Assets: the operator receipt for the run on the dev database, the JUnit report, the report of the Reviewer risk lane | — | 3 |
+| Total | 19 | 22 |
 
-В 01:58 Architect проверил, примет ли линтер план в статусе `Done`, не меняя сам файл:
+At 01:58, Architect checked whether the linter would accept the plan in the `Done` status, without changing the file itself:
 
 ```markdown
 - 2026-09-28 01:58 MSK (Architect pre-Done lint): public `planveyor_plan_lint --as-status Done`
@@ -130,11 +134,11 @@ Oracle — скрипт `scripts/plan_status_oracle.py`, из командной
   Status сохранён `Architect arch review`, stage/commit до исправления не выполнялись.
 ```
 
-Открытые пункты `## Post-merge gate` в `Done` недопустимы, и Architect заменил раздел строкой `N/A` с причиной (правило и текст — в главе [«Закрытие задачи»](closeout.md)).
+Open items of `## Post-merge gate` are not allowed in `Done`, and Architect replaced the section with an `N/A` line with a reason (the rule and the text are in the [Task closeout](closeout.md) chapter).
 
-После этого проверка прошла, и Architect записал `Done`. Первая попытка закрытия в 02:09 коммит не создала: по ошибочной инструкции оператора Architect вызвал режим `--commit-exact`, рассчитанный на коммит документов ([«Закрытие задачи»](closeout.md#закрытие-документов)). Architect снял `Done` и вернул `Architect arch review`, в 02:14 повторил закрытие обычным путём, и в 02:17 коммит `70526ee` унёс план со статусом `Done`. Сейчас, когда роли запущены командами `planveyor sibling`, эти шаги делает `planveyor sibling close --commit` и перед записью `Done` запускает тот же линтер.
+After that, the check passed, and Architect wrote `Done`. The first closeout attempt at 02:09 did not create a commit: following a wrong instruction from the operator, Architect called the `--commit-exact` mode, which is meant for the documents commit ([Task closeout](closeout.md#docs-closeout)). Architect removed `Done` and restored `Architect arch review`, repeated the closeout the usual way at 02:14, and at 02:17, commit `70526ee` carried the plan with the `Done` status. Now, when the roles are launched with the `planveyor sibling` commands, `planveyor sibling close --commit` does these steps and runs the same linter before it writes `Done`.
 
-## Что делает Owner
+## What Owner does
 
 ```sh
 planveyor sibling plan
@@ -142,14 +146,14 @@ planveyor sibling plan docs/plans/YYMMDD_HHMM_topic.md
 planveyor sibling answer Q2
 ```
 
-`planveyor sibling plan` печатает текущий план, статус, открытые вопросы к вам с номерами и следующий шаг: `answer`, `architect`, `run`, `close` или причину остановки от Oracle; с путём к файлу команда делает текущим другой план. Полный порядок команд описывает [руководство по sibling](../stack-sibling.ru.md).
+`planveyor sibling plan` prints the current plan, the status, the open questions to you with their numbers, and the next step: `answer`, `architect`, `run`, `close`, or the stop reason from Oracle; with a file path, the command makes another plan current. The full order of commands is described in the [stack sibling guide](../stack-sibling.md).
 
-## Частые ошибки
+## Common mistakes
 
-- Править статус в шапке вручную, чтобы сдвинуть задачу. Статус ставит роль, чей это шаг, а `Done` — Architect или `close --commit`. Известное исключение — тупик после вопроса Reviewer к Architect: статус `Ready for Architect response` пока ставит сам Owner (F49 в главе [«Что уже работает и что дальше»](capabilities-boundaries.md#границы-первой-версии)).
-- Вписывать в целевые файлы каталог или файлы «для контекста». Целевыми бывают только файлы, которые задача меняет или на которых держится её проверка.
-- Браться за следующий план, не закрыв документы текущего. Команды работают с текущим планом и о прежнем не напомнят.
+- Editing the status in the header by hand to move the task along. The status is set by the role whose step it is, and `Done` by Architect or `close --commit`. A known exception is the deadlock after a Reviewer question to Architect: for now, Owner sets the `Ready for Architect response` status personally (F49 in the [What works now and what comes next](capabilities-boundaries.md#limits-of-the-first-version) chapter).
+- Adding a directory or files “for context” to the target files. Only the files that the task changes or that its check depends on can be targets.
+- Starting the next plan without closing the documents of the current one. The commands work with the current plan and will not remind you of the earlier one.
 
-Функции и тесты, о которых шла речь, — в [справочнике по коду](code-map.md#план-и-его-статусы).
+The functions and tests mentioned here are in the [code map](code-map.md#the-plan-and-its-statuses).
 
-Дальше: [«Разработка, анализ и декомпозиция»](work-contours.md).
+Next: [Development, analysis, and decomposition](work-contours.md).

@@ -1,120 +1,125 @@
-# Как работает Planveyor
+# How Planveyor works
 
-Planveyor организует работу ИИ над проектом. Цель ставит человек — Owner. Задачу ведут роли Architect, Planner, Coder и Reviewer, а координатор Manager по статусу плана запускает следующую из них. Роли передают работу через файлы в репозитории — план, черновик кода, ревью, — чтобы результат можно было проверить по ним, не читая переписку с моделью. Содержательную работу делают модели, а скрипты Planveyor следят за формальными условиями: можно ли передать работу дальше, на месте ли нужные файлы и не устарели ли проверки.
+**English** · [Русский](README.ru.md)
 
-Этот раздел объясняет, как всё устроено. Пошаговые команды для своего проекта — в [руководстве по sibling](../stack-sibling.ru.md).
+Planveyor organizes AI work on a project. A person, Owner, sets the goal. The Architect, Planner, Coder, and Reviewer roles carry out the task, and Manager, the coordinator, starts the next of them by the plan status. The roles hand over the work through files in the repository (the plan, the code draft, the review), so that the result can be checked from these files without reading the chat with the model. The models do the substantive work, and Planveyor scripts watch the formal conditions: whether the work can be handed on, whether the needed files are in place, and whether the checks are out of date.
 
-## Что нужно до начала
+This section explains how everything works. The step-by-step commands for your own project are in the [stack sibling guide](../stack-sibling.md).
 
-- macOS: первая версия работает только на ней.
-- Git, zsh, rg, Python 3.12 и зависимости из `requirements-dev.lock` (Copier 9.18.2, PyYAML).
-- Codex CLI, в который вы вошли, с пятью настроенными агентами ролей: `architect`, `planner`, `coder` и две линии Reviewer — см. [настройку Codex](../launch-and-role-modes.ru.md#настройка-codex). Команда `planveyor sibling run` запускает все роли как агентов Codex. Planner и Reviewer можно запускать и в Claude Code: по отдельности или в пошаговом режиме Manager, о нём — в [главе о запуске](runtime-launch.md).
-- Инструменты и dev-среда вашего стека готовятся отдельно от Planveyor.
+## What you need before you start
 
-Если чего-то не хватает, команда скажет, чего именно. Сама она ничего не ставит и не настраивает. Чего ещё не умеет первая версия, перечислено в главе [«Что уже работает и что дальше»](capabilities-boundaries.md).
+- macOS: the first version works only on it.
+- Git, zsh, rg, Python 3.12, and the dependencies from `requirements-dev.lock` (Copier 9.18.2, PyYAML).
+- Codex CLI that you are signed in to, with five configured role agents: `architect`, `planner`, `coder`, and the two Reviewer lanes; see [Codex setup](../launch-and-role-modes.md#codex-setup). The `planveyor sibling run` command starts all roles as Codex agents. Planner and Reviewer can also run in Claude Code: in a single-role launch or in the custom pipeline, which the [launch chapter](runtime-launch.md) describes.
+- The tools and the dev environment of your stack are prepared separately from Planveyor.
 
-## Путь задачи и команды владельца
+If something is missing, the command tells you exactly what. It does not install or configure anything itself. What the first version cannot do yet is listed in the [What works now and what comes next](capabilities-boundaries.md) chapter.
 
-![Путь задачи: цель Owner → план → черновик кода → изменение и проверки → ревью и решение Architect → закрытие](assets/README-1.svg)
+## Task path and Owner commands
 
-Ваш проект лежит в отдельном репозитории (sibling), а движок — в отдельной копии Planveyor. Задачу вы ведёте командами `planveyor sibling …`:
+![Task path: Owner goal → plan → code draft → change and checks → review and Architect decision → closeout](assets/README-1.svg)
 
-1. Один раз создайте проект командой `planveyor sibling init ~/my-stack` и перейдите в его каталог.
-2. В чате Codex вызовите скилл `$planveyor-plan-draft` и попросите завести план задачи и сделать его текущим; в клиенте ZCode скилл вызывается как `/planveyor-plan-draft`. Первый план нового проекта — адаптация под ваш стек. Какой план сейчас текущий и какой шаг следующий, покажет `planveyor sibling plan`.
-3. Обсудите задачу с Architect: `planveyor sibling architect`. На его вопросы отвечайте командой `planveyor sibling answer` и снова запускайте `architect`. Если развилок для вас нет, Architect сам переводит план в `Architect draft`, подтверждения он не просит. Раздел «Как я понял задачу» есть в плане всегда: прочитайте его до `run`. Как вывести раздел командой или попросить агента показать его, сказано в [руководстве по sibling](../stack-sibling.ru.md#раздел-как-я-понял-задачу).
-4. Запустите Manager: `planveyor sibling run`. По статусу плана он по очереди запускает Planner, Coder, Reviewer и снова Architect на приёмку. Если Manager ждёт вашего решения, ответьте через `answer` и снова запустите `run`. Если он остановился на лимите шагов, повторите тот же `run`.
-5. Когда Architect принял работу, посмотрите точный набор файлов плана командой `planveyor sibling close` и разрешите коммит: `planveyor sibling close --commit`.
-6. Запустите `planveyor sibling run` ещё раз. Это закрытие документов: роли перенесут в общие документы проекта то, что стоит закрепить после задачи, и предложат изменения процесса и отложенные задачи. Затем посмотрите результат через `planveyor sibling close`; если нужен отдельный коммит документов, разрешите его командой `planveyor sibling close --commit`.
-7. Убедитесь, что задача закрыта: `planveyor sibling ready`.
+Your project lives in a separate repository (a sibling), and the engine lives in a separate Planveyor checkout. You run the task with the `planveyor sibling …` commands:
 
-Реальный пример: задачу «какие товары пора пополнить» в SQL-проекте роли решили за 2 часа 11 минут от первой строки плана до коммита кода. Тогда команд `planveyor sibling` ещё не было, и роли вручную запускал оператор. Кто что сделал в этой задаче, рассказано в главе [«Роли и файлы задачи»](roles-artifacts.md), а её данные и тесты — в [сквозном примере](sql-example.md).
+1. Create the project once with `planveyor sibling init ~/my-stack` and go to its directory.
+2. In a Codex chat, call the `$planveyor-plan-draft` skill and ask it to create a task plan and make it current; in ZCode, the skill is called as `/planveyor-plan-draft`. The first plan of a new project is the adaptation to your stack. `planveyor sibling plan` shows which plan is current and which step is next.
+3. Run the plan in one of two modes ([Two ways to work on a plan](../stack-sibling.md#two-ways-to-work-on-a-plan)):
+   - **TUI mode**, the main path. Start a Manager session, switch it to command approval requests, and open its window: `planveyor --project "$PWD" planveyor_manager_init`, then the approval step with `planveyor --project "$PWD" planveyor_manager_resume` from the [guide](../stack-sibling.md#run-the-plan-in-tui-mode), then `planveyor sibling tui`. The window does not open while the plan has open Owner questions: answer them first with `planveyor sibling answer` and the printed `architect`. In the window, Manager discusses the task with Architect and asks you questions, then by the plan status starts Planner, Coder, Reviewer, and Architect again for acceptance. Architect commits the implementation, the same roles do the docs closeout, and, if the closeout requires it, Architect commits the documents. The description is based on how the engine works. The corresponding route has been checked by live passes in Planveyor itself. Do not close the window before the end of the docs closeout.
+   - **Manual console mode.** Discuss the task with Architect: `planveyor sibling architect`; answer its questions with `planveyor sibling answer` and run `architect` again. Then start Manager: `planveyor sibling run`. If Manager waits for your decision, answer with `answer` and run `run` again; on the step limit, repeat the same `run`. When Architect has accepted the work, look at the exact bundle of the plan with `planveyor sibling close` and authorize the commit: `planveyor sibling close --commit`. For the docs closeout, run `planveyor sibling run` once more, then `close` again and, if the documents need a separate commit, `close --commit`.
 
-## Карта раздела
+   If there are no choices for you to make, Architect moves the plan to `Architect draft` itself; it does not ask for a confirmation. The plan always has the `## Как я понял задачу` section (how I understood the task): read it before the roles start the work. The [stack sibling guide](../stack-sibling.md#the-task-understanding-section) says how to print the section with a command or ask an agent to show it. The docs closeout is the step at which the roles carry over to the shared project documents whatever is worth keeping after the task, and propose process changes and follow-ups.
+4. Make sure that the task is closed: `planveyor sibling ready`.
 
-**Часть 1. Задача и роли.** Для всех, кто ставит и принимает задачи.
+A real example: in the SQL project, the roles solved the task “which products to reorder” in 2 hours 11 minutes, from the first line of the plan to the code commit. At that time, the `planveyor sibling` commands did not exist yet, and an operator started the roles by hand. The [Roles and task files](roles-artifacts.md) chapter tells who did what in this task, and the [running example](sql-example.md) describes its data and tests.
 
-| Глава | На какой вопрос отвечает |
+## Section map
+
+**Part 1. The task and the roles.** For everyone who sets and accepts tasks.
+
+| Chapter | Question it answers |
 | --- | --- |
-| [Роли и файлы задачи](roles-artifacts.md) | Кто что решает и какие файлы передаёт дальше? |
-| [Сквозной пример: какие товары пора пополнить](sql-example.md) | Как бизнес-правило превращается в процедуру и тесты? |
-| [План и его статусы](plan-lifecycle.md) | Где записан текущий шаг задачи и кто его читает? |
-| [Разработка, анализ и декомпозиция](work-contours.md) | Когда сразу писать код, когда сначала исследовать, а когда делить задачу? |
-| [Ревью и приёмка](review-acceptance.md) | Что проверяют две линии Reviewer, как Architect принимает работу и кто делает коммит? |
-| [Закрытие задачи](closeout.md) | Что происходит после приёмки и когда задача закончена? |
-| [Тесты и доказательства: чему можно доверять](testing-evidence.md) | Что на самом деле доказывает каждая проверка? |
+| [Roles and task files](roles-artifacts.md) | Who decides what, and which files do they hand on? |
+| [Running example: which products to reorder](sql-example.md) | How does a business rule turn into a procedure and tests? |
+| [The plan and its statuses](plan-lifecycle.md) | Where is the current step of the task recorded, and who reads it? |
+| [Development, analysis, and decomposition](work-contours.md) | When do you write code right away, when do you research first, and when do you split the task? |
+| [Review and acceptance](review-acceptance.md) | What do the two Reviewer lanes check, how does Architect accept the work, and who makes the commit? |
+| [Task closeout](closeout.md) | What happens after acceptance, and when is the task finished? |
+| [Tests and evidence: what you can trust](testing-evidence.md) | What does each check actually prove? |
 
-**Часть 2. Проект на своём стеке.** Для владельца sibling.
+**Part 2. A project on your own stack.** For the owner of a sibling.
 
-| Глава | На какой вопрос отвечает |
+| Chapter | Question it answers |
 | --- | --- |
-| [Sibling: создание и обновление](sibling-lifecycle.md) | Как создать проект, чем он владеет сам и как принять новую версию Planveyor? |
-| [Обмен изменениями с Planveyor](change-packets.md) | Как передать общую проблему в Planveyor и как решение возвращается в проект? |
-| [Что уже работает и что дальше](capabilities-boundaries.md) | Чего первая версия не умеет и что будет дальше? |
+| [Sibling: creation and upgrade](sibling-lifecycle.md) | How do you create the project, what does it own itself, and how do you accept a new Planveyor version? |
+| [Exchanging changes with Planveyor](change-packets.md) | How do you pass a shared problem to Planveyor, and how does the solution come back to the project? |
+| [What works now and what comes next](capabilities-boundaries.md) | What can the first version not do, and what comes next? |
 
-**Часть 3. Как устроен Planveyor.** Для тех, кто меняет сам движок.
+**Part 3. How Planveyor is built.** For those who change the engine itself.
 
-| Глава | На какой вопрос отвечает |
+| Chapter | Question it answers |
 | --- | --- |
-| [Запуск: команды, обёртки, клиенты](runtime-launch.md) | Как команда связывает проект, инструкции, сессию и ИИ-клиент? |
-| [Как Planveyor меняет себя](self-development.md) | Как меняются промпты, обёртки, правила и сам движок? Что происходит с предложениями по процессу (PI)? |
-| [Проверка после слияния](postmerge.md) | Что проверяют, когда несколько задач уже слиты в основную ветку? |
-| [Тесты движка](engine-tests.md) | Как устроен набор тестов Planveyor и как его запускать? |
+| [Launch: commands, wrappers, agent harnesses](runtime-launch.md) | How does a command connect the project, the instructions, the session, and the agent harness? |
+| [How Planveyor changes itself](self-development.md) | How do the prompts, wrappers, rules, and the engine itself change? What happens to process improvements (PIs)? |
+| [Post-merge check](postmerge.md) | What is checked when several tasks are already merged into the main branch? |
+| [Engine tests](engine-tests.md) | How is the Planveyor test suite built, and how do you run it? |
 
-**Приложения.** [Словарь](glossary.md): все термины раздела. [Справочник по коду](code-map.md): с каких файлов и функций начинать читать код и что проверяют тесты.
+**Appendices.** [Glossary](glossary.md): all terms of the section. [Code map](code-map.md): which files and functions to start reading the code from, and what the tests check.
 
-## Кому что читать
+## Who should read what
 
-| Кто вы | С чего начать | Что дальше |
+| Who you are | Where to start | What next |
 | --- | --- | --- |
-| Владелец проекта: ставите и принимаете задачи | [Роли и файлы задачи](roles-artifacts.md), [Сквозной пример: какие товары пора пополнить](sql-example.md), [Закрытие задачи](closeout.md) | [Что уже работает и что дальше](capabilities-boundaries.md), затем [руководство по sibling](../stack-sibling.ru.md) и остальные главы части 2 |
-| Разработчик продукта: работаете в sibling | [План и его статусы](plan-lifecycle.md), [Ревью и приёмка](review-acceptance.md) | [Тесты и доказательства: чему можно доверять](testing-evidence.md) |
-| Разработчик Planveyor: меняете движок | [Запуск: команды, обёртки, клиенты](runtime-launch.md), [Как Planveyor меняет себя](self-development.md) | [Тесты движка](engine-tests.md), [справочник по коду](code-map.md) и [CONTRIBUTING](../../../CONTRIBUTING.ru.md) |
+| Project owner: you set and accept tasks | [Roles and task files](roles-artifacts.md), [Running example: which products to reorder](sql-example.md), [Task closeout](closeout.md) | [What works now and what comes next](capabilities-boundaries.md), then the [stack sibling guide](../stack-sibling.md) and the other chapters of part 2 |
+| Product developer: you work in a sibling | [The plan and its statuses](plan-lifecycle.md), [Review and acceptance](review-acceptance.md) | [Tests and evidence: what you can trust](testing-evidence.md) |
+| Planveyor developer: you change the engine | [Launch: commands, wrappers, agent harnesses](runtime-launch.md), [How Planveyor changes itself](self-development.md) | [Engine tests](engine-tests.md), the [code map](code-map.md), and [CONTRIBUTING](../../../CONTRIBUTING.md) |
 
-## Короткий словарь
+## Short glossary
 
-| Термин | Что значит |
+| Term | What it means |
 | --- | --- |
-| Sibling | Отдельный репозиторий вашего проекта, созданный из Planveyor: код продукта, настройки стека, планы и локальные правила ролей |
-| Движок | Копия репозитория Planveyor, из которой запускаются команды |
-| План | Файл задачи в `docs/plans/`. Статус в его шапке показывает, чей сейчас ход |
-| Черновик кода (code draft) | Файл Planner со списком целевых файлов и шагами для Coder |
-| Точный набор файлов плана (exact bundle) | Все файлы задачи, которые проверяются вместе: целевые файлы, план, черновик, ревью и приложения к нему. В коммит из них попадают изменённые |
-| Oracle | Скрипт, который читает статус плана и сообщает, что мешает переходу |
-| Обёртка (wrapper) | Функция движка, которая готовит вызов роли и запускает его |
-| Клиент запуска (runner) | ИИ-клиент, в котором работает сессия роли: Codex или Claude Code |
-| Квитанция (receipt) | Запись о выполненном действии и его результате |
-| SID | Идентификатор сессии клиента. По нему сессию продолжают |
-| Доказательства (evidence) | Результаты проверок, привязанные к версии файлов; в плане — раздел `## Evidence`, журнал проверок |
-| Контракт | Записанные правила, форматы и границы ответственности. Контракт sibling — файлы и правила, которые пришли из Planveyor |
+| Sibling | A separate repository of your project, created from Planveyor: the product code, the stack settings, the plans, and the local role rules |
+| Engine | Shared Planveyor mechanisms: commands, role launch, and lifecycle checks |
+| Runtime | The Planveyor checkout from which the commands run |
+| Plan | The task file in `docs/plans/`. The status in its header shows whose turn it is now |
+| Code draft | The Planner file with the list of target files and the steps for Coder |
+| Exact bundle | All task files that are checked together: the target files, the plan, the draft, the review, and its assets. The changed ones among them go into the commit |
+| Oracle | The script that reads the plan status and reports what blocks the transition |
+| Wrapper | The engine function that prepares a role call and runs it |
+| Agent harness | The program in which a role session runs: Codex CLI, Claude Code, or ZCode |
+| Runner | The agent harness selected for a role |
+| Receipt | A record of a completed action and its result |
+| SID | The id of an agent harness session. It is used to continue the session |
+| Evidence | Check results tied to a version of the files; in the plan, the `## Evidence` section, the evidence log |
+| Contract | Written rules, formats, and boundaries of responsibility. The consumer contract is the files and rules that came from Planveyor |
 
-Остальные термины — в [словаре](glossary.md).
+The other terms are in the [glossary](glossary.md).
 
-## Если команда остановилась
+## If a command stops
 
-Что делать — в разделе [«Если команда остановилась»](../stack-sibling.ru.md#если-команда-остановилась) руководства по sibling. А почему команды так себя ведут, объясняют главы:
+What to do is in the [If a command stops](../stack-sibling.md#if-a-command-stops) section of the stack sibling guide. The chapters explain why the commands behave this way:
 
-| Что видно | Где читать |
+| What you see | Where to read |
 | --- | --- |
-| Проверка набора файлов сообщает `MISSING-PATH` | [План и его статусы](plan-lifecycle.md): какого объявленного файла нет и на каком шаге он уже обязателен |
-| `sibling close` не закрывает задачу | [Ревью и приёмка](review-acceptance.md): не устарело ли ревью, есть ли вердикт Architect и тот ли это набор файлов |
-| Проверка закрытия сообщает `semantic_closeout_commit_pending` или `semantic_closeout_has_unstaged_delta` | [Закрытие задачи](closeout.md): план уже в `Done`, а коммита задачи нет |
-| Скрипт выбора записи линии рисков (risk selector) вернул `missing` или `blocked` | [Ревью и приёмка](review-acceptance.md): готов ли результат первой линии, на который опирается вторая |
-| После обновления остался непринятый кандидат | [Sibling: создание и обновление](sibling-lifecycle.md): почему так вышло, что с локальными разделами и как принять кандидата |
+| The bundle check reports `MISSING-PATH` | [The plan and its statuses](plan-lifecycle.md): which declared file is missing and at which step it is already required |
+| `sibling close` does not close the task | [Review and acceptance](review-acceptance.md): whether the review is stale, whether there is an Architect verdict, and whether it is the same bundle |
+| The closeout check reports `semantic_closeout_commit_pending` or `semantic_closeout_has_unstaged_delta` | [Task closeout](closeout.md): the plan is already in `Done`, but there is no task commit |
+| The risk selector returned `missing` or `blocked` | [Review and acceptance](review-acceptance.md): whether the result of the first lane, on which the second one relies, is ready |
+| An unaccepted candidate remains after an upgrade | [Sibling: creation and upgrade](sibling-lifecycle.md): why this happened, what happened to the local sections, and how to accept the candidate |
 
-Не правьте вручную статус, квитанцию или очередь, чтобы обойти остановку: сначала устраните причину. Известное исключение для статуса — F49 в главе [«Что уже работает и что дальше»](capabilities-boundaries.md#границы-первой-версии).
+Do not edit the status, a receipt, or the queue by hand to get around a stop: first remove the cause. The known exception for the status is F49 in the [What works now and what comes next](capabilities-boundaries.md#limits-of-the-first-version) chapter.
 
-Проверить окружение и движок можно без запуска ролей — см. раздел [«Быстрый readback»](../launch-and-role-modes.ru.md#быстрое-чтение-состояния) руководства запуска. Успешная проверка окружения ещё не значит, что роль запустится, а результат примут.
+You can check the environment and the engine without starting roles; see the [Quick readback](../launch-and-role-modes.md#quick-readback) section of the launch guide. A successful environment check does not yet mean that a role will start or that the result will be accepted.
 
-## Где что лежит в Planveyor
+## Where things are in Planveyor
 
-Похожие пути в Planveyor и в sibling не значат, что у файлов один владелец. В самом Planveyor:
+Similar paths in Planveyor and in a sibling do not mean that the files have the same owner. In Planveyor itself:
 
-| Что | Где начать |
+| What | Where to start |
 | --- | --- |
-| Ответственность ролей и правила процесса | [документы ролей](../../roles/index.md), [плейбуки](../../playbooks/README.md) |
-| Промпты фаз | [индекс промптов](../../tools/prompts/README.md) |
-| Команды, обёртки и вспомогательные скрипты | [bin/planveyor](../../../bin/planveyor), [карта модулей](../../../scripts/planveyor/README.ru.md) |
-| Файлы, которые получает новый sibling | [README-шаблон sibling](../../../copier_template/docs/README.md.jinja) |
-| Тесты механизмов, контракта и документации | [маршруты проверки](../../tools/verify_suite.ru.md) |
+| Role responsibilities and process rules | [role definitions](../../roles/index.md) (in Russian), [playbooks](../../playbooks/README.md) (in Russian) |
+| Phase prompts | [prompt index](../../tools/prompts/README.md) |
+| Commands, wrappers, and helper scripts | [bin/planveyor](../../../bin/planveyor), [module map](../../../scripts/planveyor/README.md) |
+| Files that a new sibling gets | [sibling README template](../../../copier_template/docs/README.md.jinja) |
+| Tests of the mechanisms, the contract, and the documentation | [verification routes](../../tools/verify_suite.md) |
 
-Главы ссылаются на файлы и функции Planveyor. Номера строк в коде меняются, поэтому функцию или тест ищите по имени. Описания тестов в справочнике составлены по их исходному коду; проходят ли тесты на вашей версии, покажет только запуск.
+The chapters link to Planveyor files and functions. Line numbers in the code change, so look for a function or a test by its name. The test descriptions in the code map are written from their source code; only a run shows whether the tests pass on your version.

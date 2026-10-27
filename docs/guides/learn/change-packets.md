@@ -1,47 +1,49 @@
-# Обмен изменениями с Planveyor
+# Exchanging changes with Planveyor
 
-Изменения ходят между проектом и Planveyor в обе стороны. Общую проблему, найденную в sibling, вы передаёте в Planveyor запросом. Принятое решение возвращается в проект с новой версией Planveyor, а если оно меняет контракт или поведение движка, вместе с ним приходит извещение. Порядок действий описан в разделе [«Предложить изменение Planveyor»](../stack-sibling.ru.md#предложить-изменение-planveyor) руководства по sibling.
+**English** · [Русский](change-packets.ru.md)
 
-![Путь общей проблемы: проверенный запрос в sibling, issue с разрешения Owner, импорт и решение в Planveyor, новая версия и обновление проекта](assets/change-packets-1.svg)
+Changes travel between the project and Planveyor in both directions. You pass a shared problem found in a sibling to Planveyor with an upstream request. The accepted solution comes back to the project with a new Planveyor version, and if it changes the contract or the engine behavior, a contract notice comes with it. The steps are described in the [Propose a change to Planveyor](../stack-sibling.md#propose-a-change-to-planveyor) section of the stack sibling guide.
 
-## Что отправлять в Planveyor
+![Path of a shared problem: a checked request in the sibling, an issue with Owner's permission, import and decision in Planveyor, a new version, and the project upgrade](assets/change-packets-1.svg)
 
-Правила своего стека вы меняете в проекте, обычным планом. В Planveyor отправляют общие проблемы: в документах ролей, промптах, шаблонах, плейбуках и самом движке.
+## What to send to Planveyor
 
-В SQL-проекте предложения по процессу (PI) появились дважды, оба раза при закрытии документов (глава [«Закрытие задачи»](closeout.md)). Первое появилось после адаптации и касалось шаблонов ревью из Planveyor:
+You change the rules of your stack in the project, with an ordinary plan. Shared problems go to Planveyor: in role definitions, prompts, templates, playbooks, and the engine itself.
+
+In the SQL project, process improvements (PIs) appeared twice, both times during the docs closeout (the [Task closeout](closeout.md) chapter). The first one appeared after the adaptation and concerned the review templates from Planveyor; it is quoted as written in the project, in Russian:
 
 ```markdown
 - symptom: `Шаблоны code/doc review закрепляют `GPT-5.2` и `GPT-5.5` в заголовках lanes, хотя текущий принятый review фиксирует фактический `gpt-6-sol` в runner metadata.`
 - suggested_fix: `В source-owned шаблонах code/doc review сделать заголовки lanes нейтральными к модели и оставить фактические runner/model/session данные в metadata текущего запуска.`
 ```
 
-Шаблоны ревью приходят с контрактом целиком и принадлежат Planveyor, локальных разделов в них нет. Исправлять их нужно в Planveyor, и это повод для запроса. Запроса по этому предложению в проекте нет: в его `docs/upstream_packets/` лежит только шаблон.
+The review templates come with the contract as a whole and belong to Planveyor; they have no local sections. They must be fixed in Planveyor, and this is a reason for an upstream request. The project has no request for this proposal: its `docs/upstream_packets/` holds only the template.
 
-Второе появилось после задачи `GetReorderCandidates`. Локальный раздел плейбука ревью, который разрешает Reviewer не повторять прогон оператора, ссылался на отчёт JUnit из плана адаптации, хотя Reviewer должен смотреть отчёт текущей задачи. Этот текст принадлежит проекту, и правят его в самом проекте.
+The second one appeared after the `GetReorderCandidates` task. The local section of the review playbook, which allows Reviewer not to repeat the operator's run, referred to the JUnit report from the adaptation plan, although Reviewer must look at the report of the current task. This text belongs to the project, and it is fixed in the project itself.
 
-## Запрос в Planveyor
+## Upstream request
 
-Запрос в Planveyor (upstream request) — это файл в sibling по [шаблону](../../upstream_packets/_template.md) `docs/upstream_packets/_template.md`. В нём три главных поля: `symptom` описывает, что вы наблюдали, `process_gap` называет, чего не хватает в общем процессе, `suggested_fix` предлагает исправление. Факты своего стека выносят в раздел `Target-Specific Facts To Filter`: при разборе их отделяют от общих правил. Не пишите в запрос секреты, адреса серверов и абсолютные пути.
+An upstream request is a file in a sibling made from the [template](../../upstream_packets/_template.md) `docs/upstream_packets/_template.md`. It has three main fields: `symptom` describes what you observed, `process_gap` names what the shared process lacks, and `suggested_fix` proposes a fix. The facts of your stack go into the `Target-Specific Facts To Filter` section: when the request is examined, they are separated from the shared rules. Do not put secrets, server addresses, or absolute paths into the request.
 
-Готовит запрос ИИ-клиент в обычном чате проекта, вне ролей. Вы читаете файл и коммитите его обычным `git commit`: `planveyor sibling close --commit` коммитит только точный набор файлов плана, а запрос в него не входит. Отправить запрос — отдельное ваше решение, просьба подготовить файл его не заменяет. Отправляет запрос GitHub CLI `gh`, который вы сами установили и авторизовали, командой `gh issue create --body-file <файл запроса> --repo planveyor/planveyor` с подготовленным файлом. Issue уходит в репозиторий Planveyor на GitHub: флаг `--repo` нужен, иначе `gh` возьмёт репозиторий вашего проекта. Перед отправкой посмотрите готовую команду и текст issue. Если `gh` не настроен, отправка остановится и назовёт причину.
+The agent harness prepares the request in a regular project chat, outside the roles. You read the file and commit it with a regular `git commit`: `planveyor sibling close --commit` commits only the exact bundle of the plan, and the request is not part of it. Sending the request is your separate decision; asking to prepare the file does not replace it. The GitHub CLI `gh`, which you installed and authorized yourself, sends the request with the command `gh issue create --body-file <request file> --repo planveyor/planveyor` and the prepared file. The issue goes to the Planveyor repository on GitHub: the `--repo` flag is needed, otherwise `gh` takes the repository of your project. Before sending, look at the ready command and the issue text. If `gh` is not set up, sending stops and names the reason.
 
-Дальше работает сопровождающий Planveyor. Запрос попадает в `docs/upstream_packets/` репозитория Planveyor, и у Planveyor появляется своя копия. Команда `planveyor_upstream_request_import` создаёт по ней запись PI и переводит копию в статус `imported`. Нужен ли план исправления, решает Architect самого Planveyor, и исправление проходит обычный план. Команда `planveyor_upstream_request_ack` записывает в копию Planveyor ссылку на решение и, если есть, на план исполнения и ставит статус `decided`; такую отметку называют ACK. Обе команды работают только в корне Planveyor.
+Then the Planveyor maintainer takes over. The request lands in `docs/upstream_packets/` of the Planveyor repository, and Planveyor gets its own copy. The `planveyor_upstream_request_import` command creates a PI record from it and moves the copy to the `imported` status. Planveyor's own Architect decides whether a fix plan is needed, and the fix goes through an ordinary plan. The `planveyor_upstream_request_ack` command writes into the Planveyor copy a link to the decision and, if there is one, to the execution plan, and sets the `decided` status; this mark is called ACK. Both commands work only in the Planveyor root.
 
-Файл в вашем проекте меняется позже. Принятое исправление выходит в новой версии Planveyor. Если оно меняет контракт или поведение движка, вместе с ним выходит извещение, и в его `sibling_actions` сказано, что сделать с локальной копией запроса: перевести её в `decided` и записать в `source_decision_ref` ссылку на извещение. Это делают роли в плане обновления, который создаёт `planveyor sibling upgrade`.
+The file in your project changes later. The accepted fix comes out in a new Planveyor version. If it changes the contract or the engine behavior, a contract notice comes out with it, and its `sibling_actions` say what to do with the local copy of the request: move it to `decided` and write a link to the notice in `source_decision_ref`. The roles do this in the upgrade plan that `planveyor sibling upgrade` creates.
 
-Неудобства этого пути записаны в пункте [F28](../../release_backlog.md#f28) «Обязательств первого релиза»:
+The inconveniences of this path are recorded in item [F28](../../release_backlog.md#f28) (in Russian) of the First-release backlog:
 
-- нет команды или шага скилла, которые создают запрос;
-- команды `show` и `lint` для запросов в sibling штатно не работают, поэтому формат запроса проверить нечем;
-- в извещении нет поля со ссылкой на запрос.
+- there is no command or skill step that creates a request;
+- the `show` and `lint` commands for requests do not work normally in a sibling, so there is no standard command to check the request format there;
+- the contract notice has no field with a link to the request.
 
-Pull request прямо из sibling вместо issue отложен на следующий этап, это пункт [F26](../../release_backlog.md#f26).
+A pull request straight from a sibling instead of an issue is deferred to the next stage; this is item [F26](../../release_backlog.md#f26).
 
-## Извещение: что приносит новая версия
+## Contract notice: what a new version brings
 
-Извещение (contract notice) — это JSON-файл в каталоге `docs/contract_notices/` Planveyor. По правилу Planveyor ([docs_architecture.md](../../playbooks/docs_architecture.md)) оно сопровождает изменение общего контракта или механики движка. Когда извещение обязательно, точно не определено, и изменение шаблона контракта или скриптов движка без извещения сейчас ничто не остановит (пункт [F27](../../release_backlog.md#f27)). Поэтому в плане обновления читайте и списки изменённых файлов.
+A contract notice is a JSON file in the `docs/contract_notices/` directory of Planveyor. By the Planveyor rule ([docs_architecture.md](../../playbooks/docs_architecture.md), in Russian), it comes with a change of the shared contract or of the engine mechanics. It is not defined exactly when a notice is required, and nothing currently stops a change of the contract template or the engine scripts without a notice (item [F27](../../release_backlog.md#f27)). So in the upgrade plan, read the lists of changed files too.
 
-В извещении пять полей: однострочный `summary` и массивы строк `contract_changes`, `engine_changes`, `sibling_actions` и `checks`; формат описан в [README каталога извещений](../../contract_notices/README.md). Адресата у извещения нет: его получает каждый проект, чьё обновление проходит через эту версию. Образец из истории разработки Planveyor — извещение, которое вышло вместе с командами `planveyor sibling`:
+A notice has five fields: a one-line `summary` and the string arrays `contract_changes`, `engine_changes`, `sibling_actions`, and `checks`; the format is described in the [README of the notices directory](../../contract_notices/README.md) (in Russian). A notice has no addressee: every project whose upgrade passes through this version gets it. A sample from the Planveyor development history is the notice that came out together with the `planveyor sibling` commands, quoted as written, in Russian:
 
 ```text
 "summary": "Обычная работа с sibling выполняется через одну группу human-команд с автоматическим техническим контекстом и явными точными коммитами.",
@@ -53,11 +55,11 @@ Pull request прямо из sibling вместо issue отложен на сл
 ]
 ```
 
-Это действие просит перед каждым `close --commit` смотреть набор файлов, а после коммита задачи отдельно закрывать документы.
+This action asks you to look at the bundle before each `close --commit` and, after the task commit, to do the docs closeout separately.
 
-Обновление читает извещения между версией Planveyor, из которой собран проект, и новой. Извещение, которое уже было в прежней версии с тем же текстом, повторно не приходит. В план обновления извещение попадает по частям. Путь извещения, коммит и `summary` команда пишет в `## Scope`. Строки `checks` она добавляет в `## Tests`, а каждую строку `sibling_actions` превращает в запись «Действие: …» в `## Evidence`. Поля `contract_changes` и `engine_changes` в план не копируются: списки изменённых файлов команда составляет сама.
+The upgrade reads the notices between the Planveyor version the project was built from and the new one. A notice that was already in the earlier version with the same text does not come again. A notice goes into the upgrade plan in parts. The command writes the notice path, the commit, and the `summary` to `## Scope`. It adds the `checks` lines to `## Tests`, and turns each `sibling_actions` line into an entry `Действие: …` (action) in `## Evidence`. The `contract_changes` and `engine_changes` fields are not copied into the plan: the command makes the lists of changed files itself.
 
-SQL-проект получил при обновлении одно извещение: «Уточнено общее правило проверки обновления sibling после Copier.» Ниже — текст пробного прогона того же обновления на копии проекта. В самом проекте Architect потом переписал эти разделы своими словами.
+On the upgrade, the SQL project got one notice: `Уточнено общее правило проверки обновления sibling после Copier.` (the shared rule for checking a sibling upgrade after Copier is clarified). Below is the text from a trial run of the same upgrade on a copy of the project, quoted as written, in Russian. In the project itself, Architect later rewrote these sections in its own words.
 
 ```markdown
 ## Tests
@@ -69,25 +71,25 @@ SQL-проект получил при обновлении одно извещ�
 - Действие: В локальном плане адаптации записать прежний и новый source commit, затем сверить локальные секции до и после Copier.
 ```
 
-Первую строку `## Tests` команда пишет всегда, вторая пришла из извещения. Роли выполнили это действие; как прошло обновление, рассказано в главе [«Sibling: создание и обновление»](sibling-lifecycle.md).
+The command always writes the first `## Tests` line; the second came from the notice. The roles performed this action; the [Sibling: creation and upgrade](sibling-lifecycle.md) chapter tells how the upgrade went.
 
-## Адресная доставка
+## Rollout
 
-Адресных пакетов sibling сейчас не получает: изменения приходят к нему обновлением с извещением. Адресный пакет (rollout packet) Planveyor выпускает для конкретного репозитория. Получатель принимает его своим планом и записывает итог, например `adopted`, `parked` или `rejected`, а Planveyor отдельно отмечает получение; команды описаны в руководстве [«Lifecycle и пакеты»](../lifecycle-and-packets.ru.md#адресная-доставка-принятие-и-ack). В SQL-проекте все три плана (адаптация, задача и обновление) заполнили раздел `## Rollout packet handoff` значением `N/A`. Убрать механизм или оставить его только для работы над самим Planveyor, решат в пункте [F29](../../release_backlog.md#f29).
+A sibling does not receive rollout packets now: changes come to it through an upgrade with a contract notice. Planveyor issues a rollout packet for a specific repository. The recipient adopts it with its own plan and records the outcome, for example `adopted`, `parked`, or `rejected`, and Planveyor separately records that the packet was received; the commands are described in the [Lifecycle and packets](../lifecycle-and-packets.md#rollout-adoption-and-ack) guide. In the SQL project, all three plans (the adaptation, the task, and the upgrade) filled in the `## Rollout packet handoff` section with `N/A`. Whether to remove the mechanism or to keep it only for work on Planveyor itself will be decided in item [F29](../../release_backlog.md#f29).
 
-## Что делает Owner
+## What Owner does
 
-1. Решает, общая ли проблема. Если дело в правилах своего стека, ставит обычный план в проекте.
-2. Просит в обычном чате проекта подготовить запрос по шаблону, читает его и коммитит.
-3. Отдельно разрешает отправку, посмотрев команду `gh issue create --body-file … --repo planveyor/planveyor` и текст issue.
-4. Когда исправление войдёт в новую версию Planveyor, обновляет копию Planveyor, запускает снаружи проекта `planveyor --project ~/my-stack sibling upgrade` и проводит план обновления до закрытия документов.
+1. Decides whether the problem is shared. If it is about the rules of their own stack, sets up an ordinary plan in the project.
+2. Asks in a regular project chat to prepare a request from the template, reads it, and commits it.
+3. Separately authorizes sending, after looking at the `gh issue create --body-file … --repo planveyor/planveyor` command and the issue text.
+4. When the fix gets into a new Planveyor version, updates the Planveyor checkout, runs `planveyor --project ~/my-stack sibling upgrade` from outside the project, and runs the upgrade plan through to the docs closeout.
 
-Формулировки для чата и условный пример запроса из SQL-проекта есть в [руководстве по sibling](../stack-sibling.ru.md#предложить-изменение-planveyor).
+Wording for the chat and a hypothetical example of a request from the SQL project are in the [stack sibling guide](../stack-sibling.md#propose-a-change-to-planveyor).
 
-## Частые ошибки
+## Common mistakes
 
-- Считать созданный issue или статус `decided` в Planveyor исправлением в своём проекте. Исправление появится в проекте после обновления и принятого плана обновления.
+- Taking a created issue or the `decided` status in Planveyor for a fix in your own project. The fix appears in the project after the upgrade and the accepted upgrade plan.
 
-Функции и тесты, о которых шла речь, — в [справочнике по коду](code-map.md#обмен-изменениями-с-planveyor).
+The functions and tests discussed here are in the [code map](code-map.md#exchanging-changes-with-planveyor).
 
-Дальше: [«Что уже работает и что дальше»](capabilities-boundaries.md).
+Next: [What works now and what comes next](capabilities-boundaries.md).
