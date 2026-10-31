@@ -2,7 +2,7 @@
 
 **English** · [Русский](README.ru.md)
 
-Planveyor is a standalone, repo-backed toolkit for plan-driven work with Architect, Planner, Coder, Reviewer, and Manager roles. It keeps plans, reviews, follow-ups, packet records, and process guidance as inspectable repository artifacts.
+Planveyor is a standalone, repo-backed toolkit for plan-driven work with coding agents in the Architect, Planner, Coder, Reviewer, and Manager roles. It keeps plans, reviews, follow-ups, packet records, and process guidance as inspectable repository artifacts.
 
 ## Start here
 
@@ -26,9 +26,11 @@ Do not source implementation shell files into a parent shell. The public command
 
 ## Supported verification environment
 
-The first release supports one environment: macOS with an activated Python 3.12 environment that contains Copier 9.18.2 and PyYAML as pinned in `requirements-dev.lock`, plus Git, zsh, ripgrep, and `make` on `PATH`. Prepare that environment yourself (for example, a conda environment named `planveyor` with `make bootstrap-python` run inside it) and activate it before calling `bin/planveyor` or `make`: Planveyor uses the `python3` found on `PATH`. It never installs or repairs dependencies; a missing prerequisite stops the command with an error that names it. The source-identity loader technically accepts Python 3.10–3.12, but the environment above is the supported path. The configured CI workflow is not a hosted-run result; hosted CI and other Python versions come after the release.
+The first release supports one environment: macOS with an activated Python 3.12 environment that contains Copier 9.18.2 and PyYAML as pinned in `requirements-dev.lock`, plus Git, zsh, ripgrep, and `make` on `PATH`. Prepare that environment yourself (for example, a conda environment named `planveyor` with `make bootstrap-python` run inside it) and activate it before calling `bin/planveyor` or `make`: Planveyor uses the `python3` found on `PATH`. It never installs or repairs dependencies; a missing prerequisite stops the command with an error that names it. The source-identity loader technically accepts Python 3.10–3.12, but the environment above is the supported path. Support for other Python versions is planned after the first release.
 
 For local verification, `make verify` is the fast default route. `make test-scripts` is direct canonical full discovery, while `make verify-full` is the alternative aggregate full route; use one of those full routes for a single full claim, not both. Windows and Linux native validation have not been completed and are not supported by this statement.
+
+The first hosted CI run on the release commit, [run 41122296894](https://github.com/planveyor/planveyor/actions/runs/41122296894), used a GitHub macOS runner with Python 3.10 and 3.12, 14 shards for each version. The run took 3 h 44 min, and 8 of its 28 test jobs failed. The logs show three groups of failures. Six tests in `test_sibling_runbook` failed on both Python versions: they compare the interpreter path literally and expect `…/bin/python`, the path the runner starts the tests with, while the product writes `…/bin/python3.10` or `…/bin/python3.12` from the same installation. A dashboard test in `test_planveyor_bare_entrypoints` failed on both versions: the product shows the time in the machine's time zone, the test expects UTC+3, and the runner works in UTC. In these two groups, the test's expectation depends on the machine. Two more tests exceeded their time limits, on Python 3.12 only: the 5-second threshold in `test_planveyor_init_capture` (6.3 seconds on the runner) and the 120-second timeout for `sibling close --commit` in `test_contract_authority_shell`. Whether the runner's speed or a slowdown in the product caused this has not been established. Before the release, the full suite passed locally on macOS with Python 3.12: 3517 of 3517 tests. Next come an analysis of the failures and a rework of the CI workflow in several small plans; this is item [F5](docs/release_backlog.md#f5) of the First-release backlog (in Russian).
 
 ## What is included
 
@@ -80,6 +82,10 @@ The root corpus supplies public process guidance. A consumer repository owns its
 ## Contributing and security
 
 Keep changes small, public-safe, and supported by the relevant validation. Read [CONTRIBUTING.md](CONTRIBUTING.md) before proposing a change and [SECURITY.md](SECURITY.md) before reporting a security issue.
+
+## Contact
+
+Contacts, including for companies and collaboration, are on the project website: [planveyor.dev](https://planveyor.dev/#contacts).
 
 ## License
 

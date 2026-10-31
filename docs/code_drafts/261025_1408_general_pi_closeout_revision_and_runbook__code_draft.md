@@ -32,7 +32,7 @@
 ## Provenance / session context
 - Source plan provenance: `docs/plans/261025_1408_general_pi_closeout_revision_and_runbook.md#Plan-provenance--session-context`
 - Relation: `created-here`
-- Thread ID: `01a172d4-894a-7d71-896f-667fbfe33217`
+- Thread ID: `<REDACTED>`
 - Parent thread ID: `N/A (why=not exposed by env, wrapper receipts, or session stats)`
 - Session SID: `N/A (why=.planveyor.session.planner is missing or empty)`
 - Launch surface: `unknown (why=no env, wrapper receipt, or session stats origin identified the launch surface)`

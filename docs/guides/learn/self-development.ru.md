@@ -1,4 +1,4 @@
-<!-- i18n: pair=docs/guides/learn/self-development.md pair-sha256=e28b27e3782f7fee07cccffb5ce2676770880a275a513539d3aba8b1c522872d self-sha256=bb147aa7adf23ce4d20c326ce47d9c7b20a74f45c50ee4bc15736781e7a0f2cf -->
+<!-- i18n: pair=docs/guides/learn/self-development.md pair-sha256=365e51dbc2c12e137e1ace47aa28bc8d3f53c48547e5adc9ae6f0c2db2f53a26 self-sha256=7bf5c89288bd4cc65eb54faf250b53062585f4232c477ec41e84eefa2dfcaaee -->
 # Как Planveyor меняет себя
 
 [English](self-development.md) · **Русский**
@@ -77,7 +77,7 @@
 
 Второй источник записей — запрос из sibling в Planveyor. Команда `planveyor_upstream_request_import` превращает его в такую же запись `open`, дальше идёт тот же разбор (см. [«Обмен изменениями с Planveyor»](change-packets.ru.md)). Формат записи и правила собраны в [описании предложений по процессу](../../process_improvements/README.md).
 
-У самого Planveyor три собственных предложения ждут разбора: `PI-001`, `PI-002` и `PI-003` в `docs/process_improvements/release__process_improvements_backlog.md`, все `open` с `P?`. В [обязательствах первого релиза](../../release_backlog.md) они названы PI1–PI3.
+На момент первого выпуска у самого Planveyor разбора ждали 27 собственных предложений в семи файлах, их список — в `docs/process_improvements/index.md`. Три из них, `PI-001`, `PI-002` и `PI-003` в `docs/process_improvements/release__process_improvements_backlog.md`, — `open` с `P?`; в [обязательствах первого релиза](../../release_backlog.md) они названы PI1–PI3.
 
 ## Пример: запись PI-001 в SQL-проекте
 

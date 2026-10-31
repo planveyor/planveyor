@@ -14,9 +14,9 @@
 - Coverage domains: correctness, tests quality, security/privacy, subprocess/timeouts, races/locks/atomicity, data/migrations, performance, observability, integrations, supply chain, failure semantics
 - Findings: N/A (findings отсутствуют)
 - No findings reason: прочитан helper-selected current plan artifact `reviewer_code_risk:manifest-reviewer-p1:20261023T234520Z` и полный immutable support; собственные P0–P5 этой независимой lane дали raw child0/0/2/2/0/0, exact delta, неизменные profiles/weights и canonical3512.
-- Metadata: runner_id=codex; session_key=reviewer_code_risk; sid=01a168f4-1161-7fe1-bbbe-ab325f813dff; profile=native_collab; model=gpt-6.1-sol; reasoning_effort=ultra.
+- Metadata: runner_id=codex; session_key=reviewer_code_risk; sid=<REDACTED>; profile=native_collab; model=gpt-6.1-sol; reasoning_effort=ultra.
 - Source refs: `docs/plans/261023_0037_test_manifest_exact_once.md#evidence-chronological-append-only`; `docs/code_reviews/assets/261023_0037_test_manifest_exact_once/reviewer_code_risk_20261023T234520Z.json`.
-- Support SHA-256: `3ba46d3d4df96a4e6b309f9cd574ef527f05d7c461b1e905d89c06c13072372b`. Support и compact carrier не изменялись.
+- Support SHA-256: `0d640541b39bbf970945cd9bb1de428ee4f19564fc75ed3e42f3f82c77598151`. Support и compact carrier не изменялись.
 - Native terminal proof: публичные completed outputs исходного risk SID независимо открыты; все шесть native exit0, initial yields P0/P4 не приняты за terminal. Полные24 original journal files прочитаны отдельно.
 
 ## reviewer_code_contracts - GPT-6.1 Sol ultra
@@ -31,11 +31,11 @@
 
 ```json
 {
-  "run_id": "reviewer_code_contracts:01a16b2c-bc47-7c33-ab2c-957d1a3f7ec5",
+  "run_id": "reviewer_code_contracts:<REDACTED>",
   "lane_id": "reviewer_code_contracts",
   "runner_id": "codex",
   "session_key": "reviewer_code_contracts",
-  "sid": "01a168f7-ac31-7062-89e0-438e7d9efa07",
+  "sid": "<REDACTED>",
   "profile": "native_collab",
   "model": "gpt-6.1-sol",
   "reasoning_effort": "ultra",
@@ -142,7 +142,7 @@ Native/model proof взят из свежего PUBLIC turn_context исходн
 
 Самостоятельно проверены exact manifest diff и declared contract. Изменены только baseline composition revision, accepted GeneralPI whole-class (два метода), Shell IDs s01/s02, Native IDs3/5 в s05/s06 и две s01.notes. Все прежние selectors,14 shards/profiles3/4, weighting/prior notes и protected runner/schema/CI/locks/test bodies сохранены. Baseline e9baf7c22e49ae948a8647568e40ac5344796359 — revision состава, не будущий semantic commit OID и не timing measurement.
 
-Принята current independent review evidence обеих native lanes: own helper-selected risk run reviewer_code_risk:manifest-reviewer-p1:20261023T234520Z/support3ba46d3d4df96a4e6b309f9cd574ef527f05d7c461b1e905d89c06c13072372b и current target0048c69f83108f83944c8a9a837541f7d79635f88e606ffdf93722aa41c8413e. Все24 original Reviewer full4 прочитаны, raw0/0/2/2/0/0, P4 canonical3512/точный partition, P5 exact_delta/profiles_weights_unchanged. Текущие130 protected hashes совпали с исходным P0; P0/P5 argv payload bytes совпали с текущим draft. Проверка source main подтверждает return из --check до run_selected; новый suite import/product pass/TestCase bodies не запускались.
+Принята current independent review evidence обеих native lanes: own helper-selected risk run reviewer_code_risk:manifest-reviewer-p1:20261023T234520Z/support0d640541b39bbf970945cd9bb1de428ee4f19564fc75ed3e42f3f82c77598151 и current target0048c69f83108f83944c8a9a837541f7d79635f88e606ffdf93722aa41c8413e. Все24 original Reviewer full4 прочитаны, raw0/0/2/2/0/0, P4 canonical3512/точный partition, P5 exact_delta/profiles_weights_unchanged. Текущие130 protected hashes совпали с исходным P0; P0/P5 argv payload bytes совпали с текущим draft. Проверка source main подтверждает return из --check до run_selected; новый suite import/product pass/TestCase bodies не запускались.
 
 Подтверждённых архитектурных blocker/risk/nit или незакрытых discovered findings нет. Suggestions/Objections/Documentation impact сверены: старые red/late/STOP и placeholder N-A entries являются chronological history, актуальные contract decisions и результаты их закрывают; новых sync canon/registry/deferred targets не найдено. Форматный review-lint red сохранён, его ONE owning Visual env correction подтверждена actual r1 gates; re-open отсутствует. UI/data/rollout pin N/A по этому manifest-only diff. Counts/исторические weights не доказывают CI upper bound, баланс времени или исполнение тел тестов; общий release qualification вне этого результата.
 

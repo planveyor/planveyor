@@ -125,7 +125,7 @@
   "outcome": "Root завершил risk-проверку; final contracts/architecture acceptance следует отдельно в том же чате.",
   "limits": [
     "По прямому поручению Owner 26.10 все проверки выполняет Root этого чата последовательно; независимый второй агент/модель не участвовал.",
-    "Actual model, profile, session SID и effort не exposed; metadata unknown. Root thread 01a14ff9-c22d-75c0-bbef-3a9bb04b9bbe не выдаётся за SID отдельного Reviewer.",
+    "Actual model, profile, session SID и effort не exposed; metadata unknown. Root thread <REDACTED> не выдаётся за SID отдельного Reviewer.",
     "Полный suite, SQL и публикация не выполнялись. Historical completed checks переиспользованы с доказанной неизменностью inputs; fresh modules покрывают изменённые test bodies."
   ],
   "current": true,

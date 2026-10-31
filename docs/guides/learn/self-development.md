@@ -76,7 +76,7 @@ Roles do not call the triage, promotion, and reconciliation scripts in an ordina
 
 The second source of records is an upstream request from a sibling. The `planveyor_upstream_request_import` command turns it into the same kind of `open` record, and the same triage follows (see [Exchanging changes with Planveyor](change-packets.md)). The record format and the rules are collected in the [description of process improvements](../../process_improvements/README.md) (in Russian).
 
-Planveyor itself has three of its own PIs waiting for triage: `PI-001`, `PI-002`, and `PI-003` in `docs/process_improvements/release__process_improvements_backlog.md`, all `open` with `P?`. The [First-release backlog](../../release_backlog.md) calls them PI1–PI3.
+At the first release, Planveyor itself had 27 of its own PIs waiting for triage in seven files; `docs/process_improvements/index.md` lists them. Three of them, `PI-001`, `PI-002`, and `PI-003` in `docs/process_improvements/release__process_improvements_backlog.md`, are `open` with `P?`, and the [First-release backlog](../../release_backlog.md) calls them PI1–PI3.
 
 ## Example: the PI-001 record in the SQL project
 

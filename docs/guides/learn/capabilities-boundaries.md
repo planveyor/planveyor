@@ -28,7 +28,7 @@ F numbers are items of the [First-release backlog](../../release_backlog.md) (in
 
 | Area | Limit | Items |
 | --- | --- | --- |
-| Environment | One environment is supported: macOS and an activated environment with Python 3.12 and the dependencies from `requirements-dev.lock`. The version check at launch lets Python 3.10–3.12 through, but only 3.12 is supported. GitHub CI has not been run yet: the first version was checked locally on macOS | F1, F2, F5, F6 |
+| Environment | One environment is supported: macOS and an activated environment with Python 3.12 and the dependencies from `requirements-dev.lock`. The version check at launch lets Python 3.10–3.12 through, but only 3.12 is supported. The first version was checked locally on macOS; the first GitHub CI run on the release commit failed, and CI is not green yet | F1, F2, F5, F6 |
 | Dependencies and the agent harness | A command names a missing prerequisite but does not install or configure it itself. Owner prepares Codex CLI, the sign-in to it, and the five role agents in `config.toml`; Planveyor does not create or change this file ([Codex setup](../launch-and-role-modes.md#codex-setup)) | — |
 | Agent harnesses | TUI mode and `planveyor sibling run` start five role agents in Codex; in TUI mode, they are nested subagents of the Manager session, a capability of Codex CLI. Planner and Reviewer can run in Claude Code where a wrapper starts the role: in a single-role launch or in the Manager custom pipeline; Architect, Coder, and Manager work only in Codex ([Launch: commands, wrappers, agent harnesses](runtime-launch.md)). Manager in ZCode works only in the Planveyor root: its launch files are not delivered to a sibling | F20 about ZCode is closed: this limit is described |
 | Manager recovery | It is not decided yet how an interrupted Manager session learns at which step it stopped and continues the work | F7 |
@@ -43,12 +43,12 @@ If a limit gets in the way of your project, describe the problem in an upstream 
 
 ## Where development is heading
 
-In the First-release backlog, 15 items are closed and 37 are open, and there are three separate process improvements, PI1–PI3. Of the items F5–F52, the 33 open ones are deferred until after the release of the first version; F1–F4 remain separate open commitments. The further work has no deadlines.
+In the First-release backlog, 18 items are closed and 45 are open: F1–F62 and one item without a number. There are also four separate process improvements: PI1–PI3 and a separate source-bound PI. Of the items F5–F62 and the item without a number, the 41 open ones are deferred until after the release of the first version; F1–F4 remain separate open commitments. The further work has no deadlines.
 
 | Direction | What lies ahead | Items |
 | --- | --- | --- |
 | Reliability | Recover an interrupted Manager session: in one of the sibling runs on SQL Server, after a model overload, a reset of one role cost about 0.8 million tokens. Check write access to `.git` before a commit is first prepared: now this only comes out after the review. Remove the manual steps of Owner: the status in the deadlock after a Reviewer question, and the closing of the stack brief questions, which Owner now closes themselves | F7, F40, F49, F50 |
-| Environments | Check Windows, then Linux; other Python versions; start GitHub CI | F1, F2, F5, F6 |
+| Environments | Check Windows, then Linux; other Python versions; make GitHub CI green | F1, F2, F5, F6 |
 | Sibling upgrade | A jump over a version, the transfer of a renamed file that comes from Planveyor, two engine versions at the same time when its API changes, a doctor that shows how far a sibling lags behind the engine. A successful upgrade on one transition does not check these cases. A rule and a check for contract notices. An analysis of the upgrade by the roles instead of a list of changed paths | F8, F27, F30, F32 |
 | Exchange with Planveyor | A pull request straight from a sibling; commands for upstream requests from a sibling; a decision about rollout | F26, F28, F29 |
 | Large tasks | An analysis of a large task in which Coder writes the results to a separate file right away; decomposition refinements; tests of analysis and decomposition, including an end-to-end run with a fake Codex. The end-to-end check of the plan queue is deferred separately, without a number | F33, F34, F35 |
