@@ -1,0 +1,97 @@
+{
+  "run_id": "reviewer_code_risk_20261101011051Z",
+  "lane_id": "reviewer_code_risk",
+  "runner_id": "codex-native-collab",
+  "session_key": "/root/reviewer_code_risk_sol_xhigh_v2",
+  "sid": "unknown",
+  "profile": "unknown",
+  "model": "unknown",
+  "reasoning_effort": "unknown",
+  "thread_id": "01a19403-8df0-7ba1-9bfb-1f7cee20a97c",
+  "prompt_file": "docs/tools/prompts/reviewer_status_driven.md",
+  "target_ref": "BUNDLE=current",
+  "coverage_domains": [
+    "correctness",
+    "tests quality",
+    "security/privacy",
+    "subprocess/timeouts",
+    "performance",
+    "observability",
+    "integrations",
+    "failure semantics"
+  ],
+  "findings": [],
+  "lane_status": "no_findings",
+  "no_findings_reason": "Независимо прочитаны оба exact diff, изменённые assertions и их реальные fixture/facade consumers. Unique/absolute/file/samefile и alias/foreign-file controls сохранены; обе timezone исполняют прежние assertions, authority budgets и timeout cleanup. Два Owner blob pins совпали; 14 текущих Coder logs и четыре canonical snapshots проверены по содержимому, hashes и source continuity. Новых конкретных risk-регрессий не найдено.",
+  "source_refs": [
+    "scripts/test_sibling_runbook.py:661",
+    "scripts/test_sibling_runbook.py:755",
+    "scripts/test_sibling_runbook.py:256",
+    "scripts/test_planveyor_bare_entrypoints.py:667",
+    "scripts/test_planveyor_bare_entrypoints.py:704",
+    "scripts/test_contract_authority_support.py:158",
+    "scripts/test_contract_authority_support.py:351",
+    "scripts/planveyor.zsh:778",
+    "bin/planveyor:233",
+    "docs/plans/261101_0052_ci_test_expectations_rebuild.md::Evidence"
+  ],
+  "delta": "Только два pinned test targets: identity по файлу вместо spelling пути; явные Europe/Moscow и UTC только в child env. Product/runtime/workflow/manifest/dependencies неизменны.",
+  "outcome": "Risk lane завершена без findings. Финальный review artifact, synthesis/status, indexed scanner и local closeout остаются последующим owning lanes.",
+  "limits": [
+    "14 method invocations — свежий Coder proof на текущих pins, независимо прочитанный и переиспользованный; Risk не объявляет новый behavioral rerun. Исторические reference logs не использованы как текущие результаты.",
+    "Свежие Risk checks: current discovery и run_test_shard.py --check на Python 3.10.22/3.12.14, scoped links/basic hygiene, plan lint, scope inventory, exact diff/bytes и canonical snapshot. Discovery/partition не исполняют suite.",
+    "Provider-free fixtures не доказывают live authentication/provider, hosted CI или публикацию. Final review, strict completion check, indexed dictionary scanner, local commit и Manager tail ещё обязательны.",
+    "Baseline canonical rc=1 с пятью missing links остаётся de-scoped debt; scoped green не является общим canonical green.",
+    "Native collab thread подтверждён env CODEX_THREAD_ID; отдельный native SID и фактические model/profile/reasoning metadata не раскрыты. Имя handle не используется как model proof."
+  ],
+  "current": true,
+  "written_at": "2026-11-01T01:10:51Z",
+  "target_snapshot": {
+  "bundle_sha256": "d285666ffd02d6216b54a5006a24eec3cf3ad0ef9830e0bc35250494de69de9f",
+  "code_draft": "docs/code_drafts/261101_0052_ci_test_expectations_rebuild__code_draft.md",
+  "files": [
+    {
+      "git_mode": "100644",
+      "path": "scripts/test_planveyor_bare_entrypoints.py",
+      "sha256": "6727a7e0cc2d87a0c2c454d2e834d4a701fbf7e33110456265864616e39e0c8c",
+      "size_bytes": 195929
+    },
+    {
+      "git_mode": "100644",
+      "path": "scripts/test_sibling_runbook.py",
+      "sha256": "c465da3a082a129f8c0790c1a2355d64112b8e3e7fc6aeba23aa8cfc7aca4be8",
+      "size_bytes": 73806
+    }
+  ],
+  "hash_basis": "sha256 over canonical JSON (ensure_ascii=False, sort_keys=True, separators=(',', ':')) of hash_basis_payload; targets come from the primary code_draft_meta.targets, are normalized to repo-relative POSIX paths, sorted by path, and each file authenticates its bytes plus normalized git_mode (100755 iff the owner-execute bit is set, otherwise 100644)",
+  "hash_basis_payload": {
+    "algorithm": "sha256",
+    "files": [
+      {
+        "git_mode": "100644",
+        "path": "scripts/test_planveyor_bare_entrypoints.py",
+        "sha256": "6727a7e0cc2d87a0c2c454d2e834d4a701fbf7e33110456265864616e39e0c8c",
+        "size_bytes": 195929
+      },
+      {
+        "git_mode": "100644",
+        "path": "scripts/test_sibling_runbook.py",
+        "sha256": "c465da3a082a129f8c0790c1a2355d64112b8e3e7fc6aeba23aa8cfc7aca4be8",
+        "size_bytes": 73806
+      }
+    ],
+    "schema_version": "review_target_snapshot.hash_basis.v2"
+  },
+  "plan": "docs/plans/261101_0052_ci_test_expectations_rebuild.md",
+  "schema_version": "review_target_snapshot.v2",
+  "target": "BUNDLE=current bundle_sha256=d285666ffd02d6216b54a5006a24eec3cf3ad0ef9830e0bc35250494de69de9f",
+  "target_paths": [
+    "scripts/test_planveyor_bare_entrypoints.py",
+    "scripts/test_sibling_runbook.py"
+  ],
+  "target_snapshot": {
+    "bundle_sha256": "d285666ffd02d6216b54a5006a24eec3cf3ad0ef9830e0bc35250494de69de9f",
+    "target": "BUNDLE=current"
+  }
+}
+}

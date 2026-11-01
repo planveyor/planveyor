@@ -661,7 +661,13 @@ class NativeSiblingCommitPolicyTests(unittest.TestCase):
     def assert_payload_header(self, event, role, policy, *, reference=None, pre_status=None, cycle=None):
         header, _ = self.payload_parts(event["payload"])
         self.assertEqual(event["role"], role)
-        expected = {"ROLE": role, "PYBIN": os.fspath(Path(sys.executable)),
+        pybin_lines = [line for line in header if line.startswith("PYBIN=")]
+        self.assertEqual(len(pybin_lines), 1, "PYBIN")
+        pybin = Path(pybin_lines[0].split("=", 1)[1])
+        self.assertTrue(pybin.is_absolute(), "PYBIN must be absolute")
+        self.assertTrue(pybin.is_file(), "PYBIN must exist as a file")
+        self.assertTrue(pybin.samefile(sys.executable), "PYBIN must identify the selected executable")
+        expected = {"ROLE": role,
                     "COMMIT_POLICY": policy, "PLANVEYOR_RUNTIME_ROOT": os.fspath(self.runtime),
                     "PLAN_PATH": reference, "PRE_STATUS_LINE": pre_status,
                     "FOLLOWUPS_CAPTURE_CYCLE_ID": cycle}
@@ -757,6 +763,27 @@ class NativeSiblingCommitPolicyTests(unittest.TestCase):
         self.assert_tui_payload(events[1], reference)
         self.assert_tui_payload(events[2], reference)
         self.assertEqual(protected_inventory(other), before)
+
+        identity_directory = self.root / "python-identity"
+        identity_directory.mkdir()
+        alias = identity_directory / "python-alias"
+        alias.symlink_to(Path(sys.executable).resolve())
+        unrelated = identity_directory / "python-unrelated"
+        unrelated.write_text("unrelated existing file\n")
+        header, _ = self.payload_parts(events[2]["payload"])
+        pybin_line = next(line for line in header if line.startswith("PYBIN="))
+        pre_status = self.current_status_line(target, reference)
+        for name, pybin in (("alias", alias), ("unrelated", unrelated)):
+            with self.subTest(python_identity=name):
+                event = dict(events[2], payload=events[2]["payload"].replace(
+                    pybin_line + "\n", "PYBIN=" + os.fspath(pybin) + "\n", 1))
+                if name == "alias":
+                    self.assert_payload_header(event, "Manager", "native_existing",
+                                               reference=reference, pre_status=pre_status)
+                else:
+                    with self.assertRaisesRegex(AssertionError, "PYBIN must identify the selected executable"):
+                        self.assert_payload_header(event, "Manager", "native_existing",
+                                                   reference=reference, pre_status=pre_status)
 
     def test_tui_markerless_legacy_refuses_before_session_effects(self):
         target, reference = self.tui_target("tui-markerless")

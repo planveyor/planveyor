@@ -670,9 +670,11 @@ class PlanveyorFacadeDashboardTests(unittest.TestCase):
         fixture: AuthorityFixture,
         path: str,
         *arguments: str,
+        timezone: str,
     ) -> subprocess.CompletedProcess[str]:
         environment = fixture.environment()
         environment["PATH"] = path
+        environment["TZ"] = timezone
         command = [str(entry), "--project", str(fixture.target_root), *arguments]
         # A session of its own: on timeout the child and every forked
         # subshell die together, so this test can neither hang nor leak.
@@ -706,84 +708,87 @@ class PlanveyorFacadeDashboardTests(unittest.TestCase):
         architect_task = "/root/architect_sol_xhigh_v2"
         base = "a" * 40
         head = "b" * 40
-        with AuthorityFixture(identity="dashboard-sibling") as fixture:
-            entry = write(
-                fixture.runtime_root,
-                "bin/planveyor",
-                (REPO_ROOT / "bin" / "planveyor").read_bytes(),
-                executable=True,
-            )
-            commit_all(fixture.runtime_root, "public child entry")
-            fixture.activate_local((), required_runtime_api=(5, 5))
-            for relative, text in {
-                ".planveyor.session.architect": f"# fixture\n{architect_sid}\n",
-                ".planveyor.session.architect.log": f"29.09.2026 05:03:00\t{architect_sid}\trunner=codex\n",
-                ".planveyor.runner.reviewer": "claude\n",
-                ".planveyor.session.architect_process_roles": f"# fixture\n{process_sid}\n",
-                ".planveyor.collab.agent.architect": f"# fixture\n{architect_task}\n",
-                ".planveyor.collab.agent.architect.log": (
-                    f"29.09.2026 05:04:00\t{architect_task}\tspawn\tplanveyor_manager_collab\n"
-                ),
-                ".planveyor.range.base": f"{base}\n",
-                ".planveyor.range.head": f"{head}\n",
-            }.items():
-                write(fixture.target_root, relative, text)
-            shim, log = self._bridge_logging_interpreter(fixture)
-            path = str(shim.parent) + os.pathsep + os.environ.get("PATH", os.defpath)
+        parent_timezone = os.environ.get("TZ")
+        for timezone, expected_stamp in (("Europe/Moscow", "29.09 05:03"), ("UTC", "29.09 02:03")):
+            with self.subTest(timezone=timezone), AuthorityFixture(identity="dashboard-sibling") as fixture:
+                entry = write(
+                    fixture.runtime_root,
+                    "bin/planveyor",
+                    (REPO_ROOT / "bin" / "planveyor").read_bytes(),
+                    executable=True,
+                )
+                commit_all(fixture.runtime_root, "public child entry")
+                fixture.activate_local((), required_runtime_api=(5, 5))
+                for relative, text in {
+                    ".planveyor.session.architect": f"# fixture\n{architect_sid}\n",
+                    ".planveyor.session.architect.log": f"29.09.2026 05:03:00\t{architect_sid}\trunner=codex\n",
+                    ".planveyor.runner.reviewer": "claude\n",
+                    ".planveyor.session.architect_process_roles": f"# fixture\n{process_sid}\n",
+                    ".planveyor.collab.agent.architect": f"# fixture\n{architect_task}\n",
+                    ".planveyor.collab.agent.architect.log": (
+                        f"29.09.2026 05:04:00\t{architect_task}\tspawn\tplanveyor_manager_collab\n"
+                    ),
+                    ".planveyor.range.base": f"{base}\n",
+                    ".planveyor.range.head": f"{head}\n",
+                }.items():
+                    write(fixture.target_root, relative, text)
+                shim, log = self._bridge_logging_interpreter(fixture)
+                path = str(shim.parent) + os.pathsep + os.environ.get("PATH", os.defpath)
 
-            def run_counted(*arguments: str) -> tuple[subprocess.CompletedProcess[str], list[str]]:
-                log.write_text("", encoding="utf-8")
-                result = self._run_facade(entry, fixture, path, *arguments)
-                validations = [
-                    line for line in log.read_text(encoding="utf-8").splitlines()
-                    if self.VALIDATE_CALL.search(line)
-                ]
-                return result, validations
+                def run_counted(*arguments: str) -> tuple[subprocess.CompletedProcess[str], list[str]]:
+                    log.write_text("", encoding="utf-8")
+                    result = self._run_facade(entry, fixture, path, *arguments, timezone=timezone)
+                    validations = [
+                        line for line in log.read_text(encoding="utf-8").splitlines()
+                        if self.VALIDATE_CALL.search(line)
+                    ]
+                    return result, validations
 
-            usage, usage_validations = run_counted("planveyor_help", "planveyor_help")
-            full_help, help_validations = run_counted("planveyor_help")
-            dashboard, show_validations = run_counted("planveyor_show")
+                usage, usage_validations = run_counted("planveyor_help", "planveyor_help")
+                full_help, help_validations = run_counted("planveyor_help")
+                dashboard, show_validations = run_counted("planveyor_show")
 
-        self.assertEqual(usage.returncode, 0, usage.stdout + usage.stderr)
-        self.assertEqual(usage.stdout, "planveyor_help [--all|--manual|--collab|--process|<command>]\n")
-        # The fixture exercises the sibling path: every revalidation carries
-        # the engaged context of the marked target.
-        self.assertTrue(usage_validations)
-        self.assertTrue(all('"state":"engaged"' in line for line in usage_validations), usage_validations[:1])
+                self.assertEqual(usage.returncode, 0, usage.stdout + usage.stderr)
+                self.assertEqual(usage.stdout, "planveyor_help [--all|--manual|--collab|--process|<command>]\n")
+                # The fixture exercises the sibling path: every revalidation carries
+                # the engaged context of the marked target.
+                self.assertTrue(usage_validations)
+                self.assertTrue(all('"state":"engaged"' in line for line in usage_validations), usage_validations[:1])
 
-        self.assertEqual(full_help.returncode, 0, full_help.stdout + full_help.stderr)
-        for marker in (
-            "## Manual",
-            "### Sessions (manual dashboard)",
-            "## Collab",
-            "## Process tracks (Architect)",
-            "#### Catalog (process)",
-            f'planveyor_merge_range_stats_json "{base}..{head}"',
-            architect_task,
-        ):
-            self.assertIn(marker, full_help.stdout)
-        self.assertRegex(full_help.stdout, r"(?m)^architect\s+codex\s+019f0000\s+29\.09 05:03$")
-        self.assertRegex(full_help.stdout, r"(?m)^reviewer_code_risk\s+claude\s*$")
-        self.assertRegex(full_help.stdout, r"(?m)^roles\s+019f0001\s+resume\s*$")
-        # Rendering every block costs no more authority revalidations than
-        # printing a single usage line: dashboard rows and catalog examples
-        # read under the root the help owner has already validated.
-        self.assertEqual(
-            len(help_validations),
-            len(usage_validations),
-            f"planveyor_help revalidated {len(help_validations)} times, one usage line {len(usage_validations)}",
-        )
+                self.assertEqual(full_help.returncode, 0, full_help.stdout + full_help.stderr)
+                for marker in (
+                    "## Manual",
+                    "### Sessions (manual dashboard)",
+                    "## Collab",
+                    "## Process tracks (Architect)",
+                    "#### Catalog (process)",
+                    f'planveyor_merge_range_stats_json "{base}..{head}"',
+                    architect_task,
+                ):
+                    self.assertIn(marker, full_help.stdout)
+                self.assertRegex(full_help.stdout, r"(?m)^architect\s+codex\s+019f0000\s+" + re.escape(expected_stamp) + r"$")
+                self.assertRegex(full_help.stdout, r"(?m)^reviewer_code_risk\s+claude\s*$")
+                self.assertRegex(full_help.stdout, r"(?m)^roles\s+019f0001\s+resume\s*$")
+                # Rendering every block costs no more authority revalidations than
+                # printing a single usage line: dashboard rows and catalog examples
+                # read under the root the help owner has already validated.
+                self.assertEqual(
+                    len(help_validations),
+                    len(usage_validations),
+                    f"planveyor_help revalidated {len(help_validations)} times, one usage line {len(usage_validations)}",
+                )
 
-        self.assertEqual(dashboard.returncode, 0, dashboard.stdout + dashboard.stderr)
-        for marker in ("=== Manual ===", "=== Collab ===", "=== Process ===", architect_task, f"range: {base}..{head}"):
-            self.assertIn(marker, dashboard.stdout)
-        self.assertRegex(dashboard.stdout, r"(?m)^roles\s+019f0001\s+resume\s*$")
-        # Without --wide the dashboard stays compact and skips the per-role
-        # execution-ready preflights.
-        self.assertNotIn("execution_ready:", dashboard.stdout)
-        # Owner-level guarded readers only (22 when this budget was set); the
-        # per-row revalidation and the forced wide view made it hundreds.
-        self.assertLessEqual(len(show_validations), 30, f"planveyor_show revalidated {len(show_validations)} times")
+                self.assertEqual(dashboard.returncode, 0, dashboard.stdout + dashboard.stderr)
+                for marker in ("=== Manual ===", "=== Collab ===", "=== Process ===", architect_task, f"range: {base}..{head}"):
+                    self.assertIn(marker, dashboard.stdout)
+                self.assertRegex(dashboard.stdout, r"(?m)^roles\s+019f0001\s+resume\s*$")
+                # Without --wide the dashboard stays compact and skips the per-role
+                # execution-ready preflights.
+                self.assertNotIn("execution_ready:", dashboard.stdout)
+                # Owner-level guarded readers only (22 when this budget was set); the
+                # per-row revalidation and the forced wide view made it hundreds.
+                self.assertLessEqual(len(show_validations), 30, f"planveyor_show revalidated {len(show_validations)} times")
+        self.assertEqual(os.environ.get("TZ"), parent_timezone)
 
 
 class BareEntrypointsDoctorTests(unittest.TestCase):
