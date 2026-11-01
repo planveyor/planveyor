@@ -1,0 +1,120 @@
+{
+  "run_id": "reviewer_code_risk_20261101T160418Z",
+  "lane_id": "reviewer_code_risk",
+  "runner_id": "codex-native-collab",
+  "session_key": "/root/reviewer_code_risk_sol_xhigh_v2",
+  "sid": "unknown",
+  "profile": "unknown",
+  "model": "unknown",
+  "reasoning_effort": "unknown",
+  "thread_id": "01a19403-8df0-7ba1-9bfb-1f7cee20a97c",
+  "prompt_file": "docs/tools/prompts/reviewer_status_driven.md",
+  "target_ref": "BUNDLE=current",
+  "coverage_domains": [
+    "correctness",
+    "tests quality",
+    "security/privacy",
+    "subprocess/timeouts",
+    "races/locks/atomicity",
+    "performance",
+    "observability",
+    "integrations",
+    "failure semantics"
+  ],
+  "findings": [
+    {
+      "id": "risk:R1",
+      "severity": "S2",
+      "domain": "observability",
+      "title": "Неполный запуск выдаёт planned observer counts за фактические",
+      "source_refs": [
+        "scripts/test_planveyor_init_capture.py:3891",
+        "scripts/test_planveyor_init_capture.py:3960",
+        "scripts/test_planveyor_init_capture.py:4116"
+      ],
+      "blocking": false,
+      "trigger": "При _run timeout или исключении до части timestamp writers finally всё равно вызывает report_timing со всеми planned writer_specs.",
+      "impact": "timestamp_writer_process_count, added_boundary_writer_process_count и added_boundary_timestamp_file_write_count вычисляются по specs, а не по выполненным операциям. На неполном запуске diagnostics численно приписывают отсутствующие процессы/записи; это искажает разбор observer cost при timing failure.",
+      "evidence": "Exact source report_timing с timeout-shaped incomplete input и нулём запущенных writers/доступных sidecars сообщил 4/2/2; missing_writer_observations=4 и original_failure сохранены. Probe не запускает subprocess и не доказывает физический timeout.",
+      "recommendation": "Явно назвать эти три поля planned/expected counts. Фактическое количество сообщать только при достаточном наблюдении, иначе UNKNOWN; не выводить успешный запуск из наличия spec или отсутствия sidecar.",
+      "disposition_proposal": "nonblocking; Contracts явно фиксирует planned-count interpretation для неполного запуска, Architect выбирает bounded follow-up. Новые runtime/cause fixes этой находкой не разрешены."
+    }
+  ],
+  "lane_status": "complete",
+  "no_findings_reason": "N/A (why=одна S2 observability finding risk:R1; S1 не найдено)",
+  "source_refs": [
+    "scripts/test_contract_authority_shell.py:636",
+    "scripts/test_contract_authority_shell.py:1243",
+    "scripts/test_planveyor_init_capture.py:292",
+    "scripts/test_planveyor_init_capture.py:3812",
+    "scripts/test_planveyor_init_capture.py:3891",
+    "docs/plans/261101_1252_ci_runtime_timing_diagnostics.md::Evidence"
+  ],
+  "delta": "Только test diagnostics в двух targets: outer public-command timings; raw writer/body/boundary observations в existing s11 method. Original assertions/subcases/38+58 IDs, bounds, runtime и guards сохранены.",
+  "outcome": "Risk завершена: S1 нет, одна nonblocking S2 risk:R1. Contracts владеет независимой synthesis, единственным review, durable phase report и status.",
+  "limits": [
+    "Шесть Coder method executions переиспользованы после независимого чтения всех raw logs, rc/outcomes, hashes/source provenance и source-before/after. Risk не заявляет новый behavioral rerun этих methods.",
+    "Fresh Risk checks: native bare-login prerequisite, exact source/AST assertions/subcases/IDs/guards parity, helper snapshot/scope/lint, controlled terminal0/2+timeout parity и partition --check на обеих Python axes, scoped hygiene. Partition не исполняет suite; mocked timeout не доказывает физический deadline/cleanup.",
+    "s11 raw samples отделены от исходных .9f business timestamps; writer-body interval исключает sidecar I/O и process launch/import/scheduling. Boundary interval включает observer remainder/after-writer launch. Эти costs не вычитались; ненаблюдённое остаётся UNKNOWN.",
+    "risk:R1 воспроизведён exact-source diagnostic function probe с incomplete input. Это structural error-path proof, без live timeout или hosted reproduction; все шесть текущих Coder executions complete, counts в них совпали.",
+    "Local provider-free proof не доказывает hosted CI, provider readiness или причину historical failure. Full suite/all shards, cause fixes, publication и CI actions не выполнялись.",
+    "Final review/current completion proof, durable phase report, indexed scanner, Architect local commit и Manager terminal family ещё обязательны. Known baseline canonical doc debt не объявлен green.",
+    "Native thread_id прочитан из env. Отдельные SID/model/profile/effort runtime metadata недоступны; имя handle не является model proof."
+  ],
+  "current": true,
+  "written_at": "2026-11-01T16:04:18Z",
+  "proof_refs": {
+    "native_prerequisite": ".tmp/ci_p2_proof/reviewer-risk-001/native-prerequisite.json",
+    "independent_readback": ".tmp/ci_p2_proof/reviewer-risk-001/independent-proof-readback.json",
+    "fresh_structural_checks": ".tmp/ci_p2_proof/reviewer-risk-001/fresh-structural-checks.json",
+    "risk_R1_probe": ".tmp/ci_p2_proof/reviewer-risk-001/incomplete-observer-count-probe.json"
+  },
+  "target_snapshot": {
+  "bundle_sha256": "4c534ea3e2de0ddb4e3f70ea19a6934c264b5ce88dc637ca3a15851a30630815",
+  "code_draft": "docs/code_drafts/261101_1252_ci_runtime_timing_diagnostics__code_draft.md",
+  "files": [
+    {
+      "git_mode": "100644",
+      "path": "scripts/test_contract_authority_shell.py",
+      "sha256": "6ecc69ba0dd5f3dc87acfc762ca19bf1fd6b21c06e2f67489976963a7aa31465",
+      "size_bytes": 207082
+    },
+    {
+      "git_mode": "100644",
+      "path": "scripts/test_planveyor_init_capture.py",
+      "sha256": "02841e0b128d7f06bf9e24fd04ecc33a504dba36d3860045133d7940de681010",
+      "size_bytes": 321615
+    }
+  ],
+  "hash_basis": "sha256 over canonical JSON (ensure_ascii=False, sort_keys=True, separators=(',', ':')) of hash_basis_payload; targets come from the primary code_draft_meta.targets, are normalized to repo-relative POSIX paths, sorted by path, and each file authenticates its bytes plus normalized git_mode (100755 iff the owner-execute bit is set, otherwise 100644)",
+  "hash_basis_payload": {
+    "algorithm": "sha256",
+    "files": [
+      {
+        "git_mode": "100644",
+        "path": "scripts/test_contract_authority_shell.py",
+        "sha256": "6ecc69ba0dd5f3dc87acfc762ca19bf1fd6b21c06e2f67489976963a7aa31465",
+        "size_bytes": 207082
+      },
+      {
+        "git_mode": "100644",
+        "path": "scripts/test_planveyor_init_capture.py",
+        "sha256": "02841e0b128d7f06bf9e24fd04ecc33a504dba36d3860045133d7940de681010",
+        "size_bytes": 321615
+      }
+    ],
+    "schema_version": "review_target_snapshot.hash_basis.v2"
+  },
+  "plan": "docs/plans/261101_1252_ci_runtime_timing_diagnostics.md",
+  "schema_version": "review_target_snapshot.v2",
+  "target": "BUNDLE=current bundle_sha256=4c534ea3e2de0ddb4e3f70ea19a6934c264b5ce88dc637ca3a15851a30630815",
+  "target_paths": [
+    "scripts/test_contract_authority_shell.py",
+    "scripts/test_planveyor_init_capture.py"
+  ],
+  "target_snapshot": {
+    "bundle_sha256": "4c534ea3e2de0ddb4e3f70ea19a6934c264b5ce88dc637ca3a15851a30630815",
+    "target": "BUNDLE=current"
+  }
+}
+}

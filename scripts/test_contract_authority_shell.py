@@ -641,6 +641,8 @@ class ContractAuthorityShellIntegrationTests(unittest.TestCase):
         arguments: list[str],
         input_text: str | None = None,
         trace: list[dict[str, object]] | None = None,
+        role: str | None = None,
+        subcase: str | None = None,
     ) -> subprocess.CompletedProcess[str]:
         """Run one retained public command and retain a structured test trace."""
 
@@ -663,7 +665,8 @@ class ContractAuthorityShellIntegrationTests(unittest.TestCase):
                 timeout=120,
             )
         except subprocess.TimeoutExpired as exc:
-            elapsed_seconds = time.monotonic() - started_monotonic
+            ended_monotonic = time.monotonic()
+            elapsed_seconds = ended_monotonic - started_monotonic
             identity: dict[str, object] = {
                 "project_root": str(fixture.target_root),
                 "runtime_root": str(fixture.runtime_root),
@@ -716,8 +719,13 @@ class ContractAuthorityShellIntegrationTests(unittest.TestCase):
                         "state": "nonterminal_timeout",
                         "command_terminal": False,
                         "label": label,
+                        "role": role if role is not None else "UNKNOWN",
+                        "subcase": subcase if subcase is not None else label,
                         "argv": command,
+                        "clock": "time.monotonic",
+                        "units": "seconds",
                         "started_monotonic": started_monotonic,
+                        "ended_monotonic": ended_monotonic,
                         "deadline_monotonic": started_monotonic + 120,
                         "deadline_seconds": 120,
                         "elapsed_seconds": elapsed_seconds,
@@ -737,21 +745,29 @@ class ContractAuthorityShellIntegrationTests(unittest.TestCase):
                 flush=True,
             )
             raise
+        ended_monotonic = time.monotonic()
+        row = {
+            "label": label,
+            "role": role if role is not None else "UNKNOWN",
+            "subcase": subcase if subcase is not None else label,
+            "argv": command,
+            "clock": "time.monotonic",
+            "units": "seconds",
+            "started_monotonic": started_monotonic,
+            "ended_monotonic": ended_monotonic,
+            "elapsed_seconds": ended_monotonic - started_monotonic,
+            "actual_rc": result.returncode,
+            "stdin_sha256": (
+                hashlib.sha256(input_text.encode("utf-8")).hexdigest()
+                if input_text is not None
+                else None
+            ),
+            "stdout_sha256": hashlib.sha256(result.stdout.encode("utf-8")).hexdigest(),
+            "stderr_sha256": hashlib.sha256(result.stderr.encode("utf-8")).hexdigest(),
+        }
         if trace is not None:
-            trace.append(
-                {
-                    "label": label,
-                    "argv": command,
-                    "actual_rc": result.returncode,
-                    "stdin_sha256": (
-                        hashlib.sha256(input_text.encode("utf-8")).hexdigest()
-                        if input_text is not None
-                        else None
-                    ),
-                    "stdout_sha256": hashlib.sha256(result.stdout.encode("utf-8")).hexdigest(),
-                    "stderr_sha256": hashlib.sha256(result.stderr.encode("utf-8")).hexdigest(),
-                }
-            )
+            trace.append(row)
+        print(json.dumps({"schema": "public_pi_command_timing.v1", **row}, sort_keys=True), flush=True)
         return result
 
     def test_public_continuation_checkpoint_revalidates_fresh_bundle_and_replays_without_write(self) -> None:
@@ -770,10 +786,11 @@ class ContractAuthorityShellIntegrationTests(unittest.TestCase):
                     "planveyor_runtime_py", "process_improvements_collect.py", "--role", role,
                     "--source-ref", helper.plan_ref, "--followups-capture-cycle-id", cycle,
                     "--input", "-", "--json"],
+                    role=role,
                     input_text="## Process improvements\nNO PROCESS IMPROVEMENTS — why: clean_run\n")
                 self.assertEqual(result.returncode, 0, result.stderr or result.stdout)
             def read_payload():
-                result = self._run_public_pi_command(fixture, label="docs", arguments=[
+                result = self._run_public_pi_command(fixture, label="docs", role="N/A", arguments=[
                     "planveyor_docs_closeout", helper.plan_ref, "--followups-capture-cycle-id", cycle, "--json"])
                 self.assertEqual(result.returncode, 0, result.stderr or result.stdout)
                 payload = json.loads(result.stdout)
@@ -787,14 +804,14 @@ class ContractAuthorityShellIntegrationTests(unittest.TestCase):
                 "--project-root", str(fixture.target_root), "--plan-ref", helper.plan_ref,
                 "--capture-cycle-id", cycle, "--docs-closeout-json", "-"]
             result = self._run_public_pi_command(fixture, label="checkpoint", arguments=arguments,
-                                                input_text=json.dumps(read_payload()))
+                                                input_text=json.dumps(read_payload()), role="N/A")
             self.assertEqual(result.returncode, 0, result.stderr or result.stdout)
             self.assertEqual(json.loads(result.stdout)["reason_code"], "followup_capture_pi_general_checkpointed")
             after = helper._objects(fixture.target_root)
             receipt_path = helper._receipt_path(fixture.target_root, cycle).relative_to(fixture.target_root).as_posix()
             self.assertEqual([p for p in before if before[p] != after[p]], [receipt_path])
             result = self._run_public_pi_command(fixture, label="replay", arguments=arguments,
-                                                input_text=json.dumps(read_payload()))
+                                                input_text=json.dumps(read_payload()), role="N/A")
             self.assertEqual(result.returncode, 0, result.stderr or result.stdout)
             self.assertEqual(json.loads(result.stdout)["reason_code"], "followup_capture_pi_general_checkpoint_already_published")
             self.assertEqual(after, helper._objects(fixture.target_root))
@@ -820,6 +837,8 @@ class ContractAuthorityShellIntegrationTests(unittest.TestCase):
             ),
             input_text=body,
             trace=trace,
+            role=role,
+            subcase=label or f"collector-{role}",
         )
 
     def _checkpoint_public_pi_after_architect(
@@ -843,6 +862,7 @@ class ContractAuthorityShellIntegrationTests(unittest.TestCase):
         published = self._run_public_pi_command(
             fixture,
             label="checkpoint-general-pi-after-recovery",
+            role="N/A",
             arguments=[
                 "planveyor_followups_capture",
                 "checkpoint-general-pi",
@@ -1221,7 +1241,8 @@ class ContractAuthorityShellIntegrationTests(unittest.TestCase):
 
                         def public(arguments, body=None, *, success=True):
                             result = self._run_public_pi_command(fixture, label="format-correction",
-                                arguments=arguments, input_text=body, trace=trace)
+                                arguments=arguments, input_text=body, trace=trace, role=role,
+                                subcase=f"second_malformed={second_malformed}; command={arguments[0]}")
                             if success:
                                 self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
                                 return json.loads(result.stdout)
@@ -1255,7 +1276,8 @@ class ContractAuthorityShellIntegrationTests(unittest.TestCase):
                         head = git(fixture.target_root, "rev-parse", "HEAD")
                         index = git(fixture.target_root, "diff", "--cached", "--binary")
                         for command in (["sibling", "close", "--cycle", cycle], ["sibling", "close", "--cycle", cycle, "--commit"]):
-                            out = self._run_public_pi_command(fixture, label="blocked-close", arguments=command, trace=trace)
+                            out = self._run_public_pi_command(fixture, label="blocked-close", arguments=command, trace=trace,
+                                role=role, subcase=f"second_malformed={second_malformed}; blocked-close")
                             self.assertEqual(out.returncode, 0, out.stdout + out.stderr)
                             self.assertIn("general_pi_format_correction_state=retryable", out.stdout)
                             self.assertNotIn("Можно начать следующую задачу", out.stdout)
@@ -1282,7 +1304,8 @@ class ContractAuthorityShellIntegrationTests(unittest.TestCase):
                             before = aggregate.read_bytes(), leaf.read_bytes()
                             public(collector + ["--format-correction-reservation-id", reserved["reservation_id"]], self._public_pi_clean_body(), success=False)
                             self.assertEqual(before, (aggregate.read_bytes(), leaf.read_bytes()))
-                            blocked = self._run_public_pi_command(fixture, label="consumed-close", arguments=["sibling", "close", "--cycle", cycle, "--commit"], trace=trace)
+                            blocked = self._run_public_pi_command(fixture, label="consumed-close", arguments=["sibling", "close", "--cycle", cycle, "--commit"], trace=trace,
+                                role=role, subcase=f"second_malformed={second_malformed}; consumed-close")
                             self.assertEqual(blocked.returncode, 0, blocked.stdout + blocked.stderr)
                             self.assertIn("general_pi_format_correction_state=blocked", blocked.stdout)
                         elif role == "Reviewer":
@@ -1371,13 +1394,20 @@ class ContractAuthorityShellIntegrationTests(unittest.TestCase):
                     input_text: str | None = None,
                     *,
                     expect_json: bool = True,
+                    role: str | None = None,
                 ) -> dict[str, object] | str:
+                    # This composition has no distinct outer correction role.
+                    if role is None:
+                        role = next((arguments[index + 1] for index, value in enumerate(arguments[:-1])
+                                     if value == "--role"), None)
                     result = self._run_public_pi_command(
                         fixture,
                         label=label,
                         arguments=arguments,
                         input_text=input_text,
                         trace=command_trace,
+                        role=role if role is not None else "N/A",
+                        subcase=f"family={trace['family']}; label={label}",
                     )
                     self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
                     if expect_json:
@@ -2061,6 +2091,7 @@ class ContractAuthorityShellIntegrationTests(unittest.TestCase):
             published = self._run_public_pi_command(
                 fixture,
                 label="checkpoint-general-pi-before-stale-replay",
+                role="N/A",
                 arguments=[
                     "planveyor_followups_capture",
                     "checkpoint-general-pi",
@@ -2496,6 +2527,7 @@ class ContractAuthorityShellIntegrationTests(unittest.TestCase):
             result = self._run_public_pi_command(
                 public_fixture,
                 label="collector-rebuild-derived-private-rejection",
+                role="N/A",
                 arguments=arguments,
             )
             self.assertNotEqual(result.returncode, 0, result.stdout + result.stderr)
@@ -2531,6 +2563,7 @@ class ContractAuthorityShellIntegrationTests(unittest.TestCase):
             result = self._run_public_pi_command(
                 semantic_fixture,
                 label="collector-rebuild-derived-semantic-private-rejection",
+                role="N/A",
                 arguments=arguments,
             )
             self.assertEqual(result.returncode, 2, result.stdout + result.stderr)
@@ -2716,6 +2749,7 @@ class ContractAuthorityShellIntegrationTests(unittest.TestCase):
             changed = self._run_public_pi_command(
                 fixture,
                 label="collector-Architect-partial-recovery-changed-input",
+                role="Architect",
                 arguments=[
                     *self._public_pi_collection_arguments(
                         plan_ref=plan_ref,
@@ -2734,6 +2768,7 @@ class ContractAuthorityShellIntegrationTests(unittest.TestCase):
             recovered = self._run_public_pi_command(
                 fixture,
                 label="collector-Architect-blocked-recovery",
+                role="Architect",
                 arguments=[
                     *self._public_pi_collection_arguments(
                         plan_ref=plan_ref,
@@ -2882,6 +2917,7 @@ class ContractAuthorityShellIntegrationTests(unittest.TestCase):
             changed = self._run_public_pi_command(
                 semantic_fixture,
                 label="collector-Architect-partial-carrier-changed-input",
+                role="Architect",
                 arguments=[
                     *self._public_pi_collection_arguments(
                         plan_ref=plan_ref,
@@ -2920,6 +2956,7 @@ class ContractAuthorityShellIntegrationTests(unittest.TestCase):
             recovered = self._run_public_pi_command(
                 semantic_fixture,
                 label="collector-Architect-partial-carrier-final-recovery",
+                role="Architect",
                 arguments=[
                     *self._public_pi_collection_arguments(
                         plan_ref=plan_ref,

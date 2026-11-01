@@ -289,25 +289,63 @@ class InitCaptureTests(unittest.TestCase):
         self.assertIsNone(context["runtime_pin"])
         return manifest
 
-    def _monotonic_timestamp_writer(self, path: Path, env: dict[str, str]) -> str:
+    def _monotonic_timestamp_writer(
+        self,
+        path: Path,
+        env: dict[str, str],
+        *,
+        observation: dict[str, object] | None = None,
+    ) -> str:
         """Return a fixture-local command that writes one durable monotonic time."""
         writer = (
             "import os\n"
             "import pathlib\n"
             "import sys\n"
             "import time\n"
+            "writer_body_started_monotonic = time.monotonic()\n"
             "path = pathlib.Path(sys.argv[1])\n"
             "flags = os.O_WRONLY | os.O_CREAT | os.O_TRUNC | getattr(os, 'O_NOFOLLOW', 0)\n"
             "fd = os.open(path, flags, 0o600)\n"
             "with os.fdopen(fd, 'w', encoding='ascii') as handle:\n"
-            "    handle.write(f'{time.monotonic():.9f}\\n')\n"
+            "    sampled_monotonic = time.monotonic()\n"
+            "    handle.write(f'{sampled_monotonic:.9f}\\n')\n"
             "    handle.flush()\n"
             "    os.fsync(handle.fileno())\n"
             "os.chmod(path, 0o600)\n"
+            "writer_body_ended_monotonic = time.monotonic()\n"
+            "import json\n"
+            "observation = json.loads(sys.argv[2])\n"
+            "record = {\n"
+            "    'schema': 'control_marker_timestamp_writer.v1',\n"
+            "    'clock': 'time.monotonic', 'units': 'seconds',\n"
+            "    'path': str(path), 'context': observation,\n"
+            "    'raw_timestamp_monotonic': sampled_monotonic,\n"
+            "    'business_timestamp_text': f'{sampled_monotonic:.9f}',\n"
+            "    'writer_body_started_monotonic': writer_body_started_monotonic,\n"
+            "    'writer_body_ended_monotonic': writer_body_ended_monotonic,\n"
+            "    'writer_body_elapsed_seconds': writer_body_ended_monotonic - writer_body_started_monotonic,\n"
+            "    'measurement_scope': 'after original imports, before path/open through chmod; excludes diagnostics',\n"
+            "    'role_call_actual_rc': int(sys.argv[3]) if len(sys.argv) > 3 else 'UNKNOWN',\n"
+            "    'python_version': sys.version, 'python_executable': sys.executable,\n"
+            "    'unobserved_costs': {\n"
+            "        'process_launch_import_scheduling_seconds': 'UNKNOWN',\n"
+            "        'diagnostic_import_encoding_file_write_seconds': 'UNKNOWN',\n"
+            "    },\n"
+            "}\n"
+            "observation_path = path.with_name(path.name + '.observation.json')\n"
+            "try:\n"
+            "    observation_fd = os.open(observation_path, flags, 0o600)\n"
+            "    with os.fdopen(observation_fd, 'w', encoding='ascii') as handle:\n"
+            "        handle.write(json.dumps(record, sort_keys=True) + '\\n')\n"
+            "    os.chmod(observation_path, 0o600)\n"
+            "except OSError as exc:\n"
+            "    print(json.dumps({'schema': 'control_marker_observation_error.v1',\n"
+            "                      'error': str(exc), 'path': str(observation_path)}),\n"
+            "          file=sys.stderr, flush=True)\n"
         )
         return (
             f"{shlex.quote(env['PYBIN'])} -c {shlex.quote(writer)} "
-            f"{shlex.quote(str(path))}"
+            f"{shlex.quote(str(path))} {shlex.quote(json.dumps(observation or {}))}"
         )
 
     def _read_monotonic_timestamp(self, path: Path, label: str) -> float:
@@ -3772,6 +3810,95 @@ class InitCaptureTests(unittest.TestCase):
             self.assertEqual(rc, "0")
 
     def test_role_run_control_markers_are_nofollow_bounded_and_interrupt_safe(self) -> None:
+        def report_timing(result, failure, *, subcase, started, ended, writers):
+            # Aggregate only after the whole measured shell command.  These
+            # observations never replace the original reads/assertions below.
+            writer_rows = []
+            parse_errors = []
+            timestamps = []
+            for spec in writers:
+                path = spec["path"]
+                snapshot = {**spec, "path": str(path)}
+                try:
+                    info = path.lstat()
+                    if not stat.S_ISREG(info.st_mode) or stat.S_IMODE(info.st_mode) != 0o600:
+                        raise ValueError("timestamp is not a regular mode-0600 file")
+                    text = path.read_text(encoding="ascii").strip()
+                    snapshot.update(state="available", business_timestamp_text=text, value_seconds=float(text))
+                except (OSError, ValueError) as exc:
+                    snapshot.update(state="UNKNOWN", error_type=type(exc).__name__, error=str(exc))
+                timestamps.append(snapshot)
+                # A fault writer runs inside captured role stderr.  Preserve
+                # its raw observations separately without changing the original
+                # one-line .9f business timestamp or relying on stderr routing.
+                observation_path = path.with_name(path.name + ".observation.json")
+                try:
+                    info = observation_path.lstat()
+                    if not stat.S_ISREG(info.st_mode) or stat.S_IMODE(info.st_mode) != 0o600:
+                        raise ValueError("observation is not a regular mode-0600 file")
+                    row = json.loads(observation_path.read_text(encoding="ascii"))
+                    if not isinstance(row, dict) or row.get("schema") != "control_marker_timestamp_writer.v1" or row.get("path") != str(path):
+                        raise ValueError("observation identity/schema mismatch")
+                    if not isinstance(row.get("context"), dict):
+                        raise ValueError("observation context is malformed")
+                    writer_rows.append(row)
+                except (OSError, ValueError, TypeError) as exc:
+                    parse_errors.append({"path": str(observation_path), "error_type": type(exc).__name__, "error": str(exc)})
+            calls = []
+            business_intervals = []
+            for index in sorted({spec["call_index"] for spec in writers}):
+                samples = {
+                    row["context"]["point"]: row
+                    for row in writer_rows if row.get("context", {}).get("call_index") == index
+                }
+                before = samples.get("role_call_before", {})
+                after = samples.get("role_call_after", {})
+                before_sample = before.get("raw_timestamp_monotonic")
+                after_sample = after.get("raw_timestamp_monotonic")
+                calls.append({
+                    "role": "Planner", "subcase": subcase, "call_index": index,
+                    "started_monotonic": before_sample if before_sample is not None else "UNKNOWN",
+                    "ended_monotonic": after_sample if after_sample is not None else "UNKNOWN",
+                    "elapsed_seconds": after_sample - before_sample if before_sample is not None and after_sample is not None else "UNKNOWN",
+                    "actual_rc": after.get("role_call_actual_rc", "UNKNOWN"),
+                    "measurement_scope": "timestamp-writer samples around role call; includes observer remainder and after-writer launch/import",
+                })
+                business = {spec["point"]: spec for spec in timestamps
+                            if spec["call_index"] == index and not spec["added_boundary_writer"]}
+                begin = business.get("fault", business.get("start", {})).get("value_seconds")
+                close = business.get("close", {}).get("value_seconds")
+                business_intervals.append({
+                    "call_index": index,
+                    "measurement_scope": "original rounded durable business timestamps; unchanged assertion input",
+                    "started_monotonic": begin if begin is not None else "UNKNOWN",
+                    "ended_monotonic": close if close is not None else "UNKNOWN",
+                    "elapsed_seconds": close - begin if begin is not None and close is not None else "UNKNOWN",
+                })
+            print(json.dumps({
+                "schema": "control_marker_timing.v1", "subcase": subcase,
+                "clock": "time.monotonic", "units": "seconds",
+                "whole_command_started_monotonic": started,
+                "whole_command_ended_monotonic": ended,
+                "whole_command_elapsed_seconds": ended - started,
+                "whole_command_actual_rc": result.returncode if result is not None else "UNKNOWN",
+                "original_failure": failure,
+                "role_calls": calls, "business_intervals": business_intervals,
+                "durable_timestamps": timestamps, "timestamp_writers": writer_rows,
+                "missing_writer_observations": [str(spec["path"]) for spec in writers
+                                                if not any(row.get("path") == str(spec["path"]) for row in writer_rows)],
+                "observation_parse_errors": parse_errors,
+                "observer_activity": {
+                    "timestamp_writer_process_count": len(writers),
+                    "added_boundary_writer_process_count": sum(spec["added_boundary_writer"] for spec in writers),
+                    "added_boundary_timestamp_file_write_count": sum(spec["added_boundary_writer"] for spec in writers),
+                    "added_diagnostic_file_write_count": len(writer_rows),
+                    "raw_observation_storage": "one mode-0600 JSON sidecar per writer; body cost excludes this write",
+                    "costs_subtracted_from_business_interval": False,
+                    "fault_to_close_activity": "fault-writer sidecar and after-boundary writer/sidecar precede the original close timestamp",
+                    "unobserved_clock_sampling_diagnostic_io_launch_import_scheduling_seconds": "UNKNOWN",
+                },
+            }, sort_keys=True), flush=True)
+
         for marker_name, expected_reason in (
             ("transaction.done", "transaction_done_publication_failed"),
             ("lock.release", "lock_release_failed"),
@@ -3793,23 +3920,50 @@ class InitCaptureTests(unittest.TestCase):
                 timing_root.mkdir(parents=True)
                 fault_timestamp = timing_root / f"{marker_name}.fault.monotonic"
                 close_timestamp = timing_root / f"{marker_name}.close.monotonic"
-                fault_writer = self._monotonic_timestamp_writer(fault_timestamp, env)
-                close_writer = self._monotonic_timestamp_writer(close_timestamp, env)
+                writer_specs = [
+                    {"path": fault_timestamp, "point": "fault", "call_index": 1, "added_boundary_writer": False},
+                    {"path": close_timestamp, "point": "close", "call_index": 1, "added_boundary_writer": False},
+                    {"path": timing_root / f"{marker_name}.before.monotonic", "point": "role_call_before", "call_index": 1, "added_boundary_writer": True},
+                    {"path": timing_root / f"{marker_name}.after.monotonic", "point": "role_call_after", "call_index": 1, "added_boundary_writer": True},
+                ]
+                fault_writer, close_writer, before_writer, after_writer = [
+                    self._monotonic_timestamp_writer(spec["path"], env, observation={
+                        "role": "Planner", "subcase": {"marker": marker_name},
+                        **{key: value for key, value in spec.items() if key != "path"},
+                    }) for spec in writer_specs
+                ]
                 whole_command_started = time.monotonic()
-                result = self._run(
-                    root,
-                    env,
-                    "planveyor_plan_set docs/plans/260101_0000_test_runtime.md >/dev/null && "
-                    "planveyor_runner_set planner codex >/dev/null && "
-                    f"planveyor_session_set planner {planner_sid} runner=codex >/dev/null && "
-                    "planveyor_planner() { "
-                    f"{fault_writer}; "
-                    f"ln -s {shlex.quote(str(target))} \"$PLANVEYOR_ROLE_RUN_OUTPUT_DIR/{marker_name}\"; "
-                    "} && planveyor_role_run planner --json; role_rc=$?; "
-                    f"{close_writer}; close_rc=$?; "
-                    '(( close_rc == 0 )) || exit "$close_rc"; exit "$role_rc"',
-                )
-                whole_command_elapsed = time.monotonic() - whole_command_started
+                result = None
+                failure = None
+                try:
+                    result = self._run(
+                        root,
+                        env,
+                        "planveyor_plan_set docs/plans/260101_0000_test_runtime.md >/dev/null && "
+                        "planveyor_runner_set planner codex >/dev/null && "
+                        f"planveyor_session_set planner {planner_sid} runner=codex >/dev/null && "
+                        "planveyor_planner() { "
+                        f"{fault_writer}; "
+                        f"ln -s {shlex.quote(str(target))} \"$PLANVEYOR_ROLE_RUN_OUTPUT_DIR/{marker_name}\"; "
+                        f"}} && {{ {before_writer} || true; planveyor_role_run planner --json; }}; role_rc=$?; "
+                        f"{after_writer} \"$role_rc\" || true; "
+                        f"{close_writer}; close_rc=$?; "
+                        '(( close_rc == 0 )) || exit "$close_rc"; exit "$role_rc"',
+                    )
+                except BaseException as exc:
+                    failure = {"exception_type": type(exc).__name__, "detail": str(exc)}
+                    raise
+                finally:
+                    whole_command_ended = time.monotonic()
+                    whole_command_elapsed = whole_command_ended - whole_command_started
+                    try:
+                        report_timing(result, failure, subcase={"marker": marker_name},
+                                      started=whole_command_started, ended=whole_command_ended, writers=writer_specs)
+                    except Exception as observation_error:
+                        print(json.dumps({"schema": "control_marker_timing.v1", "subcase": {"marker": marker_name},
+                                          "observation_error": str(observation_error), "original_failure": failure,
+                                          "whole_command_started_monotonic": whole_command_started,
+                                          "whole_command_ended_monotonic": whole_command_ended}, sort_keys=True), flush=True)
                 self.assertEqual(result.returncode, 126, result.stderr)
                 self.assertLess(whole_command_elapsed, 60.0, result.stderr)
                 fault_started = self._read_monotonic_timestamp(
@@ -3904,36 +4058,61 @@ class InitCaptureTests(unittest.TestCase):
                 first_close_timestamp = timing_root / "release-parent-first.close.monotonic"
                 second_start_timestamp = timing_root / "release-parent-second.start.monotonic"
                 second_close_timestamp = timing_root / "release-parent-second.close.monotonic"
-                first_fault_writer = self._monotonic_timestamp_writer(
-                    first_fault_timestamp, env
-                )
-                first_close_writer = self._monotonic_timestamp_writer(
-                    first_close_timestamp, env
-                )
-                second_start_writer = self._monotonic_timestamp_writer(
-                    second_start_timestamp, env
-                )
-                second_close_writer = self._monotonic_timestamp_writer(
-                    second_close_timestamp, env
-                )
+                writer_specs = [
+                    {"path": first_fault_timestamp, "point": "fault", "call_index": 1, "added_boundary_writer": False},
+                    {"path": first_close_timestamp, "point": "close", "call_index": 1, "added_boundary_writer": False},
+                    {"path": second_start_timestamp, "point": "start", "call_index": 2, "added_boundary_writer": False},
+                    {"path": second_close_timestamp, "point": "close", "call_index": 2, "added_boundary_writer": False},
+                    {"path": timing_root / "release-parent-first.before.monotonic", "point": "role_call_before", "call_index": 1, "added_boundary_writer": True},
+                    {"path": timing_root / "release-parent-first.after.monotonic", "point": "role_call_after", "call_index": 1, "added_boundary_writer": True},
+                    {"path": timing_root / "release-parent-second.before.monotonic", "point": "role_call_before", "call_index": 2, "added_boundary_writer": True},
+                    {"path": timing_root / "release-parent-second.after.monotonic", "point": "role_call_after", "call_index": 2, "added_boundary_writer": True},
+                ]
+                (first_fault_writer, first_close_writer, second_start_writer, second_close_writer,
+                 first_before_writer, first_after_writer, second_before_writer, second_after_writer) = [
+                    self._monotonic_timestamp_writer(spec["path"], env, observation={
+                        "role": "Planner", "subcase": {"release_parent": parent_state},
+                        **{key: value for key, value in spec.items() if key != "path"},
+                    }) for spec in writer_specs
+                ]
                 whole_command_started = time.monotonic()
-                result = self._run(
-                    root,
-                    env,
-                    "planveyor_plan_set docs/plans/260101_0000_test_runtime.md >/dev/null && "
-                    "planveyor_runner_set planner codex >/dev/null && "
-                    f"planveyor_session_set planner {planner_sid} runner=codex >/dev/null && "
-                    f"planveyor_planner() {{ {first_fault_writer}; {mutate_parent}; }}; "
-                    f"planveyor_role_run planner --json > {shlex.quote(str(first_result))}; first_rc=$?; "
-                    f"{first_close_writer}; first_close_rc=$?; "
-                    '(( first_close_rc == 0 )) || exit "$first_close_rc"; '
-                    f"planveyor_planner() {{ {second_start_writer}; :; }}; "
-                    f"planveyor_role_run planner --json > {shlex.quote(str(second_result))}; second_rc=$?; "
-                    f"{second_close_writer}; second_close_rc=$?; "
-                    '(( second_close_rc == 0 )) || exit "$second_close_rc"; '
-                    'print -r -- "$first_rc:$second_rc"',
-                )
-                whole_command_elapsed = time.monotonic() - whole_command_started
+                result = None
+                failure = None
+                try:
+                    result = self._run(
+                        root,
+                        env,
+                        "planveyor_plan_set docs/plans/260101_0000_test_runtime.md >/dev/null && "
+                        "planveyor_runner_set planner codex >/dev/null && "
+                        f"planveyor_session_set planner {planner_sid} runner=codex >/dev/null && "
+                        f"planveyor_planner() {{ {first_fault_writer}; {mutate_parent}; }}; "
+                        f"{first_before_writer} || true; "
+                        f"planveyor_role_run planner --json > {shlex.quote(str(first_result))}; first_rc=$?; "
+                        f"{first_after_writer} \"$first_rc\" || true; "
+                        f"{first_close_writer}; first_close_rc=$?; "
+                        '(( first_close_rc == 0 )) || exit "$first_close_rc"; '
+                        f"planveyor_planner() {{ {second_start_writer}; :; }}; "
+                        f"{second_before_writer} || true; "
+                        f"planveyor_role_run planner --json > {shlex.quote(str(second_result))}; second_rc=$?; "
+                        f"{second_after_writer} \"$second_rc\" || true; "
+                        f"{second_close_writer}; second_close_rc=$?; "
+                        '(( second_close_rc == 0 )) || exit "$second_close_rc"; '
+                        'print -r -- "$first_rc:$second_rc"',
+                    )
+                except BaseException as exc:
+                    failure = {"exception_type": type(exc).__name__, "detail": str(exc)}
+                    raise
+                finally:
+                    whole_command_ended = time.monotonic()
+                    whole_command_elapsed = whole_command_ended - whole_command_started
+                    try:
+                        report_timing(result, failure, subcase={"release_parent": parent_state},
+                                      started=whole_command_started, ended=whole_command_ended, writers=writer_specs)
+                    except Exception as observation_error:
+                        print(json.dumps({"schema": "control_marker_timing.v1", "subcase": {"release_parent": parent_state},
+                                          "observation_error": str(observation_error), "original_failure": failure,
+                                          "whole_command_started_monotonic": whole_command_started,
+                                          "whole_command_ended_monotonic": whole_command_ended}, sort_keys=True), flush=True)
                 self.assertEqual(result.returncode, 0, result.stderr)
                 self.assertLess(whole_command_elapsed, 60.0, result.stderr)
                 first_fault_started = self._read_monotonic_timestamp(
