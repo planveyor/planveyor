@@ -58,7 +58,7 @@ These terms stay in Latin script in Russian text too. Statuses, plan sections, v
 | Термин | Примечание |
 | --- | --- |
 | diff; PR (pull request); CI; ADR; worktree; push | Общепринятые слова разработчиков. |
-| hosted CI; GitHub CI | Первый прогон hosted CI на коммите выпуска упал, зелёного CI пока нет. Перевод не утверждает обратного. |
+| hosted CI; GitHub CI | Первый прогон hosted CI на коммите выпуска упал. Первый успешный прогон — 1 ноября 2026 года на `11ace6c3`; устойчивость CI не подтверждена. Перевод не называет CI устойчивым. |
 
 ### Plan statuses / Статусы плана
 
