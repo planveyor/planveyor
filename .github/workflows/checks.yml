@@ -98,4 +98,9 @@ jobs:
       - name: Test workflow shard
         env:
           PYTHONDONTWRITEBYTECODE: "1"
-        run: '"$PYBIN" -B scripts/run_test_shard.py --shard "${{ matrix.shard }}" --report "$RUNNER_TEMP/test-shard.json"'
+        run: |
+          if [[ -n "${{ matrix.subset }}" ]]; then
+            "$PYBIN" -B scripts/run_test_shard.py --subset "${{ matrix.subset }}" --report "$RUNNER_TEMP/test-shard.json"
+          else
+            "$PYBIN" -B scripts/run_test_shard.py --shard "${{ matrix.shard }}" --report "$RUNNER_TEMP/test-shard.json"
+          fi

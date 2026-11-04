@@ -50,7 +50,7 @@ def name(value, pattern, label):
 def load_manifest(path, scripts):
     raw = path.read_bytes()
     data = json.loads(raw, object_pairs_hook=unique_object)
-    keys(data, ("version", "baseline_head", "weighting", "zero_test_modules", "shards", "local_profiles"), ("$schema",))
+    keys(data, ("version", "baseline_head", "weighting", "zero_test_modules", "shards", "local_profiles"), ("$schema", "subsets"))
     require(type(data["version"]) is int and data["version"] == 1, "unsupported manifest version")
     name(data["baseline_head"], r"[0-9a-f]{40}", "baseline HEAD")
     require(isinstance(data["weighting"], dict), "weighting must be an object")
@@ -104,6 +104,16 @@ def load_manifest(path, scripts):
             selected.extend(group["shards"])
         require(len(set(group_ids)) == len(group_ids), "duplicate local group ID")
         require(Counter(selected) == Counter(shard_ids), f"profile {width} must cover every shard exactly once")
+    subsets = data.get("subsets", {})
+    require(isinstance(subsets, dict), "subsets must be an object")
+    for subset_name, subset in subsets.items():
+        name(subset_name, r"[a-z][a-z0-9_-]*", "subset name")
+        keys(subset, ("ids",))
+        ids = subset["ids"]
+        require(isinstance(ids, list) and ids, "empty subset IDs")
+        for test_id in ids:
+            name(test_id, r"test_[A-Za-z0-9_]+\.[A-Za-z_][A-Za-z0-9_]*\.test_[A-Za-z0-9_]+", "subset test ID")
+        require(len(set(ids)) == len(ids), "duplicate subset ID")
     return data, hashlib.sha256(raw).hexdigest()
 
 
@@ -175,6 +185,19 @@ def choose_shards(args, data):
     return [args.shard]
 
 
+def choose_subset(args, data):
+    require(args.local_group is None, "--local-group requires --local-profile")
+    require(args.subset in data.get("subsets", {}), f"unknown subset: {args.subset}")
+    return set(data["subsets"][args.subset]["ids"])
+
+
+def validate_subsets(cases, data):
+    canonical = {case.id() for case in cases}
+    for subset_name, subset in data.get("subsets", {}).items():
+        unknown = set(subset["ids"]) - canonical
+        require(not unknown, f"unknown subset IDs in {subset_name}: {sorted(unknown)}")
+
+
 def git_head(root):
     completed = subprocess.run(["git", "-C", str(root), "rev-parse", "HEAD"], text=True, capture_output=True, check=True)
     value = completed.stdout.strip()
@@ -215,8 +238,12 @@ def completed_exactly(planned, started, completed):
 
 
 def run_selected(args, data, manifest_hash, cases, assignments):
-    selected_shards = choose_shards(args, data)
-    selected_ids = set().union(*(set(assignments[item]) for item in selected_shards))
+    if args.subset is not None:
+        selected_shards = []
+        selected_ids = choose_subset(args, data)
+    else:
+        selected_shards = choose_shards(args, data)
+        selected_ids = set().union(*(set(assignments[item]) for item in selected_shards))
     selected = [case for case in cases if case.id() in selected_ids]
     require(selected, "selected suite is empty")
     require(args.report is not None, "execution requires --report")
@@ -229,7 +256,8 @@ def run_selected(args, data, manifest_hash, cases, assignments):
     report = {
         "status": "running", "head_before": git_head(args.root), "head_after": None,
         "manifest_sha256": manifest_hash, "python": sys.version,
-        "selected_shards": selected_shards, "planned_ids": [case.id() for case in selected],
+        "selected_shards": selected_shards, "selected_subset": args.subset,
+        "planned_ids": [case.id() for case in selected],
         "started_ids": [], "completed_ids": [], "tests_run": None, "skipped": [],
         "wall_seconds": None, "durations_source": "unittest-native" if native_durations else "wall-only",
         "durations": None, "completion_exact": False, "result_successful": None,
@@ -237,7 +265,8 @@ def run_selected(args, data, manifest_hash, cases, assignments):
     write_report(args.report, report)
     with events_path.open("x", encoding="utf-8") as events:
         events.write(json.dumps({"event": "planned", "head": report["head_before"], "manifest_sha256": manifest_hash,
-                                 "ids": report["planned_ids"]}) + "\n")
+                                 "ids": report["planned_ids"], "selected_subset": args.subset,
+                                 "selected_shards": selected_shards}) + "\n")
         events.flush()
         observed_results = []
         def result_factory(*values, **kwargs):
@@ -285,6 +314,7 @@ def main(argv=None):
     mode.add_argument("--matrix", action="store_true", help="emit include matrix without test imports")
     mode.add_argument("--check", action="store_true", help="discover and validate coverage; do not execute")
     mode.add_argument("--shard")
+    mode.add_argument("--subset")
     mode.add_argument("--local-profile", choices=("3", "4"))
     parser.add_argument("--local-group")
     parser.add_argument("--report", type=Path)
@@ -300,13 +330,17 @@ def main(argv=None):
         data, manifest_hash = load_manifest(manifest, args.root / "scripts")
         if args.matrix:
             require(args.local_group is None and args.report is None and args.durations is None, "unexpected execution arguments for matrix")
+            require("compat310" in data.get("subsets", {}), "matrix requires compat310 subset")
             print(json.dumps({"include": [
-                {"python-version": version, "shard": shard["id"], "meta": version == "3.12" and index == 0}
-                for version in ("3.10", "3.12") for index, shard in enumerate(data["shards"])
-            ]}, separators=(",", ":")))
+                {"python-version": "3.12", "shard": shard["id"], "meta": index == 0}
+                for index, shard in enumerate(data["shards"])
+            ] + [{"python-version": "3.10", "subset": "compat310", "meta": False}]}, separators=(",", ":")))
             return 0
         if not args.check:
-            choose_shards(args, data)
+            if args.subset is not None:
+                choose_subset(args, data)
+            else:
+                choose_shards(args, data)
             require(sys.version_info >= (3, 12) or args.durations is None,
                     "--durations requires Python 3.12; Python 3.10 records suite wall time only")
         prepare_discovery(args.root)
@@ -315,6 +349,7 @@ def main(argv=None):
         require(not loader.errors, "canonical discovery errors:\n" + "\n".join(loader.errors))
         cases = list(flatten(discovered))
         assignments = partition(cases, data)
+        validate_subsets(cases, data)
         if args.check:
             require(args.local_group is None and args.report is None and args.durations is None, "unexpected execution arguments for check")
             print(json.dumps({"manifest_sha256": manifest_hash, "canonical_tests": len(cases),

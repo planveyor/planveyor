@@ -1,0 +1,244 @@
+{
+  "coverage_domains": [
+    "correctness",
+    "tests quality",
+    "security/privacy",
+    "subprocess/timeouts",
+    "races/locks/atomicity",
+    "data/migrations",
+    "performance",
+    "observability",
+    "integrations",
+    "supply chain",
+    "failure semantics"
+  ],
+  "coverage_notes": {
+    "correctness": "Прочитаны full runner и new synthetic suite; AST partition/TrackedResult/completed_exactly/green predicate совпадает с HEAD baseline. Manifest после удаления compat310 и sole s03 selector равен baseline.",
+    "data/migrations": "N/A: data store/schema migrations отсутствуют; JSON manifest shape additive, discovery остаётся membership authority.",
+    "failure semantics": "Malformed subset/unknown ID/duplicate JSON/full partition failure не достигают test body/green report; incomplete/interrupted/HEAD mismatch остаются nonzero.",
+    "integrations": "Actual workflow YAML branch проверен synthetic consumer test; выбранный public facade/Copier body исполняет real init/doctor/upgrade и preservation assertions.",
+    "observability": "selected_subset/selected_shards согласованы в report и planned event; distinct report+events+identity каждой axis сохранены несмотря на одинаковые event hashes.",
+    "performance": "Subset фильтрует canonical list по set IDs, лишнего повторного test loading нет; actual suite/command timings обеих axes сохранены без hosted SLA.",
+    "races/locks/atomicity": "Concurrency N/A по Scope; existing fresh-report/event refusal и atomic report writer не менялись. Synthetic accounting не назван concurrency proof.",
+    "security/privacy": "Имена selection строго валидируются, workflow branch использует quoted args, raw private identity paths не перенесены; runtime/Home/config не менялись.",
+    "subprocess/timeouts": "Новые subprocess paths ограничены cheap synthetic fixtures с timeout30; workflow runners/timeouts/permissions/dependency install и pinned actions неизменны.",
+    "supply chain": "requirements-dev.lock/pyproject/Make protected hashes равны HEAD; action pins, install lane и dependencies не менялись.",
+    "tests quality": "Новый independent run десяти synthetic methods rc0; реальные девять capability bodies открыты, обе retained axes9/9 без skips, reports/events/source/rc независимо reconciled."
+  },
+  "current": true,
+  "delta": "Optional strict subsets/--subset, all-subset membership после full partition, canonical-case filtering, additive report/planned identity и matrix14full3.12+compat3.10; lock и existing green predicates неизменны.",
+  "evidence_artifacts": [
+    {
+      "origin_ref": ".tmp/ci_p3_proof/coder-20261104T024119Z-25237/compat-310.json",
+      "origin_sha256": "003019765c495fcc9c659d4092ddfd971c4d2e16f20f7e6fa76a1b7171049af0",
+      "path": "docs/code_reviews/assets/261104_0314_ci_python_compat_subset/compat310_python310_20261104T031325Z.json",
+      "sha256": "003019765c495fcc9c659d4092ddfd971c4d2e16f20f7e6fa76a1b7171049af0",
+      "transform": "byte-identical"
+    },
+    {
+      "origin_ref": ".tmp/ci_p3_proof/coder-20261104T024119Z-25237/compat-310.json.events.jsonl",
+      "origin_sha256": "058bbecf25f4fdb7a1a62431325c967d60278474e8c44c3ebf54a8b096e33457",
+      "path": "docs/code_reviews/assets/261104_0314_ci_python_compat_subset/compat310_python310_20261104T031325Z.json.events.jsonl",
+      "sha256": "058bbecf25f4fdb7a1a62431325c967d60278474e8c44c3ebf54a8b096e33457",
+      "transform": "byte-identical"
+    },
+    {
+      "origin_ref": ".tmp/ci_p3_proof/coder-20261104T024119Z-25237/compat-312.json",
+      "origin_sha256": "2afdff0ab87c3274caeb1611601cc083fb876173c0f865713960f8eaade80940",
+      "path": "docs/code_reviews/assets/261104_0314_ci_python_compat_subset/compat310_python312_20261104T031325Z.json",
+      "sha256": "2afdff0ab87c3274caeb1611601cc083fb876173c0f865713960f8eaade80940",
+      "transform": "byte-identical"
+    },
+    {
+      "origin_ref": ".tmp/ci_p3_proof/coder-20261104T024119Z-25237/compat-312.json.events.jsonl",
+      "origin_sha256": "058bbecf25f4fdb7a1a62431325c967d60278474e8c44c3ebf54a8b096e33457",
+      "path": "docs/code_reviews/assets/261104_0314_ci_python_compat_subset/compat310_python312_20261104T031325Z.json.events.jsonl",
+      "sha256": "058bbecf25f4fdb7a1a62431325c967d60278474e8c44c3ebf54a8b096e33457",
+      "transform": "byte-identical"
+    },
+    {
+      "origin_ref": ".tmp/ci_p3_proof/coder-20261104T024119Z-25237/sources-before.log",
+      "origin_sha256": "0f16c2bb6ef8449c9974c92c479693e819b0873df35bb8279ab3e7a67514024c",
+      "path": "docs/code_reviews/assets/261104_0314_ci_python_compat_subset/qualified_sources_20261104T031325Z.json",
+      "sha256": "0f16c2bb6ef8449c9974c92c479693e819b0873df35bb8279ab3e7a67514024c",
+      "transform": "byte-identical"
+    },
+    {
+      "path": "docs/code_reviews/assets/261104_0314_ci_python_compat_subset/qualified_compat310_20261104T031325Z.json",
+      "sha256": "43b33a3a3aa489e0aee7d17abe109c926ca6e611371941a6f272dd232daba741",
+      "transform": "redacted derived readback; original hashes and factual identities retained"
+    }
+  ],
+  "findings": [],
+  "lane_id": "reviewer_code_risk",
+  "lane_status": "no_findings",
+  "limits": [
+    "Actual configured REVIEWER_PROFILE не передан и не подтверждён Manager: profile=unknown; SID/runner/model/effort подтверждены отдельно.",
+    "Compatibility reports/events переиспользованы только receipt-reuse-only; исходные 19 source hashes и binary basename/SHA независимо сверены. Новые compatibility runs не создавались.",
+    "Полные14 shards, verify-full и hosted CI не запускались; broader pre-discovery HEAD drift, true concurrency и изменение global skip semantics вне accepted scope.",
+    "Root exact-candidate Sol+GLM checkpoint, copy-only private scan, final p0 и native contracts/Architect/terminal gates остаются отдельными обязательствами."
+  ],
+  "model": "gpt-6.1-sol",
+  "no_findings_reason": "Независимый review девяти текущих targets и retained proof не выявил конкретных risk defects: полный partition предшествует subset, original instances/order/hooks сохраняются, negative accounting/interruption/HEAD cases краснеют, две actual compatibility axes и matrix consumer связаны с текущими source bytes.",
+  "outcome": "Risk lane без findings; готов только к canonical selector и независимой contracts lane, не к aggregate verdict.",
+  "profile": "unknown",
+  "prompt_file": "docs/tools/prompts/reviewer_status_driven.md",
+  "reasoning_effort": "ultra",
+  "run_id": "reviewer_code_risk_20261104T031325Z",
+  "runner_id": "codex",
+  "session_key": "reviewer_code_risk",
+  "sid": "01a1a403-3d4b-7252-b2d0-14d0ba318323",
+  "source_refs": [
+    ".github/workflows/checks.yml",
+    "README.md",
+    "README.ru.md",
+    "docs/tools/verify_suite.md",
+    "docs/tools/verify_suite.ru.md",
+    "scripts/run_test_shard.py",
+    "scripts/test_run_test_shard.py",
+    "scripts/test_shards.json",
+    "scripts/test_shards.schema.json"
+  ],
+  "target_ref": "BUNDLE=current bundle_sha256=526570e3af721b8e81633fbeaf2ca593661622f291d050c72d51b99b788b8c0d",
+  "written_at": "2026-11-04T03:13:25Z"
+,
+  "target_snapshot": {
+  "bundle_sha256": "526570e3af721b8e81633fbeaf2ca593661622f291d050c72d51b99b788b8c0d",
+  "code_draft": "docs/code_drafts/261104_0314_ci_python_compat_subset__code_draft.md",
+  "files": [
+    {
+      "git_mode": "100644",
+      "path": ".github/workflows/checks.yml",
+      "sha256": "6bbdf0db77358e230159247ecb7b3a080455e733b767722e22c3aaf45a8f02aa",
+      "size_bytes": 3662
+    },
+    {
+      "git_mode": "100644",
+      "path": "README.md",
+      "sha256": "38c2835a81e0ca0082532de5c05173e7136ec1c11d8968d8b73db1b1c6fac6ae",
+      "size_bytes": 9647
+    },
+    {
+      "git_mode": "100644",
+      "path": "README.ru.md",
+      "sha256": "ba4006c3e319b268948e0c50b0c491325e6637cf65f621b7677ec1fef11d9de9",
+      "size_bytes": 16757
+    },
+    {
+      "git_mode": "100644",
+      "path": "docs/tools/verify_suite.md",
+      "sha256": "eb83f6cf50e9f2dd0887a8a96f6e24a4db3393d40dffde69c0de97dd4dbf97ba",
+      "size_bytes": 5475
+    },
+    {
+      "git_mode": "100644",
+      "path": "docs/tools/verify_suite.ru.md",
+      "sha256": "2d8e101b65ac41dbf4843b2e8f1b5b949a93d1d2a23af139e89b452a1ae913a5",
+      "size_bytes": 9798
+    },
+    {
+      "git_mode": "100644",
+      "path": "scripts/run_test_shard.py",
+      "sha256": "aef13a07ba03937d2d4fa2dfdd17a9aea727ee5a79cee63fdfc71a99d3c29bb1",
+      "size_bytes": 17943
+    },
+    {
+      "git_mode": "100644",
+      "path": "scripts/test_run_test_shard.py",
+      "sha256": "609ab0c3c4dff21c6c18ca45e92cb7633daece6df0244feed43b53d7b8f585ee",
+      "size_bytes": 18457
+    },
+    {
+      "git_mode": "100644",
+      "path": "scripts/test_shards.json",
+      "sha256": "1046c7eb13b6f595b7ef784f85b3b35ef0b5f57cd761d53f80e381859ff62719",
+      "size_bytes": 30793
+    },
+    {
+      "git_mode": "100644",
+      "path": "scripts/test_shards.schema.json",
+      "sha256": "5e2f226d2276e6827a960902605fb7b79f711fdb111d06645aa330b46ceaa17f",
+      "size_bytes": 5728
+    }
+  ],
+  "hash_basis": "sha256 over canonical JSON (ensure_ascii=False, sort_keys=True, separators=(',', ':')) of hash_basis_payload; targets come from the primary code_draft_meta.targets, are normalized to repo-relative POSIX paths, sorted by path, and each file authenticates its bytes plus normalized git_mode (100755 iff the owner-execute bit is set, otherwise 100644)",
+  "hash_basis_payload": {
+    "algorithm": "sha256",
+    "files": [
+      {
+        "git_mode": "100644",
+        "path": ".github/workflows/checks.yml",
+        "sha256": "6bbdf0db77358e230159247ecb7b3a080455e733b767722e22c3aaf45a8f02aa",
+        "size_bytes": 3662
+      },
+      {
+        "git_mode": "100644",
+        "path": "README.md",
+        "sha256": "38c2835a81e0ca0082532de5c05173e7136ec1c11d8968d8b73db1b1c6fac6ae",
+        "size_bytes": 9647
+      },
+      {
+        "git_mode": "100644",
+        "path": "README.ru.md",
+        "sha256": "ba4006c3e319b268948e0c50b0c491325e6637cf65f621b7677ec1fef11d9de9",
+        "size_bytes": 16757
+      },
+      {
+        "git_mode": "100644",
+        "path": "docs/tools/verify_suite.md",
+        "sha256": "eb83f6cf50e9f2dd0887a8a96f6e24a4db3393d40dffde69c0de97dd4dbf97ba",
+        "size_bytes": 5475
+      },
+      {
+        "git_mode": "100644",
+        "path": "docs/tools/verify_suite.ru.md",
+        "sha256": "2d8e101b65ac41dbf4843b2e8f1b5b949a93d1d2a23af139e89b452a1ae913a5",
+        "size_bytes": 9798
+      },
+      {
+        "git_mode": "100644",
+        "path": "scripts/run_test_shard.py",
+        "sha256": "aef13a07ba03937d2d4fa2dfdd17a9aea727ee5a79cee63fdfc71a99d3c29bb1",
+        "size_bytes": 17943
+      },
+      {
+        "git_mode": "100644",
+        "path": "scripts/test_run_test_shard.py",
+        "sha256": "609ab0c3c4dff21c6c18ca45e92cb7633daece6df0244feed43b53d7b8f585ee",
+        "size_bytes": 18457
+      },
+      {
+        "git_mode": "100644",
+        "path": "scripts/test_shards.json",
+        "sha256": "1046c7eb13b6f595b7ef784f85b3b35ef0b5f57cd761d53f80e381859ff62719",
+        "size_bytes": 30793
+      },
+      {
+        "git_mode": "100644",
+        "path": "scripts/test_shards.schema.json",
+        "sha256": "5e2f226d2276e6827a960902605fb7b79f711fdb111d06645aa330b46ceaa17f",
+        "size_bytes": 5728
+      }
+    ],
+    "schema_version": "review_target_snapshot.hash_basis.v2"
+  },
+  "plan": "docs/plans/261104_0314_ci_python_compat_subset.md",
+  "schema_version": "review_target_snapshot.v2",
+  "target": "BUNDLE=current bundle_sha256=526570e3af721b8e81633fbeaf2ca593661622f291d050c72d51b99b788b8c0d",
+  "target_paths": [
+    ".github/workflows/checks.yml",
+    "README.md",
+    "README.ru.md",
+    "docs/tools/verify_suite.md",
+    "docs/tools/verify_suite.ru.md",
+    "scripts/run_test_shard.py",
+    "scripts/test_run_test_shard.py",
+    "scripts/test_shards.json",
+    "scripts/test_shards.schema.json"
+  ],
+  "target_snapshot": {
+    "bundle_sha256": "526570e3af721b8e81633fbeaf2ca593661622f291d050c72d51b99b788b8c0d",
+    "target": "BUNDLE=current"
+  }
+}
+}

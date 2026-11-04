@@ -1,0 +1,51 @@
+{
+  "status": "green",
+  "head_before": "e3032d4bb5d5d949411f2dcac3004f4f7b1de979",
+  "head_after": "e3032d4bb5d5d949411f2dcac3004f4f7b1de979",
+  "manifest_sha256": "1046c7eb13b6f595b7ef784f85b3b35ef0b5f57cd761d53f80e381859ff62719",
+  "python": "3.10.22 | packaged by conda-forge | (main, Oct  6 2026, 22:55:54) [Clang 19.1.7 ]",
+  "selected_shards": [],
+  "selected_subset": "compat310",
+  "planned_ids": [
+    "test_consumer_contract.ConsumerContractFacadeTests.test_public_facade_init_doctor_and_compatible_upgrade",
+    "test_contract_authority_loader_stream.ContractAuthorityLoaderStreamTests.test_header_is_not_executed_and_body_status_stays_in_current_shell",
+    "test_contract_authority_loader_stream.ContractAuthorityLoaderStreamTests.test_missing_supported_python_explains_how_to_select_it",
+    "test_contract_authority_shell.ContractAuthorityShellIntegrationTests.test_runtime_closure_and_runner_policy_drift_fail_before_effect_sentinel",
+    "test_contract_authority_snapshot.AuthoritySnapshotTests.test_duplicate_json_keys_and_non_json_bytes_are_rejected",
+    "test_contract_authority_snapshot.AuthoritySnapshotTests.test_local_marker_v3_has_exact_live_fields",
+    "test_pybin.PybinResolveTests.test_conda_prefix_precedes_path_python3",
+    "test_pybin.PybinResolveTests.test_explicit_invalid_pybin_stays_strict",
+    "test_pybin.PybinResolveTests.test_project_cache_is_ignored_in_favor_of_path_python3"
+  ],
+  "started_ids": [
+    "test_consumer_contract.ConsumerContractFacadeTests.test_public_facade_init_doctor_and_compatible_upgrade",
+    "test_contract_authority_loader_stream.ContractAuthorityLoaderStreamTests.test_header_is_not_executed_and_body_status_stays_in_current_shell",
+    "test_contract_authority_loader_stream.ContractAuthorityLoaderStreamTests.test_missing_supported_python_explains_how_to_select_it",
+    "test_contract_authority_shell.ContractAuthorityShellIntegrationTests.test_runtime_closure_and_runner_policy_drift_fail_before_effect_sentinel",
+    "test_contract_authority_snapshot.AuthoritySnapshotTests.test_duplicate_json_keys_and_non_json_bytes_are_rejected",
+    "test_contract_authority_snapshot.AuthoritySnapshotTests.test_local_marker_v3_has_exact_live_fields",
+    "test_pybin.PybinResolveTests.test_conda_prefix_precedes_path_python3",
+    "test_pybin.PybinResolveTests.test_explicit_invalid_pybin_stays_strict",
+    "test_pybin.PybinResolveTests.test_project_cache_is_ignored_in_favor_of_path_python3"
+  ],
+  "completed_ids": [
+    "test_consumer_contract.ConsumerContractFacadeTests.test_public_facade_init_doctor_and_compatible_upgrade",
+    "test_contract_authority_loader_stream.ContractAuthorityLoaderStreamTests.test_header_is_not_executed_and_body_status_stays_in_current_shell",
+    "test_contract_authority_loader_stream.ContractAuthorityLoaderStreamTests.test_missing_supported_python_explains_how_to_select_it",
+    "test_contract_authority_shell.ContractAuthorityShellIntegrationTests.test_runtime_closure_and_runner_policy_drift_fail_before_effect_sentinel",
+    "test_contract_authority_snapshot.AuthoritySnapshotTests.test_duplicate_json_keys_and_non_json_bytes_are_rejected",
+    "test_contract_authority_snapshot.AuthoritySnapshotTests.test_local_marker_v3_has_exact_live_fields",
+    "test_pybin.PybinResolveTests.test_conda_prefix_precedes_path_python3",
+    "test_pybin.PybinResolveTests.test_explicit_invalid_pybin_stays_strict",
+    "test_pybin.PybinResolveTests.test_project_cache_is_ignored_in_favor_of_path_python3"
+  ],
+  "tests_run": 9,
+  "skipped": [],
+  "wall_seconds": 82.37762287500664,
+  "durations_source": "wall-only",
+  "durations": null,
+  "completion_exact": true,
+  "result_successful": true,
+  "errors": [],
+  "failures": []
+}

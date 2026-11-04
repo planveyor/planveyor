@@ -184,6 +184,30 @@
           }
         }
       }
+    },
+    "subsets": {
+      "type": "object",
+      "propertyNames": {
+        "pattern": "^[a-z][a-z0-9_-]*$"
+      },
+      "additionalProperties": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "ids"
+        ],
+        "properties": {
+          "ids": {
+            "type": "array",
+            "minItems": 1,
+            "uniqueItems": true,
+            "items": {
+              "type": "string",
+              "pattern": "^test_[A-Za-z0-9_]+\\.[A-Za-z_][A-Za-z0-9_]*\\.test_[A-Za-z0-9_]+$"
+            }
+          }
+        }
+      }
     }
   },
   "$comment": "The stdlib runner additionally verifies file membership, unique shard/group IDs, local coverage, dynamic selector matching and exact-once canonical TestCase IDs. JSON Schema alone cannot establish these invariants."

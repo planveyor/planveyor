@@ -22,10 +22,26 @@ The default route keeps the registered non-unittest integrity checks and does no
 
 ## Platform and CI boundary
 
-First-release work is supported on macOS with a prepared Python 3.12 environment and dependencies from `requirements-dev.lock`, Git, zsh, and ripgrep available. The source-identity loader technically accepts Python 3.10–3.12; this does not expand first-release support. The configured CI matrix targets Python 3.10 and 3.12 on macOS; configuration alone is not a hosted-run result. Windows and Linux native validation have not been completed.
+First-release work is supported on macOS with a prepared Python 3.12 environment and dependencies from `requirements-dev.lock`, Git, zsh, and ripgrep available. The source-identity loader technically accepts Python 3.10–3.12; this does not expand first-release support. The configured macOS CI matrix runs all 14 full shards on Python 3.12 and one `compat310` subset on Python 3.10, with metadata checks only on the first full 3.12 row; configuration alone is not a hosted-run result. Windows and Linux native validation have not been completed.
 
 The JSON report from `planveyor_verify --format json` names the modules run by
 the installed version; pass a reported name to `--module` to select it. For consumer-project work, select the project explicitly through the facade before the command when that module is designed to inspect the consumer tree.
+
+## CI compatibility subset
+
+The exact IDs in `scripts/test_shards.json` define `compat310`: loader stream and failure handling, interpreter selection, source-identity parsing, and the real public facade/Copier init/doctor/upgrade path. This is a bounded compatibility check, not a full Python 3.10 suite or an expansion of the supported first-release environment. The mypy target remains Python 3.10.
+
+From the physical checkout with the selected prepared interpreter:
+
+```zsh
+"$PYBIN" -B scripts/run_test_shard.py --matrix
+"$PYBIN" -B scripts/run_test_shard.py --check
+"$PYBIN" -B scripts/run_test_shard.py --subset compat310 --report <fresh-report-path>
+```
+
+`--matrix` reads structure without importing tests. `--check` imports canonical discovery and validates the full exact-once partition plus all configured subset IDs, without running test bodies. Subset execution repeats those checks before filtering the original cases in canonical order, preserving module/class hooks. Unknown, empty, duplicate or missing IDs and an invalid full partition fail closed. The report parent must exist, and report/event paths must be fresh. `--subset` cannot be combined with full-shard or local-profile selection.
+
+The report and its `.events.jsonl` companion bind ordered IDs, manifest hash, Python identity, HEAD and completion accounting. Subsets report `selected_subset=compat310` and `selected_shards=[]`; full/local runs retain their shard IDs and `selected_subset=null`. Incomplete accounting, interruption or HEAD drift at the existing execution boundary cannot produce green. A local compatibility result does not establish hosted CI success, full-suite coverage on Python 3.10 or a push-time guarantee; the full verification routes above remain separate.
 
 ## What the result means
 

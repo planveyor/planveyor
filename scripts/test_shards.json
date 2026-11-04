@@ -299,6 +299,9 @@
         },
         {
           "module": "test_upstream_request"
+        },
+        {
+          "module": "test_run_test_shard"
         }
       ]
     },
@@ -729,5 +732,20 @@
         }
       ]
     }
-  ]
+  ],
+  "subsets": {
+    "compat310": {
+      "ids": [
+        "test_contract_authority_loader_stream.ContractAuthorityLoaderStreamTests.test_header_is_not_executed_and_body_status_stays_in_current_shell",
+        "test_contract_authority_loader_stream.ContractAuthorityLoaderStreamTests.test_missing_supported_python_explains_how_to_select_it",
+        "test_contract_authority_shell.ContractAuthorityShellIntegrationTests.test_runtime_closure_and_runner_policy_drift_fail_before_effect_sentinel",
+        "test_pybin.PybinResolveTests.test_project_cache_is_ignored_in_favor_of_path_python3",
+        "test_pybin.PybinResolveTests.test_explicit_invalid_pybin_stays_strict",
+        "test_pybin.PybinResolveTests.test_conda_prefix_precedes_path_python3",
+        "test_contract_authority_snapshot.AuthoritySnapshotTests.test_local_marker_v3_has_exact_live_fields",
+        "test_contract_authority_snapshot.AuthoritySnapshotTests.test_duplicate_json_keys_and_non_json_bytes_are_rejected",
+        "test_consumer_contract.ConsumerContractFacadeTests.test_public_facade_init_doctor_and_compatible_upgrade"
+      ]
+    }
+  }
 }

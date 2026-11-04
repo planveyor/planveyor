@@ -1,0 +1,395 @@
+{
+  "axes": {
+    "310": {
+      "bare_python_origin_sha256": "8a25f0b38d2b353b2bf6609c5ff31cb127d5d583f77444d95e589cb8d856780b",
+      "command_elapsed_seconds": 83.7659101486206,
+      "events_ref": "docs/code_reviews/assets/261104_0314_ci_python_compat_subset/compat310_python310_20261104T031325Z.json.events.jsonl",
+      "events_sha256": "058bbecf25f4fdb7a1a62431325c967d60278474e8c44c3ebf54a8b096e33457",
+      "executable": "<REDACTED>",
+      "executable_basename": "python3.10",
+      "executable_sha256": "cc0939d53d6d23b36e6d02b39a43808569758bb575af507b9efa6bb4f84251ee",
+      "identity_origin_sha256": "d58c7c55d5d20bdc51bfa9821d8a8c6e1e663ab4626c2b69cf0c8e3eb66f9647",
+      "locked": {
+        "PyYAML": "6.0.3",
+        "copier": "9.18.2",
+        "mypy": "1.15.0",
+        "mypy_extensions": "1.1.0",
+        "typing_extensions": "4.15.0"
+      },
+      "prerequisites_origin_sha256": "7dd0b71c0a44098fbde39c2c2db0eb88fa6dfdacea5cdba3922fd26fc20d06fa",
+      "python": "3.10.22 | packaged by conda-forge | (main, Oct  6 2026, 22:55:54) [Clang 19.1.7 ]",
+      "report_ref": "docs/code_reviews/assets/261104_0314_ci_python_compat_subset/compat310_python310_20261104T031325Z.json",
+      "report_sha256": "003019765c495fcc9c659d4092ddfd971c4d2e16f20f7e6fa76a1b7171049af0",
+      "tmpdir_outside_git": true,
+      "wall_seconds": 82.37762287500664
+    },
+    "312": {
+      "bare_python_origin_sha256": "0f13c4a3205c40b89ed009156d9daac2ec5483e55d08800c6109ea1d6b41a3f4",
+      "command_elapsed_seconds": 86.40516591072083,
+      "events_ref": "docs/code_reviews/assets/261104_0314_ci_python_compat_subset/compat310_python312_20261104T031325Z.json.events.jsonl",
+      "events_sha256": "058bbecf25f4fdb7a1a62431325c967d60278474e8c44c3ebf54a8b096e33457",
+      "executable": "<REDACTED>",
+      "executable_basename": "python3.12",
+      "executable_sha256": "9e78d18ffca959d9f44a7c363360a4b24f108e3eab576bd525c42031612a1505",
+      "identity_origin_sha256": "6b3e27845279cc264b26a0b6ee46f08f94be20575cdf56727d8dae5a480711cc",
+      "locked": {
+        "PyYAML": "6.0.3",
+        "copier": "9.18.2",
+        "mypy": "1.15.0",
+        "mypy_extensions": "1.1.0",
+        "typing_extensions": "4.15.0"
+      },
+      "prerequisites_origin_sha256": "61b981808abf7b55cb564a5586c0d8b15855142b60152bedfa1133e517e44d56",
+      "python": "3.12.14 (main, Sep  3 2026, 03:46:19) [Clang 21.1.8 ]",
+      "report_ref": "docs/code_reviews/assets/261104_0314_ci_python_compat_subset/compat310_python312_20261104T031325Z.json",
+      "report_sha256": "2afdff0ab87c3274caeb1611601cc083fb876173c0f865713960f8eaade80940",
+      "tmpdir_outside_git": true,
+      "wall_seconds": 84.74325404097908
+    }
+  },
+  "canonical_coverage": {
+    "canonical_tests": 3527,
+    "manifest_sha256": "1046c7eb13b6f595b7ef784f85b3b35ef0b5f57cd761d53f80e381859ff62719",
+    "shards": {
+      "s01": 234,
+      "s02": 222,
+      "s03": 352,
+      "s04": 169,
+      "s05": 360,
+      "s06": 513,
+      "s07": 263,
+      "s08": 318,
+      "s09": 75,
+      "s10": 109,
+      "s11": 34,
+      "s12": 48,
+      "s13": 172,
+      "s14": 658
+    }
+  },
+  "capability_sources": {
+    "duplicate_json": "scripts/test_contract_authority_snapshot.py:686",
+    "facade_copier": "scripts/test_consumer_contract.py:2016",
+    "loader_missing_python": "scripts/test_contract_authority_loader_stream.py:17",
+    "loader_stream": "scripts/test_contract_authority_loader_stream.py:47",
+    "python_cache": "scripts/test_pybin.py:103",
+    "python_conda": "scripts/test_pybin.py:157",
+    "python_strict": "scripts/test_pybin.py:137",
+    "runtime_policy_deny_before_effect": "scripts/test_contract_authority_shell.py:3624",
+    "strict_marker": "scripts/test_contract_authority_snapshot.py:617"
+  },
+  "command_status": {
+    "bare-python-310": {
+      "child_rc": "0",
+      "elapsed_seconds": "0.071090936660766602",
+      "pipeline_rc": "0",
+      "tee_rc": "0"
+    },
+    "bare-python-312": {
+      "child_rc": "0",
+      "elapsed_seconds": "0.07119297981262207",
+      "pipeline_rc": "0",
+      "tee_rc": "0"
+    },
+    "bundle-preflight": {
+      "child_rc": "0",
+      "elapsed_seconds": "10.872515916824341",
+      "pipeline_rc": "0",
+      "tee_rc": "0"
+    },
+    "compat-310": {
+      "child_rc": "0",
+      "elapsed_seconds": "83.765910148620605",
+      "pipeline_rc": "0",
+      "tee_rc": "0"
+    },
+    "compat-312": {
+      "child_rc": "0",
+      "elapsed_seconds": "86.405165910720825",
+      "pipeline_rc": "0",
+      "tee_rc": "0"
+    },
+    "coverage-312": {
+      "child_rc": "0",
+      "elapsed_seconds": "1.6937940120697021",
+      "pipeline_rc": "0",
+      "tee_rc": "0"
+    },
+    "diff-hygiene": {
+      "child_rc": "0",
+      "elapsed_seconds": "0.0076539516448974609",
+      "pipeline_rc": "0",
+      "tee_rc": "0"
+    },
+    "doc-hygiene": {
+      "child_rc": "0",
+      "elapsed_seconds": "0.070069074630737305",
+      "pipeline_rc": "0",
+      "tee_rc": "0"
+    },
+    "doc-links": {
+      "child_rc": "0",
+      "elapsed_seconds": "0.11176609992980957",
+      "pipeline_rc": "0",
+      "tee_rc": "0"
+    },
+    "i18n-selected": {
+      "child_rc": "0",
+      "elapsed_seconds": "0.015743017196655273",
+      "pipeline_rc": "0",
+      "tee_rc": "0"
+    },
+    "i18n-status": {
+      "child_rc": "0",
+      "elapsed_seconds": "0.049859046936035156",
+      "pipeline_rc": "0",
+      "tee_rc": "0"
+    },
+    "identity-310": {
+      "child_rc": "0",
+      "elapsed_seconds": "0.055996179580688477",
+      "pipeline_rc": "0",
+      "tee_rc": "0"
+    },
+    "identity-312": {
+      "child_rc": "0",
+      "elapsed_seconds": "0.045624017715454102",
+      "pipeline_rc": "0",
+      "tee_rc": "0"
+    },
+    "matrix": {
+      "child_rc": "0",
+      "elapsed_seconds": "0.036085128784179688",
+      "pipeline_rc": "0",
+      "tee_rc": "0"
+    },
+    "plan-lint": {
+      "child_rc": "0",
+      "elapsed_seconds": "10.032076120376587",
+      "pipeline_rc": "0",
+      "tee_rc": "0"
+    },
+    "prerequisites-310": {
+      "child_rc": "0",
+      "elapsed_seconds": "0.081518888473510742",
+      "pipeline_rc": "0",
+      "tee_rc": "0"
+    },
+    "prerequisites-312": {
+      "child_rc": "0",
+      "elapsed_seconds": "0.066846132278442383",
+      "pipeline_rc": "0",
+      "tee_rc": "0"
+    },
+    "proof-readback": {
+      "child_rc": "0",
+      "elapsed_seconds": "0.020788908004760742",
+      "pipeline_rc": "0",
+      "tee_rc": "0"
+    },
+    "sources-after": {
+      "child_rc": "0",
+      "elapsed_seconds": "0.02252197265625",
+      "pipeline_rc": "0",
+      "tee_rc": "0"
+    },
+    "sources-before": {
+      "child_rc": "0",
+      "elapsed_seconds": "0.02178502082824707",
+      "pipeline_rc": "0",
+      "tee_rc": "0"
+    },
+    "stamp-readme": {
+      "child_rc": "0",
+      "elapsed_seconds": "0.043600082397460938",
+      "pipeline_rc": "0",
+      "tee_rc": "0"
+    },
+    "stamp-verify": {
+      "child_rc": "0",
+      "elapsed_seconds": "0.042932987213134766",
+      "pipeline_rc": "0",
+      "tee_rc": "0"
+    },
+    "synthetic-312": {
+      "child_rc": "0",
+      "elapsed_seconds": "2.2252068519592285",
+      "pipeline_rc": "0",
+      "tee_rc": "0"
+    },
+    "tomli-310": {
+      "child_rc": "0",
+      "elapsed_seconds": "0.030848979949951172",
+      "pipeline_rc": "0",
+      "tee_rc": "0"
+    },
+    "typecheck": {
+      "child_rc": "0",
+      "elapsed_seconds": "1.9104709625244141",
+      "pipeline_rc": "0",
+      "tee_rc": "0"
+    }
+  },
+  "continuity": "receipt-reuse-only",
+  "limits": [
+    "Локальный retained proof; hosted/full14/full verify не проверены.",
+    "Existing post-discovery HEAD boundary и global skip semantics не расширяются."
+  ],
+  "matrix": [
+    {
+      "meta": true,
+      "python-version": "3.12",
+      "shard": "s01"
+    },
+    {
+      "meta": false,
+      "python-version": "3.12",
+      "shard": "s02"
+    },
+    {
+      "meta": false,
+      "python-version": "3.12",
+      "shard": "s03"
+    },
+    {
+      "meta": false,
+      "python-version": "3.12",
+      "shard": "s04"
+    },
+    {
+      "meta": false,
+      "python-version": "3.12",
+      "shard": "s05"
+    },
+    {
+      "meta": false,
+      "python-version": "3.12",
+      "shard": "s06"
+    },
+    {
+      "meta": false,
+      "python-version": "3.12",
+      "shard": "s07"
+    },
+    {
+      "meta": false,
+      "python-version": "3.12",
+      "shard": "s08"
+    },
+    {
+      "meta": false,
+      "python-version": "3.12",
+      "shard": "s09"
+    },
+    {
+      "meta": false,
+      "python-version": "3.12",
+      "shard": "s10"
+    },
+    {
+      "meta": false,
+      "python-version": "3.12",
+      "shard": "s11"
+    },
+    {
+      "meta": false,
+      "python-version": "3.12",
+      "shard": "s12"
+    },
+    {
+      "meta": false,
+      "python-version": "3.12",
+      "shard": "s13"
+    },
+    {
+      "meta": false,
+      "python-version": "3.12",
+      "shard": "s14"
+    },
+    {
+      "meta": false,
+      "python-version": "3.10",
+      "subset": "compat310"
+    }
+  ],
+  "ordered_ids": [
+    "test_consumer_contract.ConsumerContractFacadeTests.test_public_facade_init_doctor_and_compatible_upgrade",
+    "test_contract_authority_loader_stream.ContractAuthorityLoaderStreamTests.test_header_is_not_executed_and_body_status_stays_in_current_shell",
+    "test_contract_authority_loader_stream.ContractAuthorityLoaderStreamTests.test_missing_supported_python_explains_how_to_select_it",
+    "test_contract_authority_shell.ContractAuthorityShellIntegrationTests.test_runtime_closure_and_runner_policy_drift_fail_before_effect_sentinel",
+    "test_contract_authority_snapshot.AuthoritySnapshotTests.test_duplicate_json_keys_and_non_json_bytes_are_rejected",
+    "test_contract_authority_snapshot.AuthoritySnapshotTests.test_local_marker_v3_has_exact_live_fields",
+    "test_pybin.PybinResolveTests.test_conda_prefix_precedes_path_python3",
+    "test_pybin.PybinResolveTests.test_explicit_invalid_pybin_stays_strict",
+    "test_pybin.PybinResolveTests.test_project_cache_is_ignored_in_favor_of_path_python3"
+  ],
+  "protected_head_blobs_equal": true,
+  "qualified_envelope_origin_sha256": "665101d214a74bdce19fb8a6debd1b85ec782cf810eabf75aca2396eef609b76",
+  "qualified_reports_events_sha256": {
+    "compat-310.json": "003019765c495fcc9c659d4092ddfd971c4d2e16f20f7e6fa76a1b7171049af0",
+    "compat-310.json.events.jsonl": "058bbecf25f4fdb7a1a62431325c967d60278474e8c44c3ebf54a8b096e33457",
+    "compat-312.json": "2afdff0ab87c3274caeb1611601cc083fb876173c0f865713960f8eaade80940",
+    "compat-312.json.events.jsonl": "058bbecf25f4fdb7a1a62431325c967d60278474e8c44c3ebf54a8b096e33457"
+  },
+  "redaction": "Локальные executable paths заменены на <REDACTED>; version/basename/SHA и исходные report/events bytes сохранены.",
+  "retention": "durable operator/review evidence",
+  "reviewer_checks": {
+    "hygiene": {
+      "checked_paths": 11,
+      "git_diff_check_rc": 0,
+      "merge_markers": 0,
+      "trailing_whitespace": 0
+    },
+    "source_producer": {
+      "bundle_sha256": "526570e3af721b8e81633fbeaf2ca593661622f291d050c72d51b99b788b8c0d",
+      "command": "\"$PLANVEYOR_RUNTIME_ROOT/bin/planveyor\" --project \"$PWD\" planveyor_review_target_snapshot docs/plans/261104_0314_ci_python_compat_subset.md --current-bundle",
+      "stdout_sha256": "75432fb01721f5e3edd03f8053abc42b597fd65ff40176a4e64abcba599413e7"
+    },
+    "synthetic": {
+      "command": "\"$PYBIN\" -B -m unittest discover -s scripts -p test_run_test_shard.py -v",
+      "elapsed_suite_seconds": 2.356,
+      "log_sha256": "9d12c45bf7907a824be1fd13aa458126b79478bb91c09c24779bfa9cf94b6482",
+      "rc": {
+        "child_rc": 0,
+        "pipeline_rc": 0,
+        "tee_rc": 0
+      },
+      "result": "OK",
+      "tests_run": 10
+    }
+  },
+  "selection_before_execution": "partition -> validate_subsets -> run_selected",
+  "source_current_equal": true,
+  "source_files": 19,
+  "source_inventory": {
+    ".github/workflows/checks.yml": "6bbdf0db77358e230159247ecb7b3a080455e733b767722e22c3aaf45a8f02aa",
+    "Makefile": "605c5e48913ea1a0d982d1adc15d61fc12831db26e625f7e6005734215c4443c",
+    "README.md": "38c2835a81e0ca0082532de5c05173e7136ec1c11d8968d8b73db1b1c6fac6ae",
+    "README.ru.md": "ba4006c3e319b268948e0c50b0c491325e6637cf65f621b7677ec1fef11d9de9",
+    "docs/tools/verify_suite.md": "eb83f6cf50e9f2dd0887a8a96f6e24a4db3393d40dffde69c0de97dd4dbf97ba",
+    "docs/tools/verify_suite.ru.md": "2d8e101b65ac41dbf4843b2e8f1b5b949a93d1d2a23af139e89b452a1ae913a5",
+    "i18n/pairs.json": "4a2990e0621b66e45a7b2d1f3e5862f2fab34f8722637bc8ed9e2333d2e5435e",
+    "i18n/terms.md": "43b1f8534b22d21f60fba51897b8384b913c3188b30f4cf923c5440f8e906b38",
+    "pyproject.toml": "70a13936bc81ab9cba7074cde22808a2c8359c090a9712e059b0d3fac8e886db",
+    "requirements-dev.lock": "dbf0e5621222e3a63ab9edcfb2b6180877dd6a6edbcff262ae32318eef64973f",
+    "scripts/run_test_shard.py": "aef13a07ba03937d2d4fa2dfdd17a9aea727ee5a79cee63fdfc71a99d3c29bb1",
+    "scripts/test_consumer_contract.py": "fd669e4e6f00af589b427744cbfbdf2a34675974f635f6a8c858943d9a531e39",
+    "scripts/test_contract_authority_loader_stream.py": "d711b227adc70078e2c7b1d1064da574d474ccd80b38c2cea7c2ef371bc35a8b",
+    "scripts/test_contract_authority_shell.py": "6ecc69ba0dd5f3dc87acfc762ca19bf1fd6b21c06e2f67489976963a7aa31465",
+    "scripts/test_contract_authority_snapshot.py": "b0eb100a0223e4def549dc2523077187295147e4b47bd0a0bbdbfe0155130f73",
+    "scripts/test_pybin.py": "2f7a76a68f8f0fdb2a328cdcf4ea28a8d29a8b367ba0e56bd8abbe72031ed2b7",
+    "scripts/test_run_test_shard.py": "609ab0c3c4dff21c6c18ca45e92cb7633daece6df0244feed43b53d7b8f585ee",
+    "scripts/test_shards.json": "1046c7eb13b6f595b7ef784f85b3b35ef0b5f57cd761d53f80e381859ff62719",
+    "scripts/test_shards.schema.json": "5e2f226d2276e6827a960902605fb7b79f711fdb111d06645aa330b46ceaa17f"
+  },
+  "source_inventory_origin_ref": ".tmp/ci_p3_proof/coder-20261104T024119Z-25237/sources-before.log",
+  "source_inventory_ref": "docs/code_reviews/assets/261104_0314_ci_python_compat_subset/qualified_sources_20261104T031325Z.json",
+  "source_inventory_sha256": "0f16c2bb6ef8449c9974c92c479693e819b0873df35bb8279ab3e7a67514024c",
+  "state": "verified",
+  "unchanged_ast": [
+    "partition",
+    "TrackedResult",
+    "completed_exactly",
+    "green predicate"
+  ]
+}
