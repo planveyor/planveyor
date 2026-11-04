@@ -52,6 +52,7 @@ These terms stay in Latin script in Russian text too. Statuses, plan sections, v
 | Codex home | Каталог настроек Codex: `PLANVEYOR_CODEX_HOME` или `~/.codex`. |
 | Self-Planveyor | Работа над самим Planveyor: проектом служит его корень. |
 | doctor | Проверки без запуска модели: `planveyor_entry_doctor`, `planveyor_consumer_doctor`. |
+| doc gardening | Ручная сессия по плейбуку `docs/playbooks/doc_gardening.md`: длинные правила сворачивают в короткие точки входа и чистят устаревшее. Своего скрипта нет. |
 
 ### Developer words / Общие слова разработчиков
 
@@ -171,6 +172,7 @@ Use the pair from the table. In Russian text, the English term may follow in par
 | contracts lane | линия контракта | Решено. `reviewer_code_contracts`. Сайт называет её иначе: «requirements», «требования», «соответствие задаче». |
 | Copier answers | ответы Copier; файл ответов Copier |   |
 | core | ядро | Только на сайте. В документации — «engine», «движок». |
+| cross-section | срез | Срез опубликованной истории в главе `docs/guides/learn/mechanics.md`, раздел «What the published history shows». |
 | current plan; selected plan | текущий план; выбранный план | Путь к нему хранится в `.planveyor.planpath`. |
 | custom pipeline | пошаговый режим Manager | Manager по очереди вызывает роли через обёртки, каждую в своей сессии: `planveyor_manager_custom_pipeline_tui`. Не путать с отдельным запуском роли. |
 | deadlock | тупик после вопроса Reviewer | В коде — `reviewer_manager_deadlock`. |
@@ -189,6 +191,8 @@ Use the pair from the table. In Russian text, the English term may follow in par
 | doc lint; documentation linter | линтер документации | `planveyor_doc_lint`, `make doc-lint`. |
 | docs closeout | закрытие документов | Решено. Варианты «document closeout», «docs tail», «docs finalize» в тексте не используются. Имена `planveyor_docs_closeout` и промптов `*_docs_finalize_*` не меняются. |
 | docs hygiene | гигиена документов |   |
+| docs sweep; shared document sweep | обзор общих документов | Шаг `canon_sweep` проверки после слияния. |
+| documentation search | поиск по документации | `planveyor_docs_retrieve` и `planveyor_docs_get`. «Квитанция поиска» — search receipt. |
 | draft | черновик | Статусы вида `Architect draft` не переводятся. |
 | drift | расхождение | Например, `routing_carrier_drift`, `head_drift`. |
 | elevated permission | повышение прав | Запрос роли на действие вне песочницы, например на запись в `.git`. |
@@ -237,6 +241,8 @@ Use the pair from the table. In Russian text, the English term may follow in par
 | manifest | манифест |   |
 | manual console mode; manual mode | ручной режим в консоли; ручной режим | Работа с планом в sibling отдельными командами `planveyor sibling …`: каждая заканчивается и выходит, коммитит Owner командой `close --commit`. Пара к «режим TUI». |
 | matching row | совпавшая запись | Запись списка отложенных задач по той же теме. |
+| mechanic; mechanics | механика | Правило процесса с явным носителем: документом, инструкцией роли или скриптом. |
+| mechanics map; process map | карта механик; карта процесса | Глава `docs/guides/learn/mechanics.md`: «Planveyor mechanics: process map». |
 | merge | слияние | Режим `merge` и имена команд пишутся латиницей. |
 | merge mode | режим merge | Режим Manager для проверки после слияния. |
 | merge tracker | трекер слияния | Локальный файл `.planveyor.merge_tracker.md`. |
@@ -260,6 +266,7 @@ Use the pair from the table. In Russian text, the English term may follow in par
 | plan harvest | сбор решений из планов | Шаг `plan_harvest`. |
 | plan header | шапка плана |   |
 | plan linter | линтер плана | `planveyor_plan_lint`. |
+| plan metadata | метаданные плана | Блок `## Meta`, объект `plan_meta`. |
 | plan queue | очередь планов | Режим Manager для нескольких связанных планов подряд. |
 | plan status | статус плана | Строка `**Status:**` в шапке плана. |
 | planning contour | контур планирования | Анализ и декомпозиция. |
@@ -269,6 +276,7 @@ Use the pair from the table. In Russian text, the English term may follow in par
 | pointer (plan pointer, session pointer) | указатель (указатель плана, указатель сессии) | Локальные файлы вида `.planveyor.planpath`. |
 | post-merge audit | аудит после слияния | Шаг `post_merge_audit`. |
 | post-merge check | проверка после слияния | Проверка диапазона `BASE..HEAD`, уже слитого в основную ветку. |
+| pre-merge range check | проверка диапазона до слияния | `planveyor_ai_gate`. |
 | preflight | предварительная проверка | Проверка набора перед `Ready for Coder`, ключ `--preflight`. |
 | preview | просмотр | Просмотр перед `close --commit`. |
 | process improvement (PI) | предложение по процессу (PI) | Записи лежат в `docs/process_improvements/`. |
@@ -313,15 +321,18 @@ Use the pair from the table. In Russian text, the English term may follow in par
 | runtime pin | привязка к копии Planveyor, из которой идут команды |   |
 | sandbox | песочница | Ограничения агентного харнеса на файлы, сеть и команды. |
 | sanitizer | очистка от личных данных |   |
+| SATD (self-admitted technical debt) | SATD (самопризнанный технический долг) | Ищет `scripts/satd_scan.py`. |
 | scope | границы задачи | Раздел плана — `## Scope`. |
 | scope check | проверка состава набора | `planveyor_plan_bundle --scope-check`: перед diff Reviewer проверяет только состав и целостность набора; JSON `planveyor_plan_bundle_scope.v1`, код 0 — только `scope_ok=true`. Здесь scope — состав набора, а не границы задачи. |
 | scope expansion | расширение границ задачи | `plan_meta.scope_expansion`. |
+| searchable archive | поисковый архив | Шаг `docs_hygiene_archive`, `scripts/docs_archive.py`. |
 | second pass | второй проход | Проход CENSOR. |
 | secrets; private local paths | секреты; личные пути |   |
 | selectors | указатели | Локальные файлы `.planveyor.*`. |
 | session; role session | сессия; сессия роли |   |
 | session key | ключ сессии | Имя сессии роли в `.planveyor.session.<key>`. |
 | severity scale | шкала серьёзности | S1, S2, S3 в шаблонах ревью. |
+| short route | короткий маршрут | Пропуск второго прохода для правок только документов или только тестов; условия проверяет `planveyor_q_small_slice_json`. |
 | shortage | дефицит | Столбец `Shortage` в SQL-примере. |
 | sibling template | шаблон sibling | Каталог `copier_template/`. |
 | single-role launch | отдельный запуск роли | Owner сам запускает одну роль через её обёртку. На сайте режим подписан «По шагам» и «Запускать выбранную роль», по-английски — «Step by step» и «Launch a chosen role». Не путать с пошаговым режимом Manager. |
@@ -357,6 +368,7 @@ Use the pair from the table. In Russian text, the English term may follow in par
 | visual check | визуальная проверка |   |
 | working tree | рабочая копия | Файлы проекта на диске вне индекса Git. |
 | wrapper | обёртка | Функция движка, которая готовит ход роли и запускает агентный харнес. |
+| XML role context | XML-контекст роли | `.tmp/role_bundles/<role>.xml`, собирает `scripts/build_role_bundles.py`. |
 
 ## 3. Approved phrases / Утверждённые фразы
 

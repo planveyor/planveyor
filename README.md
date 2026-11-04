@@ -58,7 +58,7 @@ The focused public guides are:
 - [Lifecycle and packets](docs/guides/lifecycle-and-packets.md)
 - [Golden paths](docs/guides/golden_paths.md)
 - [Owner guide](planveyor_owner_book.md)
-- [How Planveyor works](docs/guides/learn/README.md): the learning section
+- [How Planveyor works](docs/guides/learn/README.md): the learning section and the [mechanics map](docs/guides/learn/mechanics.md)
 - [Verification suite](docs/tools/verify_suite.md)
 - [First-release backlog](docs/release_backlog.md)
 - [Role definitions](docs/roles/index.md)

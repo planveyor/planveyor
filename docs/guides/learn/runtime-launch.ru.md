@@ -1,4 +1,4 @@
-<!-- i18n: pair=docs/guides/learn/runtime-launch.md pair-sha256=da0762f909be00f6822959e82c26b2cf95b5e0d1dfae3f0439915172c44d8a50 self-sha256=e5f2a47a45e6cbaa7be759c8852ae47bf2bff33cce5d17a686b43b0f89d5b697 -->
+<!-- i18n: pair=docs/guides/learn/runtime-launch.md pair-sha256=a2865a1bd6322b44a936a930c9d2daa737b1061a466a5de61820ffed6deb48cc self-sha256=f5a69e2784595fee8b48ac610cef6a46aaba2fd40b234b947ddf6c57fc05be10 -->
 # Запуск: команды, обёртки, харнесы
 
 [English](runtime-launch.md) · **Русский**
@@ -201,7 +201,7 @@ Manager — главная сессия Codex на модели из верхн�
 
 Второй проход CENSOR Manager запускает, когда роль передала работу дальше. Проход делает та роль, которая сдала работу: Architect при статусе `Architect draft` или `Ready for Planner`, Planner при `Ready for Coder`, Coder при `Ready for Review`. Это отдельный `followup_task` тому же агенту с промптом CENSOR и новым `CENSOR_DISPATCH_ID`. Потом Manager проверяет запись прохода скриптом `censor_receipts_harvest.py`, и работа идёт дальше только при состоянии `complete`.
 
-Для небольших правок второй проход можно пропустить, если скрипт `planveyor_q_small_slice_json` до и после хода роли подтверждает, что задача подходит под короткий маршрут. Условия описаны в шаге 2a `Native cold-start CENSOR gate` [промпта Manager](../../tools/prompts/manager_collab_pipeline.md) и в [правилах Manager](../../roles/manager.md).
+Для правок только документов или только тестов второй проход можно пропустить, если команда `planveyor_q_small_slice_json` до и после хода роли подтверждает, что задача подходит под короткий маршрут. Условия описаны в шаге 2a `Native cold-start CENSOR gate` [промпта Manager](../../tools/prompts/manager_collab_pipeline.md) и в [правилах Manager](../../roles/manager.md).
 
 Режим merge поднимает тех же агентов, кроме Planner, и работает с диапазоном уже слитых коммитов. Его запускают `planveyor_merge_collab_cmd` или `planveyor_merge_collab_tui` (то же, что `planveyor_manager_collab_tui --merge`); он описан в главе [«Проверка после слияния»](postmerge.ru.md). Очередь из нескольких планов (`planveyor_q_set`, `planveyor_manager_collab_tui --q`) в первой версии отложена и сквозным прогоном не проверена. `planveyor sibling run` работает с одним выбранным планом.
 

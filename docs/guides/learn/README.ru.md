@@ -1,4 +1,4 @@
-<!-- i18n: pair=docs/guides/learn/README.md pair-sha256=224e33feb79ebbb1bbb29f1b52a9d599550717ca91ea5e4a7d332e27c566f3aa self-sha256=458a203cfbf15fed436e5db5617a15357d67ad346c9167ff8b239170a8a395ac -->
+<!-- i18n: pair=docs/guides/learn/README.md pair-sha256=aaa99dcd6f9d26e0eb22b6dace836a97ef7316ba991cc1a6addabfd7e0c161d7 self-sha256=0e79b4c678b2957936ba70a2f67382224e197768cc0dd022785d60db36b0677a -->
 # Как работает Planveyor
 
 [English](README.md) · **Русский**
@@ -39,6 +39,7 @@ Planveyor организует работу ИИ над проектом. Цел
 
 | Глава | На какой вопрос отвечает |
 | --- | --- |
+| [Механики Planveyor: карта процесса](mechanics.ru.md) | Из каких правил состоит процесс, как они связаны и где читать о каждом подробнее? |
 | [Роли и файлы задачи](roles-artifacts.ru.md) | Кто что решает и какие файлы передаёт дальше? |
 | [Сквозной пример: какие товары пора пополнить](sql-example.ru.md) | Как бизнес-правило превращается в процедуру и тесты? |
 | [План и его статусы](plan-lifecycle.ru.md) | Где записан текущий шаг задачи и кто его читает? |

@@ -1,4 +1,4 @@
-<!-- i18n: pair=README.md pair-sha256=d4e97a6385c03dc4de3f67812af76d97f4335bc8cca8000eddfdbdeed1959268 self-sha256=c1d38bd619606f71d0977bc98d79564736298c5b214651473b51ffd310a2d6d8 -->
+<!-- i18n: pair=README.md pair-sha256=299b86aee89b112ddb9017c735092f3b5239fa99deba1fa0e12f4b7741554072 self-sha256=5398538d79f9c69db84678ab5a1be930450269e625c47eab4b61fe7138707f09 -->
 # Planveyor
 
 [English](README.md) · **Русский**
@@ -59,7 +59,7 @@ Planveyor — самостоятельный набор инструментов
 - [Жизненный цикл и пакеты](docs/guides/lifecycle-and-packets.ru.md)
 - [Реестр повторяемых потоков](docs/guides/golden_paths.ru.md)
 - [Краткое руководство Owner](planveyor_owner_book.ru.md)
-- [Как работает Planveyor](docs/guides/learn/README.ru.md): учебный раздел
+- [Как работает Planveyor](docs/guides/learn/README.ru.md): учебный раздел и [карта механик](docs/guides/learn/mechanics.ru.md)
 - [Маршруты проверки](docs/tools/verify_suite.ru.md)
 - [Обязательства первого выпуска](docs/release_backlog.md)
 - [Документы ролей](docs/roles/index.md)

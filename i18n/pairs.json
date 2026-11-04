@@ -86,6 +86,10 @@
       "copy": "docs/guides/learn/README.ru.md"
     },
     {
+      "source": "docs/guides/learn/mechanics.md",
+      "copy": "docs/guides/learn/mechanics.ru.md"
+    },
+    {
       "source": "docs/guides/learn/roles-artifacts.md",
       "copy": "docs/guides/learn/roles-artifacts.ru.md"
     },

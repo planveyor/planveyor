@@ -90,7 +90,7 @@ Before passing the work on, Manager asks the role that hands it over to go throu
 
 On the second pass, the role checks whether everything discussed is written into the plan and the draft, and adds what is missing without going beyond its authority. It notes the result in the evidence log. If a question about the meaning of the task comes up, the work returns to Architect. Manager rereads the result of the pass itself and ties it to the number of its own call. The mark is valid only for this handoff: if the plan changes later, it no longer counts. CENSOR does not replace review: it is a self-check before the handoff.
 
-For small edits, the second pass can be skipped (the conditions are in the [Launch: commands, wrappers, agent harnesses](runtime-launch.md#manager-collab) chapter).
+For edits of only documents or only tests, the second pass can be skipped (the conditions are in the [Launch: commands, wrappers, agent harnesses](runtime-launch.md#manager-collab) chapter).
 
 In the GetReorderCandidates task, the operator launched the roles, so Manager and CENSOR are not visible in its files. How Manager launches the roles is told in the [launch chapter](runtime-launch.md).
 

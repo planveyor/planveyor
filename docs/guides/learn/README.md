@@ -38,6 +38,7 @@ A real example: in the SQL project, the roles solved the task “which products 
 
 | Chapter | Question it answers |
 | --- | --- |
+| [Planveyor mechanics: process map](mechanics.md) | Which rules make up the process, how are they connected, and where can you read more about each? |
 | [Roles and task files](roles-artifacts.md) | Who decides what, and which files do they hand on? |
 | [Running example: which products to reorder](sql-example.md) | How does a business rule turn into a procedure and tests? |
 | [The plan and its statuses](plan-lifecycle.md) | Where is the current step of the task recorded, and who reads it? |

@@ -1,0 +1,7 @@
+flowchart TB
+A["Task: plan, work, review, and commit"] -.-> F["Separately after the merge: docs sweep and archive"]
+A --> B["Docs closeout: results, PIs, and follow-ups"]
+B -.-> C["Separate PI triage: Architect and Owner decision"]
+C -.-> D["Ordinary fix plan with review and acceptance"]
+D -.-> E["Rules and documents for the next tasks"]
+F -.-> E
