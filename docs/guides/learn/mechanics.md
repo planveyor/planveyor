@@ -333,7 +333,7 @@ This cross-section describes the published materials of Planveyor at `11ace6c3` 
 
 An example of a loop that is not closed. At the closeout of the `261015_0939_general_pi_format_correction` plan, Coder recorded the proposal PI-001: a check subprocess ended on a timeout, the temporary fixture was deleted, and the cause of the failure could not be determined. Coder proposed to keep the command trace and the partial output until the cleanup. The record lies in `docs/process_improvements/` with the `open` status and the `P?` priority. The next step is triage: Architect assigns the file and the delivery mode of the change, Owner assigns the priority, and then an ordinary plan carries out the change.
 
-The first successful run of the `Planveyor checks` GitHub workflow came on November 1, 2026, at `11ace6c3`, the docs closeout commit of the [second example](#tests-that-depended-on-the-machine). Keeping CI green with an acceptable run time is still open work F5 in the [First-release backlog](../../release_backlog.md) (in Russian).
+The first successful run of the `Planveyor checks` GitHub workflow came on November 1, 2026, at `11ace6c3`, the docs closeout commit of the [second example](#tests-that-depended-on-the-machine). Making CI reliably green with an acceptable run time is still open work F5 in the [First-release backlog](../../release_backlog.md) (in Russian).
 
 ## What is not in the list
 
