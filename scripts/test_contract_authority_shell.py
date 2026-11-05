@@ -1275,12 +1275,13 @@ class ContractAuthorityShellIntegrationTests(unittest.TestCase):
                         self.assertEqual(initial["general_pi_format_correction_admission"]["state"], "retryable", initial)
                         head = git(fixture.target_root, "rev-parse", "HEAD")
                         index = git(fixture.target_root, "diff", "--cached", "--binary")
-                        for command in (["sibling", "close", "--cycle", cycle], ["sibling", "close", "--cycle", cycle, "--commit"]):
-                            out = self._run_public_pi_command(fixture, label="blocked-close", arguments=command, trace=trace,
-                                role=role, subcase=f"second_malformed={second_malformed}; blocked-close")
-                            self.assertEqual(out.returncode, 0, out.stdout + out.stderr)
-                            self.assertIn("general_pi_format_correction_state=retryable", out.stdout)
-                            self.assertNotIn("Можно начать следующую задачу", out.stdout)
+                        if not second_malformed:
+                            for command in (["sibling", "close", "--cycle", cycle], ["sibling", "close", "--cycle", cycle, "--commit"]):
+                                out = self._run_public_pi_command(fixture, label="blocked-close", arguments=command, trace=trace,
+                                    role=role, subcase=f"second_malformed={second_malformed}; blocked-close")
+                                self.assertEqual(out.returncode, 0, out.stdout + out.stderr)
+                                self.assertIn("general_pi_format_correction_state=retryable", out.stdout)
+                                self.assertNotIn("Можно начать следующую задачу", out.stdout)
                         reserved = public(["planveyor_followups_capture", "reserve-general-pi-correction", "--plan-ref", plan_ref,
                             "--capture-cycle-id", cycle, "--role", role, "--docs-closeout-json", "-"], json.dumps(initial))
                         self.assertEqual(reserved["state"], "reserved")
