@@ -622,7 +622,128 @@ if argv and argv[0] == "resume":
 
 
 class NativeSiblingCommitPolicyTests(unittest.TestCase):
-    """Exercise real init/resume producers through the existing public fixture."""
+    """Inventory existing policy witnesses through the public native fixture.
+
+    These are existing whole-method scenarios, not new tests or execution
+    results. The current source supports documenting the scenarios intact;
+    any future extraction needs separate source-backed justification.
+
+    Public producers and fixture boundary:
+    bin/planveyor enters planveyor_sibling in scripts/planveyor.zsh. Its
+    invocation-local readonly, unexported policy selects human_explicit for
+    sibling architect/run and native_existing for sibling tui before plan
+    selection, session bootstrap/resume or Owner-answer consumption. The
+    _planveyor_role_prompt_body reader rejects a missing/mutable/invalid
+    sibling frame; outside that frame it selects native_existing regardless
+    of the ambient selector. scripts/sibling_runbook.py and the authority
+    context/bridge/snapshot retain their admission and runtime-pin guards.
+
+    PublicSiblingTests.setUpClass checks candidate bytes/modes and clean
+    runtime lineage before creating the consumer seed. The native adapter
+    replaces only the external client/stats sinks, records argv/stdin/payload
+    and supplies fixture SIDs. Real planveyor_arch_init, planveyor_arch_initial,
+    planveyor_arch, planveyor_manager_init, planveyor_manager_collab_cmd,
+    planveyor_manager_collab_tui and session/init capture remain producers.
+    Provider-free producer coverage does not establish live provider readiness.
+    native_receipt uses public planveyor_session and internal session-check:
+    role/session_key/SID, success/exit_code=0, engaged project/runtime identity
+    and canonical ready readback must agree; its return includes receipt bytes.
+
+    Compound policy/transport/receipt contract:
+    test_tui_cmd_architect_and_direct_policy_sequence_ignores_ambient
+        starts without a Manager session. sibling run bootstraps once; the
+    following sibling tui, sibling run, explicit-cycle sibling run and direct
+    planveyor_manager_collab_tui produce six Manager events with policies
+    human_explicit, human_explicit, native_existing, human_explicit,
+    human_explicit, native_existing. Ambient human/native/invalid values do
+    not choose these policies. Manager SID and receipt bytes remain unchanged.
+
+    Both cold init events use the complete assert_init_event contract:
+    Manager events[0] and the later Architect init have exact role/policy/runtime
+    headers, one absolute existing file PYBIN identifying the selected Python
+    by samefile, and no PLAN_PATH/PRE_STATUS_LINE/FOLLOWUPS_CAPTURE_CYCLE_ID
+    header. argv[0] is exec, resume is absent from the entire argv, argv[-1] is
+    '-', and stdin equals payload. MANAGER_CMD is absent from both header and
+    payload trailer. After stripping trailing newlines, the body equals
+    approved_init_body from the real sealed/pinned reader, not a guessed copy.
+
+    Manager CMD events 1/3/4 use exec resume SID payload with empty stdin,
+    current selected plan/status and MANAGER_CMD=run PLAN_PATH as trailer;
+    only event 4 carries the explicit capture cycle. TUI events 2/5 use
+    resume SID payload with empty stdin, one current policy/header/status,
+    MANAGER_CMD=run and neither queue nor merge arguments. Header/body
+    separation and unique expected header fields are checked by shared helpers.
+
+    After changing the plan to Architect initial draft, sibling architect with
+    invalid ambient policy adds two Architect events with one cold init and
+    human_explicit policy. Its SID differs from Manager's; the resume is
+    exec resume SID '-' with stdin=payload and current plan/status. The full
+    all_events[:6] == events assertion preserves the Manager prefix through
+    the Architect tail. Final Architect SID/receipt and Manager SID/receipt
+    stay unchanged, and no queue exists. These guarantees belong together.
+
+    Other existing whole-method witnesses (OLD=NEW for every method):
+    test_tui_resolver_nested_and_explicit_second_checkout
+        resolves sibling tui from a nested directory or explicit project,
+        preserves Manager receipt identity and the other checkout's protected
+        inventory; the header helper accepts a Python samefile alias and
+        rejects an unrelated existing file.
+    test_tui_markerless_legacy_refuses_before_session_effects
+        removes the contract marker, then both sibling tui/run refuse with
+        specific rc3 before client events or pending-answer/protected changes.
+    test_tui_engaged_missing_session_bootstraps_only_through_facade
+        first proves direct Manager TUI missing-session refusal is effect-free,
+        then sibling tui performs real init/resume with approved body/header,
+        canonical receipt/checker, unchanged plan/index and no queue.
+    test_tui_reuses_receipt_and_refreshes_current_plan_payload
+        repeats sibling tui and changes the selected plan/status: one init and
+        the same Manager receipt survive; the last payload uses the current
+        plan/status, omits the old plan header and creates no queue.
+    test_tui_invalid_plan_session_and_foreign_receipts_are_effect_free
+        refuses missing/malformed plan selection, malformed session, incompatible
+        Manager mode and open Owner Q&A before new events/effects. Malformed,
+        foreign-project and foreign-runtime receipts also preserve the entire
+        protected inventory and existing event count.
+    test_tui_process_exit_and_missing_saved_session_use_existing_checker
+        reuses a valid saved SID after process exit; checker error7 and malformed
+        receipt refuse without effects. A genuinely missing saved session then
+        creates a second init and different SID, resumes that SID and no queue.
+    test_tui_client_error_and_runtime_drift_preserve_native_outcome
+        preserves error=39, drift=0 and drift-error=39 from the native sink.
+        Runtime drift reports skipped posthooks; plan/index/HEAD and no-queue
+        assertions remain, and finally restores only its disposable runtime.
+    test_actual_architect_cold_init_and_reused_resume_get_current_human_policy
+        uses sibling architect for cold init and reused resumes, including the
+        Architect arch review body/status branch, human policy, '-' transport,
+        current plan/status headers and the Architect session-key receipt.
+    test_actual_manager_bootstrap_resume_and_explicit_cycle_keep_current_policy
+        uses sibling run for cold init/resumes with human policy and current
+        plan trailer; the cycle appears only in the explicitly selected call.
+    test_direct_native_after_human_call_ignores_ambient_selector_and_history
+        follows human sibling architect with direct planveyor_arch resume:
+        ambient/history do not override native_existing; nothing is staged.
+    test_direct_manager_resume_after_human_run_uses_fresh_native_policy
+        follows human sibling run with direct planveyor_manager_collab_cmd:
+        native policy, the same SID, current plan/trailer and no queue survive.
+    test_ambient_selector_does_not_supply_direct_manager_bootstrap_authority
+        gives each direct planveyor_manager_init ambient human/empty/unknown
+        variant a fresh target/init receipt; every cold policy remains native.
+    test_missing_mutable_and_invalid_sibling_selectors_refuse_before_child_or_answers
+        uses separate invalid-frame runtime/target fixtures; sibling architect
+        returns rc3 before child/session effects or answer/plan/HEAD/index changes.
+    test_role_prompt_body_invalid_sibling_frame_returns_3_before_prompt_file_and_header
+        invokes the real reader with missing/mutable/invalid sibling frames:
+        rc3 precedes normalization, prompt-file selection, header output and
+        effects. Valid-human, valid-native and ambient-native controls retain
+        their expected policy/body while leaving consumer inventory unchanged.
+
+    Each independent scenario owns its target, receipt and protected-effect
+    inventory; cold-init/resume/readback and recovery/replay dependencies stay
+    inside that scenario. Existing setup/teardown, hooks, canonical order and
+    cleanup remain intact; methods do not pass mutable state to one another.
+    Fake wrapper rc, environment presence, prompt prose or a prewritten receipt
+    cannot replace the real producers, guards and canonical readbacks above.
+    """
     actual_native_policy_sink = True
     setUpClass = PublicSiblingTests.__dict__["setUpClass"]
     tearDownClass = PublicSiblingTests.__dict__["tearDownClass"]

@@ -1,0 +1,76 @@
+{
+  "coverage_domains": [
+    "correctness",
+    "tests quality",
+    "security/privacy",
+    "failure semantics",
+    "integrations",
+    "performance"
+  ],
+  "current": true,
+  "delta": "Только строковый class-docstring token: 122 добавленные строки и одна заменённая строка; executable behavior, bodies, hooks/fixtures, manifest/runner и modes прежние.",
+  "findings": [],
+  "lane_id": "reviewer_code_risk",
+  "lane_status": "no_findings",
+  "limits": [
+    "Source-bound inventory/static preservation; unittest, discovery, whole methods, runtime/hosted scenarios и новые measurements не запускались.",
+    "19 protected files/modes и 16 floor IDs проверены статически; live provider/session readiness, fast/full budget и whole-floor qualification не заявлены.",
+    "Scoped ADR006 plan/draft gates не закрывают F25 broad canonical debt; Root exact-copy scan остаётся обязательным до stage/commit/Done/closeout."
+  ],
+  "model": "gpt-6.1-sol",
+  "no_findings_reason": "Exact delta ограничена existing class docstring; raw prefix/suffix, остальной AST и IDs неизменны. Все 15 inventory rows сверены с bodies/helpers и реальными producer/guard paths; compound init/transport/prefix/receipt и independent refusal boundaries описаны точно.",
+  "outcome": "В risk domains новых дефектов не выявлено; Contracts synthesis, review header/status и Root privacy acceptance не выполнялись.",
+  "profile": "reviewer_code_risk",
+  "prompt_file": "docs/tools/prompts/reviewer_status_driven.md",
+  "reasoning_effort": "ultra",
+  "run_id": "reviewer-code-risk-20261106T142507Z-01a1b0b4",
+  "runner_id": "codex",
+  "session_key": "reviewer_code_risk",
+  "sid": "01a1b0b4-0c54-76f3-95a5-2cf123a180bb",
+  "source_refs": [
+    "scripts/test_sibling_runbook.py:256",
+    "scripts/test_sibling_runbook.py:624",
+    "scripts/test_sibling_runbook.py:782",
+    "scripts/test_sibling_runbook.py:1054",
+    "scripts/planveyor.zsh:2694",
+    "scripts/planveyor.zsh:17246",
+    "docs/code_drafts/261106_1456_ci_native_policy_witness_inventory__code_draft.md"
+  ],
+  "target_ref": "BUNDLE=current",
+  "written_at": "2026-11-06T14:25:07Z",
+  "target_snapshot": {
+  "bundle_sha256": "2167c8527c2217f2138648d378f2a69ba875d0b7b9a3b79817f659002e8d5b8c",
+  "code_draft": "docs/code_drafts/261106_1456_ci_native_policy_witness_inventory__code_draft.md",
+  "files": [
+    {
+      "git_mode": "100644",
+      "path": "scripts/test_sibling_runbook.py",
+      "sha256": "90d6f0c560a81f0bb9a92123bc92f7d77a7c6775667c47e5bc039c93a99c7ea6",
+      "size_bytes": 82137
+    }
+  ],
+  "hash_basis": "sha256 over canonical JSON (ensure_ascii=False, sort_keys=True, separators=(',', ':')) of hash_basis_payload; targets come from the primary code_draft_meta.targets, are normalized to repo-relative POSIX paths, sorted by path, and each file authenticates its bytes plus normalized git_mode (100755 iff the owner-execute bit is set, otherwise 100644)",
+  "hash_basis_payload": {
+    "algorithm": "sha256",
+    "files": [
+      {
+        "git_mode": "100644",
+        "path": "scripts/test_sibling_runbook.py",
+        "sha256": "90d6f0c560a81f0bb9a92123bc92f7d77a7c6775667c47e5bc039c93a99c7ea6",
+        "size_bytes": 82137
+      }
+    ],
+    "schema_version": "review_target_snapshot.hash_basis.v2"
+  },
+  "plan": "docs/plans/261106_1456_ci_native_policy_witness_inventory.md",
+  "schema_version": "review_target_snapshot.v2",
+  "target": "BUNDLE=current bundle_sha256=2167c8527c2217f2138648d378f2a69ba875d0b7b9a3b79817f659002e8d5b8c",
+  "target_paths": [
+    "scripts/test_sibling_runbook.py"
+  ],
+  "target_snapshot": {
+    "bundle_sha256": "2167c8527c2217f2138648d378f2a69ba875d0b7b9a3b79817f659002e8d5b8c",
+    "target": "BUNDLE=current"
+  }
+}
+}
