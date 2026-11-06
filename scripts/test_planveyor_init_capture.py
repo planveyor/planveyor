@@ -3809,6 +3809,333 @@ class InitCaptureTests(unittest.TestCase):
             self.assertEqual(umask_before, umask_after)
             self.assertEqual(rc, "0")
 
+    def test_role_run_control_markers_functional_safety_witness(self) -> None:
+        reference = "docs/plans/260101_0000_test_runtime.md"
+
+        def select_planner(sid):
+            return (
+                f"planveyor_plan_set {reference} >/dev/null && "
+                "planveyor_runner_set planner codex >/dev/null && "
+                f"planveyor_session_set planner {sid} runner=codex >/dev/null"
+            )
+
+        def successful_child(payload, root, sid):
+            receipt_path = Path(payload["receipt_path"])
+            self.assertTrue(receipt_path.is_file(), receipt_path)
+            self.assertFalse(receipt_path.is_symlink(), receipt_path)
+            self.assertTrue(receipt_path.is_relative_to(root))
+            self.assertEqual(receipt_path.stem, payload["run_id"])
+            raw = receipt_path.read_bytes()
+            receipt = json.loads(raw)
+            expected = {
+                "schema_version": "role_execution_receipt.v1",
+                "run_id": payload["run_id"],
+                "role": "planner",
+                "session_key": "planner",
+                "runner_id": "codex",
+                "sid": sid,
+                "sid_before": sid,
+                "sid_after": sid,
+                "target_plan": reference,
+                "receipt_path": str(receipt_path),
+                "stdout_path": payload["stdout_path"],
+                "stderr_path": payload["stderr_path"],
+                "state": "success",
+                "exit_code": 0,
+            }
+            for key, value in expected.items():
+                self.assertEqual(receipt[key], value, key)
+            return receipt_path, raw
+
+        def wait_ready(path):
+            quoted = shlex.quote(str(path))
+            return (
+                f"i=0; while (( i < 500 )) && [[ ! -f {quoted} ]]; do "
+                "sleep 0.01; (( i += 1 )); done; "
+                f"[[ -f {quoted} && ! -L {quoted} ]] || exit 91; "
+            )
+
+        def ready_holder(path, expected_state):
+            program = (
+                "import json,os,pathlib,stat,sys; "
+                "p=pathlib.Path(sys.argv[1]); info=p.lstat(); "
+                "assert stat.S_ISREG(info.st_mode) and stat.S_IMODE(info.st_mode)==0o600 "
+                "and info.st_uid==os.getuid(); "
+                "row=json.loads(p.read_text()); "
+                "assert row['state']==sys.argv[2] and row['reason']==sys.argv[3]; "
+                "assert row['parent_pid']==int(sys.argv[4]); "
+                "assert isinstance(row['holder_pid'],int) and row['holder_pid']>0; "
+                "print(row['holder_pid'])"
+            )
+            reason = "role_run_lock_contended" if expected_state == "contended" else "ok"
+            return (
+                f"_planveyor_py_any -c {shlex.quote(program)} {shlex.quote(str(path))} "
+                f"{expected_state} {reason} \"$$\""
+            )
+
+        def assert_ready(path, expected_state, parent_pid):
+            self.assertFalse(path.is_symlink(), path)
+            info = path.stat()
+            self.assertTrue(stat.S_ISREG(info.st_mode))
+            self.assertEqual(stat.S_IMODE(info.st_mode), 0o600)
+            self.assertEqual(info.st_uid, os.getuid())
+            row = json.loads(path.read_text(encoding="utf-8"))
+            self.assertEqual(row["state"], expected_state)
+            self.assertEqual(
+                row["reason"],
+                "role_run_lock_contended" if expected_state == "contended" else "ok",
+            )
+            self.assertEqual(row["parent_pid"], parent_pid)
+            self.assertIsInstance(row["holder_pid"], int)
+            self.assertGreater(row["holder_pid"], 0)
+            return row["holder_pid"]
+
+        def assert_dead(pid):
+            deadline = time.monotonic() + 5
+            while time.monotonic() < deadline:
+                try:
+                    os.kill(pid, 0)
+                except ProcessLookupError:
+                    return
+                time.sleep(0.01)
+            self.fail(f"lock process survived bounded cleanup: pid={pid}")
+
+        for marker_name, expected_reason in (
+            ("transaction.done", "transaction_done_publication_failed"),
+            ("lock.release", "lock_release_failed"),
+        ):
+            with self.subTest(marker=marker_name), tempfile.TemporaryDirectory(
+                prefix=f"planveyor_role_run_functional_{marker_name.replace('.', '_')}_"
+            ) as tmpdir:
+                root, env, _ = self._prepare_repo(
+                    tmpdir, sid_map=SUCCESS_SIDS, runtime_mode="legacy_complete"
+                )
+                manifest = self._assert_legacy_complete_runtime_identity(root, env)
+                self._write_runtime_plan(root, status="In progress")
+                sid = "00000000-0000-4000-8000-000000000337"
+                target = root / "marker-target.txt"
+                target.write_bytes(b"preserve-me")
+                result = self._run(
+                    root,
+                    env,
+                    select_planner(sid) + " && planveyor_planner() { "
+                    f"ln -s {shlex.quote(str(target))} "
+                    f"\"$PLANVEYOR_ROLE_RUN_OUTPUT_DIR/{marker_name}\"; "
+                    "} && planveyor_role_run planner --json",
+                )
+                self.assertEqual(result.returncode, 126, result.stderr)
+                payload = json.loads(result.stdout)
+                self.assertEqual(payload["readback_state"], "blocked")
+                self.assertEqual(payload["readback_reason"], expected_reason)
+                self.assertEqual(target.read_bytes(), b"preserve-me")
+                marker = Path(payload["stdout_path"]).parent / marker_name
+                self.assertTrue(marker.is_symlink(), marker)
+                self.assertEqual(marker.resolve(), target)
+                successful_child(payload, root, sid)
+                self._assert_legacy_complete_runtime_identity(
+                    root, env, expected_manifest=manifest
+                )
+
+        with tempfile.TemporaryDirectory(prefix="planveyor_role_run_functional_contender_") as tmpdir:
+            root, env, _ = self._prepare_repo(
+                tmpdir, sid_map=SUCCESS_SIDS, runtime_mode="legacy_complete"
+            )
+            manifest = self._assert_legacy_complete_runtime_identity(root, env)
+            probe = root / ".tmp" / "functional-contender"
+            owner_dir, contender_dir = probe / "owner", probe / "contender"
+            owner_dir.mkdir(parents=True)
+            contender_dir.mkdir()
+            lock_path = probe / "planner.lock"
+            owner_ready, owner_release = owner_dir / "lock.ready.json", owner_dir / "lock.release"
+            contender_ready = contender_dir / "lock.ready.json"
+            contender_release = contender_dir / "lock.release"
+            target = root / "release-target.txt"
+            target.write_bytes(b"preserve-me")
+            result = self._run(
+                root,
+                env,
+                'print -r -- "$$"; '
+                f"_planveyor_role_run_lock_holder {shlex.quote(str(lock_path))} "
+                f"{shlex.quote(str(owner_ready))} {shlex.quote(str(owner_release))} \"$$\" "
+                ">/dev/null 2>&1 & owner=$!; "
+                + wait_ready(owner_ready)
+                + f"owner_holder=$({ready_holder(owner_ready, 'acquired')}) || exit 92; "
+                'kill -0 "$owner" && kill -0 "$owner_holder" || exit 93; '
+                f"ln -s {shlex.quote(str(target))} {shlex.quote(str(owner_release))} || exit 94; "
+                f"_planveyor_role_run_lock_holder {shlex.quote(str(lock_path))} "
+                f"{shlex.quote(str(contender_ready))} {shlex.quote(str(contender_release))} \"$$\" "
+                ">/dev/null 2>&1 & contender=$!; "
+                + wait_ready(contender_ready)
+                + f"contender_holder=$({ready_holder(contender_ready, 'contended')}) || exit 95; "
+                'kill -0 "$owner_holder" || exit 96; wait "$contender" || exit 97; '
+                f"cat {shlex.quote(str(owner_ready))} {shlex.quote(str(contender_ready))}; "
+                f"_planveyor_role_run_lock_release {shlex.quote(str(owner_release))} "
+                '"$owner" "$owner_holder"; release_rc=$?; '
+                'print -r -- "$_PLANVEYOR_ROLE_RUN_LOCK_RELEASE_JSON"; print -r -- "$release_rc"; '
+                'if kill -0 "$owner" 2>/dev/null || kill -0 "$owner_holder" 2>/dev/null; then exit 98; fi',
+            )
+            self.assertEqual(result.returncode, 0, result.stderr)
+            rows = result.stdout.splitlines()
+            self.assertEqual(len(rows), 5, result.stdout)
+            parent_pid = int(rows[0])
+            owner_pid = assert_ready(owner_ready, "acquired", parent_pid)
+            contender_pid = assert_ready(contender_ready, "contended", parent_pid)
+            self.assertNotEqual(owner_pid, contender_pid)
+            self.assertEqual(json.loads(rows[1]), json.loads(owner_ready.read_text()))
+            self.assertEqual(json.loads(rows[2]), json.loads(contender_ready.read_text()))
+            release = json.loads(rows[3])
+            self.assertEqual(int(rows[4]), 1)
+            self.assertFalse(release["ok"])
+            self.assertEqual(release["reason"], "lock_release_failed")
+            self.assertFalse(release["holder_cleanup_failed"])
+            self.assertTrue(owner_release.is_symlink())
+            self.assertEqual(target.read_bytes(), b"preserve-me")
+            assert_dead(owner_pid)
+            assert_dead(contender_pid)
+            with lock_path.open("a+") as handle:
+                fcntl.flock(handle.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
+            self._assert_legacy_complete_runtime_identity(
+                root, env, expected_manifest=manifest
+            )
+
+        with tempfile.TemporaryDirectory(prefix="planveyor_role_run_functional_retry_") as tmpdir:
+            root, env, _ = self._prepare_repo(
+                tmpdir, sid_map=SUCCESS_SIDS, runtime_mode="legacy_complete"
+            )
+            manifest = self._assert_legacy_complete_runtime_identity(root, env)
+            self._write_runtime_plan(root, status="In progress")
+            sid = "00000000-0000-4000-8000-000000000338"
+            first = self._run(
+                root,
+                env,
+                select_planner(sid) + " && planveyor_planner() { "
+                'rm -rf -- "$PLANVEYOR_ROLE_RUN_OUTPUT_DIR"; '
+                "} && planveyor_role_run planner --json",
+            )
+            self.assertEqual(first.returncode, 126, first.stderr)
+            first_payload = json.loads(first.stdout)
+            self.assertEqual(first_payload["readback_state"], "blocked")
+            self.assertEqual(first_payload["readback_reason"], "lock_release_failed")
+            first_path, first_bytes = successful_child(first_payload, root, sid)
+            session_path = root / ".planveyor.session.planner"
+            session_bytes = session_path.read_bytes()
+            lock_path = root / ".tmp" / "planveyor_role_runs" / ".locks" / "planner.lock"
+            lock_identity = lock_path.stat()
+            self.assertFalse(lock_path.is_symlink())
+            retry = self._run(
+                root, env, "planveyor_planner() { :; } && planveyor_role_run planner --json"
+            )
+            self.assertEqual(retry.returncode, 0, retry.stderr)
+            retry_payload = json.loads(retry.stdout)
+            self.assertEqual(retry_payload["state"], "success")
+            self.assertEqual(retry_payload["readback_state"], "ok")
+            retry_path, _ = successful_child(retry_payload, root, sid)
+            self.assertNotEqual(first_payload["run_id"], retry_payload["run_id"])
+            self.assertNotEqual(first_path, retry_path)
+            self.assertEqual(first_path.read_bytes(), first_bytes)
+            self.assertEqual(session_path.read_bytes(), session_bytes)
+            self.assertEqual(
+                (lock_path.stat().st_dev, lock_path.stat().st_ino),
+                (lock_identity.st_dev, lock_identity.st_ino),
+            )
+            self._assert_legacy_complete_runtime_identity(
+                root, env, expected_manifest=manifest
+            )
+
+        with tempfile.TemporaryDirectory(prefix="planveyor_role_run_functional_interrupt_") as tmpdir:
+            root, env, _ = self._prepare_repo(
+                tmpdir, sid_map=SUCCESS_SIDS, runtime_mode="legacy_complete"
+            )
+            manifest = self._assert_legacy_complete_runtime_identity(root, env)
+            probe = root / ".tmp" / "functional-interrupt"
+            first_dir, second_dir = probe / "first", probe / "second"
+            first_dir.mkdir(parents=True)
+            second_dir.mkdir()
+            lock_path = probe / "planner.lock"
+            first_ready, first_release = first_dir / "lock.ready.json", first_dir / "lock.release"
+            caller_pid_path = first_dir / "holder.pid"
+            parent_command = (
+                "source scripts/planveyor.zsh || exit $?; "
+                f"_planveyor_role_run_lock_holder {shlex.quote(str(lock_path))} "
+                f"{shlex.quote(str(first_ready))} {shlex.quote(str(first_release))} \"$$\" "
+                ">/dev/null 2>&1 & holder=$!; "
+                f"print -r -- \"$holder\" > {shlex.quote(str(caller_pid_path))}; "
+                'wait "$holder"'
+            )
+            parent = subprocess.Popen(
+                ["/bin/zsh", "-fc", parent_command], cwd=root, env=env,
+                text=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+            )
+            try:
+                caller_pid = None
+                for _ in range(500):
+                    self.assertIsNone(parent.poll(), "lock caller exited before readiness")
+                    if first_ready.exists() and caller_pid_path.is_file():
+                        self.assertFalse(caller_pid_path.is_symlink())
+                        caller_pid_text = caller_pid_path.read_text(encoding="ascii")
+                        if caller_pid_text.endswith("\n"):
+                            self.assertTrue(
+                                caller_pid_text[:-1].isascii() and caller_pid_text[:-1].isdigit(),
+                                "lock caller PID artifact is malformed",
+                            )
+                            caller_pid = int(caller_pid_text[:-1])
+                            self.assertGreater(caller_pid, 0)
+                            break
+                    time.sleep(0.01)
+                self.assertTrue(first_ready.exists(), "first holder readiness exhausted")
+                self.assertIsNotNone(caller_pid, "complete lock caller PID readiness exhausted")
+                first_holder = assert_ready(first_ready, "acquired", parent.pid)
+                os.kill(first_holder, 0)
+                os.kill(caller_pid, 0)
+                parent.terminate()
+                try:
+                    parent.communicate(timeout=5)
+                except subprocess.TimeoutExpired:
+                    self.fail("interrupted lock caller did not exit within cleanup bound")
+                self.assertIsNotNone(parent.returncode)
+                assert_dead(first_holder)
+                assert_dead(caller_pid)
+            finally:
+                if parent.poll() is None:
+                    parent.kill()
+                    parent.communicate(timeout=5)
+
+            second_ready = second_dir / "lock.ready.json"
+            second_release = second_dir / "lock.release"
+            reacquire = self._run(
+                root,
+                env,
+                'print -r -- "$$"; '
+                f"_planveyor_role_run_lock_holder {shlex.quote(str(lock_path))} "
+                f"{shlex.quote(str(second_ready))} {shlex.quote(str(second_release))} \"$$\" "
+                ">/dev/null 2>&1 & holder=$!; "
+                + wait_ready(second_ready)
+                + f"actual_holder=$({ready_holder(second_ready, 'acquired')}) || exit 92; "
+                f"cat {shlex.quote(str(second_ready))}; "
+                f"_planveyor_role_run_lock_release {shlex.quote(str(second_release))} "
+                '"$holder" "$actual_holder"; release_rc=$?; '
+                'print -r -- "$_PLANVEYOR_ROLE_RUN_LOCK_RELEASE_JSON"; print -r -- "$release_rc"; '
+                'if kill -0 "$holder" 2>/dev/null || kill -0 "$actual_holder" 2>/dev/null; then exit 98; fi',
+            )
+            self.assertEqual(reacquire.returncode, 0, reacquire.stderr)
+            rows = reacquire.stdout.splitlines()
+            self.assertEqual(len(rows), 4, reacquire.stdout)
+            second_holder = assert_ready(second_ready, "acquired", int(rows[0]))
+            self.assertEqual(json.loads(rows[1]), json.loads(second_ready.read_text()))
+            release = json.loads(rows[2])
+            self.assertEqual(int(rows[3]), 0)
+            self.assertTrue(release["ok"])
+            self.assertEqual(release["reason"], "ok")
+            self.assertFalse(release["holder_cleanup_failed"])
+            self.assertTrue(second_release.is_file())
+            self.assertFalse(second_release.is_symlink())
+            self.assertEqual(stat.S_IMODE(second_release.stat().st_mode), 0o600)
+            self.assertEqual(second_release.stat().st_uid, os.getuid())
+            assert_dead(second_holder)
+            self._assert_legacy_complete_runtime_identity(
+                root, env, expected_manifest=manifest
+            )
+
     def test_role_run_control_markers_are_nofollow_bounded_and_interrupt_safe(self) -> None:
         def report_timing(result, failure, *, subcase, started, ended, writers):
             # Aggregate only after the whole measured shell command.  These

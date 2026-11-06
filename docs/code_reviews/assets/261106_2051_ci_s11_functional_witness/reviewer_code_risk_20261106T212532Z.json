@@ -1,0 +1,219 @@
+{
+  "coverage_domains": [
+    "correctness",
+    "tests quality",
+    "security/privacy",
+    "subprocess/timeouts",
+    "races/locks/atomicity",
+    "failure semantics",
+    "performance",
+    "integrations"
+  ],
+  "current": true,
+  "delta": "Один новый F с nested support и одна manifest строка; удаление F/строки восстанавливает все BASE bytes, old AST/ID order/original span, compat9 и protected11/modes.",
+  "findings": [],
+  "lane_id": "reviewer_code_risk",
+  "lane_status": "no_findings",
+  "limits": [
+    "Actual corrected F Ran1 OK на prepared3.12: whole54.707s/process54.78s; прежний eeed-source run historical. Reviewer F/guard не повторял, raw receipts/ready внутри F проверяются до штатного fixture teardown.",
+    "Own fresh static canonical checks prepared3.10+3.12:3528/s11=35/compat9; это import/exact-once proof, не original timing/full-floor/hosted acceptance. Original/A-B/full suites/shards/CI/F3.10/PartB не запускались.",
+    "Root pre-stage exact UNSTAGED checkpoint pending; Contracts synthesis/review/status/Done/commit/closeout не принадлежат этой lane. Scoped ADR006 green не исправляет F25 broad debt."
+  ],
+  "model": "gpt-6.1-sol",
+  "no_findings_reason": "327-line additive F и одна full-selector запись сверены с реальными holder/release/nofollow/finalizer и receipt producers. Пять independent fixtures, first actual child success0 перед retry, same-session/lock continuity, interrupt/death/reacquire и finite fail-closed guards сохранены; current corrected execution/source binding подтверждён independently read raw proof.",
+  "outcome": "В risk domains новых findings не выявлено. Свежие own static checks пройдены; unchanged corrected F/timeout guard proof квалифицирован и переиспользован без новых runtime executions.",
+  "profile": "reviewer_code_risk",
+  "prompt_file": "docs/tools/prompts/reviewer_status_driven.md",
+  "reasoning_effort": "ultra",
+  "run_id": "reviewer-code-risk-20261106T212532Z-01a1b0b4",
+  "runner_id": "codex",
+  "session_key": "reviewer_code_risk",
+  "sid": "01a1b0b4-0c54-76f3-95a5-2cf123a180bb",
+  "source_refs": [
+    "scripts/test_planveyor_init_capture.py:246",
+    "scripts/test_planveyor_init_capture.py:475",
+    "scripts/test_planveyor_init_capture.py:3812",
+    "scripts/test_shards.json:631",
+    "scripts/planveyor/role_runtime.zsh:1025",
+    "scripts/planveyor/role_runtime.zsh:1128",
+    "scripts/planveyor/role_runtime.zsh:1239",
+    "scripts/planveyor/role_runtime.zsh:1335"
+  ],
+  "target_ref": "BUNDLE=current",
+  "written_at": "2026-11-06T21:25:32Z",
+  "target_snapshot": {
+  "bundle_sha256": "0b371f4a9ac99ce26f5b4a5da126881fdeac43c6601c7151d15cf60946dfff69",
+  "code_draft": "docs/code_drafts/261106_2051_ci_s11_functional_witness__code_draft.md",
+  "files": [
+    {
+      "git_mode": "100644",
+      "path": "scripts/test_planveyor_init_capture.py",
+      "sha256": "e7c9b32bbaac28db5a8e1be45ceeb04d57148835ae5c48494f0a113e13f76d38",
+      "size_bytes": 339032
+    },
+    {
+      "git_mode": "100644",
+      "path": "scripts/test_shards.json",
+      "sha256": "5d60ca023c77e655f14733824176740e3744e851c8baf7b5271d46ad47b801ff",
+      "size_bytes": 30909
+    }
+  ],
+  "hash_basis": "sha256 over canonical JSON (ensure_ascii=False, sort_keys=True, separators=(',', ':')) of hash_basis_payload; targets come from the primary code_draft_meta.targets, are normalized to repo-relative POSIX paths, sorted by path, and each file authenticates its bytes plus normalized git_mode (100755 iff the owner-execute bit is set, otherwise 100644)",
+  "hash_basis_payload": {
+    "algorithm": "sha256",
+    "files": [
+      {
+        "git_mode": "100644",
+        "path": "scripts/test_planveyor_init_capture.py",
+        "sha256": "e7c9b32bbaac28db5a8e1be45ceeb04d57148835ae5c48494f0a113e13f76d38",
+        "size_bytes": 339032
+      },
+      {
+        "git_mode": "100644",
+        "path": "scripts/test_shards.json",
+        "sha256": "5d60ca023c77e655f14733824176740e3744e851c8baf7b5271d46ad47b801ff",
+        "size_bytes": 30909
+      }
+    ],
+    "schema_version": "review_target_snapshot.hash_basis.v2"
+  },
+  "plan": "docs/plans/261106_2051_ci_s11_functional_witness.md",
+  "schema_version": "review_target_snapshot.v2",
+  "target": "BUNDLE=current bundle_sha256=0b371f4a9ac99ce26f5b4a5da126881fdeac43c6601c7151d15cf60946dfff69",
+  "target_paths": [
+    "scripts/test_planveyor_init_capture.py",
+    "scripts/test_shards.json"
+  ],
+  "target_snapshot": {
+    "bundle_sha256": "0b371f4a9ac99ce26f5b4a5da126881fdeac43c6601c7151d15cf60946dfff69",
+    "target": "BUNDLE=current"
+  }
+}
+,
+  "proof_binding": {
+  "actual_current_execution": {
+    "errors": 0,
+    "failures": 0,
+    "process_real_seconds": 54.78,
+    "proof_reused_without_rerun": true,
+    "python": "3.12.14",
+    "ran": 1,
+    "skips": 0,
+    "test_seconds": 54.707
+  },
+  "base": "d2e720e182ca952dd24b9c616ea6b2eae05fd7b2",
+  "canonical_tests": 3528,
+  "compat310_count": 9,
+  "current_launch_task_binding_valid": true,
+  "current_module_sha256": "e7c9b32bbaac28db5a8e1be45ceeb04d57148835ae5c48494f0a113e13f76d38",
+  "function_sha256": "17a5f145f8f024a4582ba2d9c9fe1e65d6684aafbfb15d08c6047c2ede6c2e9c",
+  "guard_actual": "Ran1 OK; not rerun",
+  "manifest_sha256": "5d60ca023c77e655f14733824176740e3744e851c8baf7b5271d46ad47b801ff",
+  "old_source_proof": "raw/AST/orderedIDs/originalspan preserved",
+  "own_static_canonical_axes": [
+    "3.10",
+    "3.12"
+  ],
+  "proof_refs": {
+    "after-F-HEAD": ".tmp/ci_s11_functional_proof/coder_censor_1330e373_20261106T211000Z/after-F-HEAD",
+    "after-F-hashes": ".tmp/ci_s11_functional_proof/coder_censor_1330e373_20261106T211000Z/after-F-hashes",
+    "before-F-HEAD": ".tmp/ci_s11_functional_proof/coder_censor_1330e373_20261106T211000Z/before-F-HEAD",
+    "before-F-hashes": ".tmp/ci_s11_functional_proof/coder_censor_1330e373_20261106T211000Z/before-F-hashes",
+    "canonical-310": ".tmp/ci_s11_functional_proof/coder_censor_1330e373_20261106T211000Z/canonical-310",
+    "canonical-312": ".tmp/ci_s11_functional_proof/coder_censor_1330e373_20261106T211000Z/canonical-312",
+    "corrected-F": ".tmp/ci_s11_functional_proof/coder_censor_1330e373_20261106T211000Z/corrected-F",
+    "fresh-launch": ".tmp/ci_s11_functional_proof/coder_censor_1330e373_20261106T211000Z/fresh-launch",
+    "interpreter-310": ".tmp/ci_s11_functional_proof/coder_censor_1330e373_20261106T211000Z/interpreter-310",
+    "interpreter-312": ".tmp/ci_s11_functional_proof/coder_censor_1330e373_20261106T211000Z/interpreter-312",
+    "manifest-preservation": ".tmp/ci_s11_functional_proof/coder_censor_1330e373_20261106T211000Z/manifest-preservation",
+    "post-readback": ".tmp/ci_s11_functional_proof/coder_censor_1330e373_20261106T211000Z/post-readback",
+    "protected11": ".tmp/ci_s11_functional_proof/coder_censor_1330e373_20261106T211000Z/protected11",
+    "source-preservation": ".tmp/ci_s11_functional_proof/coder_censor_1330e373_20261106T211000Z/source-preservation",
+    "syntax": ".tmp/ci_s11_functional_proof/coder_censor_1330e373_20261106T211000Z/syntax",
+    "timeout-guard": ".tmp/ci_s11_functional_proof/coder_censor_1330e373_20261106T211000Z/timeout-guard"
+  },
+  "proof_sha256": {
+    "after-F-HEAD": {
+      "exitcodes": "db1fe142bf668f1b990a171cd1b82d95103e723d138e2de38f0c1ff33fe68a68",
+      "stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stdout": "5291bb2d934b5a44127296b248d20d24a74278e9f3085c15a7e7ea19f32d1697"
+    },
+    "after-F-hashes": {
+      "exitcodes": "db1fe142bf668f1b990a171cd1b82d95103e723d138e2de38f0c1ff33fe68a68",
+      "stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stdout": "279e0868a648187009edaabecc91b2c5ebb54d496137199de4b63308f9edcefd"
+    },
+    "before-F-HEAD": {
+      "exitcodes": "db1fe142bf668f1b990a171cd1b82d95103e723d138e2de38f0c1ff33fe68a68",
+      "stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stdout": "5291bb2d934b5a44127296b248d20d24a74278e9f3085c15a7e7ea19f32d1697"
+    },
+    "before-F-hashes": {
+      "exitcodes": "db1fe142bf668f1b990a171cd1b82d95103e723d138e2de38f0c1ff33fe68a68",
+      "stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stdout": "279e0868a648187009edaabecc91b2c5ebb54d496137199de4b63308f9edcefd"
+    },
+    "canonical-310": {
+      "exitcodes": "db1fe142bf668f1b990a171cd1b82d95103e723d138e2de38f0c1ff33fe68a68",
+      "stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stdout": "1bd4df17c5f029119a054499aec70cb6602ca1ecf5b9126d1691e4d271688f0c"
+    },
+    "canonical-312": {
+      "exitcodes": "db1fe142bf668f1b990a171cd1b82d95103e723d138e2de38f0c1ff33fe68a68",
+      "stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stdout": "1bd4df17c5f029119a054499aec70cb6602ca1ecf5b9126d1691e4d271688f0c"
+    },
+    "corrected-F": {
+      "exitcodes": "db1fe142bf668f1b990a171cd1b82d95103e723d138e2de38f0c1ff33fe68a68",
+      "stderr": "25467aad2a4db2a804f55b73b48d316ef71614e24fac3c1a18328605b2e73f7b",
+      "stdout": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "fresh-launch": {
+      "exitcodes": "db1fe142bf668f1b990a171cd1b82d95103e723d138e2de38f0c1ff33fe68a68",
+      "stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stdout": "91650538b9599f0aff8687dcc2dbdac39f7f287a33165fda13cb2ad32bb9a6c3"
+    },
+    "interpreter-310": {
+      "exitcodes": "db1fe142bf668f1b990a171cd1b82d95103e723d138e2de38f0c1ff33fe68a68",
+      "stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stdout": "4c2ba10654527a1658300fbaa8248f24da59d56944def7b4642f5619d15bcec9"
+    },
+    "interpreter-312": {
+      "exitcodes": "db1fe142bf668f1b990a171cd1b82d95103e723d138e2de38f0c1ff33fe68a68",
+      "stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stdout": "a9f1b39c8c4f87d5017ad669f62170bf89513de04b8aeb6df503a60a74ddc325"
+    },
+    "manifest-preservation": {
+      "exitcodes": "db1fe142bf668f1b990a171cd1b82d95103e723d138e2de38f0c1ff33fe68a68",
+      "stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stdout": "8408625285b5985c0cc27ee7200935e19c4e4ac51c190c619f81e821a4cd6ae0"
+    },
+    "post-readback": {
+      "exitcodes": "db1fe142bf668f1b990a171cd1b82d95103e723d138e2de38f0c1ff33fe68a68",
+      "stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stdout": "e1fcc4aaa90eb9048ae0b3be47518391bcee913fd2c3657e46a12f507e6f8f78"
+    },
+    "protected11": {
+      "exitcodes": "db1fe142bf668f1b990a171cd1b82d95103e723d138e2de38f0c1ff33fe68a68",
+      "stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stdout": "8b0b5ce59a4a7ca2e68191e19e5c69ed0b4a23ef66a8dc42412a471ca024f231"
+    },
+    "source-preservation": {
+      "exitcodes": "db1fe142bf668f1b990a171cd1b82d95103e723d138e2de38f0c1ff33fe68a68",
+      "stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stdout": "0b70d55707ce6b8c4dd4d0fe617c4a349d091e02310e9b7b2331ec5aa3eaf4c1"
+    },
+    "syntax": {
+      "exitcodes": "db1fe142bf668f1b990a171cd1b82d95103e723d138e2de38f0c1ff33fe68a68",
+      "stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stdout": "301f50a77020035bdb413e8602b6cc2c26907e4f8fba076a1eb6ecf7af92ee87"
+    },
+    "timeout-guard": {
+      "exitcodes": "db1fe142bf668f1b990a171cd1b82d95103e723d138e2de38f0c1ff33fe68a68",
+      "stderr": "5ebf240cb7995d87b1b706df5a0152a59560a85b19849183fd43f5155a918a53",
+      "stdout": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    }
+  },
+  "s11": 35
+}
+}

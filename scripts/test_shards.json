@@ -628,6 +628,7 @@
             "test_planveyor_init_capture.InitCaptureTests.test_public_owner_runbook_documents_neutral_init_run_artifact_lookup",
             "test_planveyor_init_capture.InitCaptureTests.test_role_run_architect_variant_missing_session_fails_before_wrapper",
             "test_planveyor_init_capture.InitCaptureTests.test_role_run_binds_post_match_carrier_swap_to_proof_runner",
+            "test_planveyor_init_capture.InitCaptureTests.test_role_run_control_markers_functional_safety_witness",
             "test_planveyor_init_capture.InitCaptureTests.test_role_run_control_markers_are_nofollow_bounded_and_interrupt_safe",
             "test_planveyor_init_capture.InitCaptureTests.test_role_run_exposes_current_run_carrier_to_role_process",
             "test_planveyor_init_capture.InitCaptureTests.test_role_run_ignores_ambient_preflight_marker_and_uses_fresh_proof",
