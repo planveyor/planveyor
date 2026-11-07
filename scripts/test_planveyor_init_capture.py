@@ -3823,7 +3823,10 @@ class InitCaptureTests(unittest.TestCase):
             receipt_path = Path(payload["receipt_path"])
             self.assertTrue(receipt_path.is_file(), receipt_path)
             self.assertFalse(receipt_path.is_symlink(), receipt_path)
-            self.assertTrue(receipt_path.is_relative_to(root))
+            self.assertTrue(
+                receipt_path.is_relative_to(root),
+                f"functional_receipt_outside_root: receipt_path={receipt_path!s}; root={root!s}",
+            )
             self.assertEqual(receipt_path.stem, payload["run_id"])
             raw = receipt_path.read_bytes()
             receipt = json.loads(raw)
@@ -3908,7 +3911,7 @@ class InitCaptureTests(unittest.TestCase):
                 prefix=f"planveyor_role_run_functional_{marker_name.replace('.', '_')}_"
             ) as tmpdir:
                 root, env, _ = self._prepare_repo(
-                    tmpdir, sid_map=SUCCESS_SIDS, runtime_mode="legacy_complete"
+                    str(Path(tmpdir).resolve(strict=True)), sid_map=SUCCESS_SIDS, runtime_mode="legacy_complete"
                 )
                 manifest = self._assert_legacy_complete_runtime_identity(root, env)
                 self._write_runtime_plan(root, status="In progress")
@@ -3938,7 +3941,7 @@ class InitCaptureTests(unittest.TestCase):
 
         with tempfile.TemporaryDirectory(prefix="planveyor_role_run_functional_contender_") as tmpdir:
             root, env, _ = self._prepare_repo(
-                tmpdir, sid_map=SUCCESS_SIDS, runtime_mode="legacy_complete"
+                str(Path(tmpdir).resolve(strict=True)), sid_map=SUCCESS_SIDS, runtime_mode="legacy_complete"
             )
             manifest = self._assert_legacy_complete_runtime_identity(root, env)
             probe = root / ".tmp" / "functional-contender"
@@ -4000,7 +4003,7 @@ class InitCaptureTests(unittest.TestCase):
 
         with tempfile.TemporaryDirectory(prefix="planveyor_role_run_functional_retry_") as tmpdir:
             root, env, _ = self._prepare_repo(
-                tmpdir, sid_map=SUCCESS_SIDS, runtime_mode="legacy_complete"
+                str(Path(tmpdir).resolve(strict=True)), sid_map=SUCCESS_SIDS, runtime_mode="legacy_complete"
             )
             manifest = self._assert_legacy_complete_runtime_identity(root, env)
             self._write_runtime_plan(root, status="In progress")
@@ -4038,13 +4041,25 @@ class InitCaptureTests(unittest.TestCase):
                 (lock_path.stat().st_dev, lock_path.stat().st_ino),
                 (lock_identity.st_dev, lock_identity.st_ino),
             )
+            foreign_dir = root.parent / "foreign-receipts"
+            foreign_dir.mkdir()
+            foreign_path = foreign_dir / retry_path.name
+            retry_bytes = retry_path.read_bytes()
+            foreign_receipt = json.loads(retry_bytes)
+            foreign_receipt["receipt_path"] = str(foreign_path)
+            foreign_path.write_text(json.dumps(foreign_receipt), encoding="utf-8")
+            foreign_payload = {**retry_payload, "receipt_path": str(foreign_path)}
+            with self.assertRaisesRegex(AssertionError, "functional_receipt_outside_root"):
+                successful_child(foreign_payload, root, sid)
+            self.assertEqual(retry_path.read_bytes(), retry_bytes)
+            self.assertEqual(retry_payload, json.loads(retry.stdout))
             self._assert_legacy_complete_runtime_identity(
                 root, env, expected_manifest=manifest
             )
 
         with tempfile.TemporaryDirectory(prefix="planveyor_role_run_functional_interrupt_") as tmpdir:
             root, env, _ = self._prepare_repo(
-                tmpdir, sid_map=SUCCESS_SIDS, runtime_mode="legacy_complete"
+                str(Path(tmpdir).resolve(strict=True)), sid_map=SUCCESS_SIDS, runtime_mode="legacy_complete"
             )
             manifest = self._assert_legacy_complete_runtime_identity(root, env)
             probe = root / ".tmp" / "functional-interrupt"
