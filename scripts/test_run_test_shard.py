@@ -229,6 +229,42 @@ class TestRunTestShard(unittest.TestCase):
 
     def test_matrix_and_workflow_selection_contract(self):
         data, _ = shard.load_manifest(ROOT / "scripts/test_shards.json", ROOT / "scripts")
+        required_fast_ids = {
+            'test_planveyor_init_capture.InitCaptureTests.test_in_scope_init_wrappers_promote_run_artifacts_by_sid',
+            'test_planveyor_init_capture.InitCaptureTests.test_failed_init_without_sid_stays_under_pending',
+            'test_planveyor_init_capture.InitCaptureTests.test_runner_selection_init_precedes_artifacts_and_consumes_captured_bytes_once',
+            'test_planveyor_init_capture.InitCaptureTests.test_role_run_writes_fresh_success_receipt_and_compat_readback',
+            'test_planveyor_init_capture.InitCaptureTests.test_role_run_rejects_bad_or_changed_preflight_identity_before_child',
+            'test_planveyor_init_capture.InitCaptureTests.test_role_run_missing_wrapper_and_spawn_error_are_not_started',
+            'test_planveyor_init_capture.InitCaptureTests.test_role_run_nonzero_and_timeout_are_non_green_receipts',
+            'test_planveyor_init_capture.InitCaptureTests.test_role_run_keeps_non_green_child_and_green_outcome_independent',
+            'test_planveyor_init_capture.InitCaptureTests.test_role_run_control_markers_functional_safety_witness',
+            'test_planveyor_init_capture.InitCaptureTests.test_role_run_recovery_tuple_is_one_shot_and_exactly_once',
+            'test_planveyor_init_capture.InitCaptureTests.test_role_run_carrier_is_isolated_from_manager_architect_paths',
+            'test_contract_authority_shell.ContractAuthorityShellIntegrationTests.test_clean_first_source_pins_and_same_source_is_idempotent',
+            'test_contract_authority_shell.ContractAuthorityShellIntegrationTests.test_runtime_closure_and_runner_policy_drift_fail_before_effect_sentinel',
+            'test_sibling_runbook.NativeSiblingCommitPolicyTests.test_tui_cmd_architect_and_direct_policy_sequence_ignores_ambient',
+            'test_sibling_runbook.NativeSiblingCommitPolicyTests.test_tui_markerless_legacy_refuses_before_session_effects',
+            'test_planveyor_bare_entrypoints.PlanveyorFacadeDashboardTests.test_help_and_dashboards_finish_without_per_row_authority_revalidation',
+        }
+
+        def assert_fast_composition(manifest):
+            fast_ids = manifest.get("subsets", {}).get("fast", {}).get("ids", [])
+            missing = required_fast_ids - set(fast_ids)
+            self.assertFalse(missing, f"missing fast safety floor IDs: {sorted(missing)}")
+            self.assertNotIn(
+                "test_planveyor_init_capture.InitCaptureTests.test_role_run_control_markers_are_nofollow_bounded_and_interrupt_safe", fast_ids,
+                "original timing witness must remain full-only")
+
+        original_data = copy.deepcopy(data)
+        assert_fast_composition(data)
+        for required_id in sorted(required_fast_ids):
+            with self.subTest(missing_fast_id=required_id):
+                missing = copy.deepcopy(data)
+                missing["subsets"]["fast"]["ids"].remove(required_id)
+                with self.assertRaisesRegex(AssertionError, "missing fast safety floor IDs"):
+                    assert_fast_composition(missing)
+        self.assertEqual(data, original_data)
         result = subprocess.run([sys.executable, "-B", str(RUNNER), "--matrix"], capture_output=True, text=True, timeout=30)
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
         rows = json.loads(result.stdout)["include"]
