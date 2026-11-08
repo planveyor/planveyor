@@ -66,6 +66,8 @@ Standard immutable-pinned artifact actions transport only `result.json` under `p
 
 Missing, extra, malformed, duplicate-key, stale, foreign, duplicate, incomplete, red, cancelled, or skipped parts/needs fail closed. A successful matrix aggregate cannot hide a missing report, s02 executing s01, two equal wrong HEADs, or a red authoritative report. Events remain diagnostics; no per-event reaggregation or GitHub API client is required.
 
+The summary reads only the current attempt, so re-run the workflow as a whole with “Re-run all jobs”. If any part passed in the previous attempt, “Re-run failed jobs” does not repeat it, the new attempt has no report for that part, and the summary stays red. Re-running only `ci-summary` also leaves the summary red. For `full`, this repeats the whole profile, currently about 2 h.
+
 Fast concurrency is ref-bound/latest-wins. Full groups include run ID and attempt so later full runs do not replace earlier pending full runs; this reserves no runner capacity. The mandatory summary must be retained as a required check by deployment policy; this change does not edit repository rulesets. A full green run on the actual release SHA is required before a future release. Local synthetic checks and source configuration do not establish hosted success, queue/cancellation qualification, publication, or an hour guarantee.
 
 ## What the result means
