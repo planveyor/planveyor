@@ -4,18 +4,34 @@ on:
   pull_request:
   push:
     branches: [main]
+  schedule:
+    - cron: '17 2 * * *'
+  workflow_dispatch:
 
 concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
+  group: ${{ (github.event_name == 'push' || github.event_name == 'pull_request') && format('{0}-fast-{1}', github.workflow, github.ref) || format('{0}-full-{1}-{2}', github.workflow, github.run_id, github.run_attempt) }}
+  cancel-in-progress: ${{ github.event_name == 'push' || github.event_name == 'pull_request' }}
 
 permissions:
   contents: read
+
+env:
+  CI_PROFILE: ${{ (github.event_name == 'push' || github.event_name == 'pull_request') && 'fast' || 'full' }}
+  CI_EVENT: ${{ github.event_name }}
+  CI_RUN_ID: ${{ github.run_id }}
+  CI_RUN_ATTEMPT: ${{ github.run_attempt }}
+  CI_EXPECTED_SHA: ${{ github.sha }}
+  CI_PR_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+  PYTHONDONTWRITEBYTECODE: "1"
 
 jobs:
   shard-matrix:
     runs-on: macos-latest
     timeout-minutes: 105
+    defaults:
+      run:
+        working-directory: My Planveyor
+        shell: bash
     outputs:
       matrix: ${{ steps.matrix.outputs.matrix }}
     steps:
@@ -23,16 +39,27 @@ jobs:
         with:
           fetch-depth: 0
           path: My Planveyor
+          ref: ${{ github.sha }}
       - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1
         with:
           python-version: "3.12"
+      - name: Install shell tools
+        run: |
+          brew install ripgrep
+          command -v rg
+          command -v zsh
+          zsh -df -c 'exit 0'
+      - name: Select build interpreter
+        run: echo "PYBIN=$(python -c 'import sys; print(sys.executable)')" >> "$GITHUB_ENV"
+      - name: Install development dependencies
+        run: make bootstrap-python
+      - name: Check CI composition
+        run: '"$PYBIN" -B scripts/run_test_shard.py --check --ci-profile "$CI_PROFILE"'
       - name: Generate test matrix from manifest
         id: matrix
-        working-directory: My Planveyor
-        shell: bash
         run: |
           set -euo pipefail
-          planveyor_test_matrix="$(python -B scripts/run_test_shard.py --matrix)"
+          planveyor_test_matrix="$("$PYBIN" -B scripts/run_test_shard.py --matrix --ci-profile "$CI_PROFILE")"
           echo "matrix=$planveyor_test_matrix" >> "$GITHUB_OUTPUT"
   verify:
     needs: shard-matrix
@@ -41,6 +68,7 @@ jobs:
     defaults:
       run:
         working-directory: My Planveyor
+        shell: bash
     strategy:
       fail-fast: false
       matrix: ${{ fromJSON(needs.shard-matrix.outputs.matrix) }}
@@ -49,6 +77,7 @@ jobs:
         with:
           fetch-depth: 0
           path: My Planveyor
+          ref: ${{ github.sha }}
       - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1
         with:
           python-version: ${{ matrix.python-version }}
@@ -65,8 +94,6 @@ jobs:
       - name: Install development dependencies
         run: make bootstrap-python
       - name: Check test shard partition
-        env:
-          PYTHONDONTWRITEBYTECODE: "1"
         run: '"$PYBIN" -B scripts/run_test_shard.py --matrix > "$RUNNER_TEMP/shard-matrix-readback.json"'
       - name: Lint documentation and translation pairs
         if: matrix.meta
@@ -77,18 +104,29 @@ jobs:
           EVENT_NAME: ${{ github.event_name }}
           BASE_BRANCH: ${{ github.base_ref }}
           BEFORE_COMMIT: ${{ github.event.before }}
-        shell: bash
         run: |
           set -euo pipefail
-          if [[ "$EVENT_NAME" == pull_request ]]; then
-            planveyor_ci_base="$(git merge-base "origin/$BASE_BRANCH" HEAD)"
-          else
-            planveyor_ci_base="$BEFORE_COMMIT"
-          fi
-          if [[ -z "$planveyor_ci_base" || "$planveyor_ci_base" =~ ^0+$ ]] || ! git cat-file -e "$planveyor_ci_base^{commit}" 2>/dev/null; then
-            planveyor_ci_base="$(git rev-list --max-parents=0 HEAD)"
-          fi
-          "$PYBIN" -B scripts/plan_lint_changed.py --base "$planveyor_ci_base" --head HEAD
+          case "$EVENT_NAME" in
+            pull_request)
+              base="$(git merge-base "origin/$BASE_BRANCH" HEAD)"
+              ;;
+            push)
+              base="$BEFORE_COMMIT"
+              if [[ -z "$base" || "$base" =~ ^0+$ ]] || ! git cat-file -e "$base^{commit}" 2>/dev/null; then
+                base="$(git rev-list --max-parents=0 HEAD)"
+              fi
+              ;;
+            schedule|workflow_dispatch)
+              base="$(git rev-parse --verify HEAD^1 2>/dev/null)" || base="$(git rev-list --max-parents=0 HEAD)"
+              ;;
+            *)
+              echo "unsupported CI event: $EVENT_NAME" >&2
+              exit 2
+              ;;
+          esac
+          git cat-file -e "$base^{commit}"
+          printf 'plan-lint-changed: event=%s base=%s head=%s\n' "$EVENT_NAME" "$base" "$(git rev-parse HEAD)"
+          "$PYBIN" -B scripts/plan_lint_changed.py --base "$base" --head HEAD
       - name: Typecheck
         if: matrix.meta
         run: make typecheck
@@ -97,10 +135,78 @@ jobs:
         run: make oss-release-scan
       - name: Test workflow shard
         env:
-          PYTHONDONTWRITEBYTECODE: "1"
+          CI_PART: ${{ matrix.part }}
+          CI_PYTHON: ${{ matrix.python-version }}
+          CI_SHARD: ${{ matrix.shard }}
+          CI_SUBSET: ${{ matrix.subset }}
         run: |
-          if [[ -n "${{ matrix.subset }}" ]]; then
-            "$PYBIN" -B scripts/run_test_shard.py --subset "${{ matrix.subset }}" --report "$RUNNER_TEMP/test-shard.json"
-          else
-            "$PYBIN" -B scripts/run_test_shard.py --shard "${{ matrix.shard }}" --report "$RUNNER_TEMP/test-shard.json"
+          set -euo pipefail
+          ci_context=(--ci-profile "$CI_PROFILE" --ci-event "$CI_EVENT"
+            --ci-run-id "$CI_RUN_ID" --ci-run-attempt "$CI_RUN_ATTEMPT"
+            --ci-expected-sha "$CI_EXPECTED_SHA")
+          if [[ "$CI_EVENT" == pull_request ]]; then
+            ci_context+=(--ci-pr-head-sha "$CI_PR_HEAD_SHA")
           fi
+          if [[ -n "$CI_SUBSET" ]]; then
+            ci_selector=(--subset "$CI_SUBSET")
+          else
+            ci_selector=(--shard "$CI_SHARD")
+          fi
+          "$PYBIN" -B scripts/run_test_shard.py "${ci_selector[@]}" --ci-strict \
+            --ci-part "$CI_PART" --ci-python "$CI_PYTHON" "${ci_context[@]}" \
+            --report "$RUNNER_TEMP/result.json"
+      - name: Upload actual worker report
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: planveyor-ci-${{ github.run_id }}-${{ github.run_attempt }}-${{ matrix.part }}
+          path: ${{ runner.temp }}/result.json
+          if-no-files-found: error
+          overwrite: false
+  ci-summary:
+    if: always()
+    needs: [shard-matrix, verify]
+    runs-on: macos-latest
+    timeout-minutes: 105
+    defaults:
+      run:
+        working-directory: My Planveyor
+        shell: bash
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+        with:
+          fetch-depth: 0
+          path: My Planveyor
+          ref: ${{ github.sha }}
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1
+        with:
+          python-version: "3.12"
+      - name: Install shell tools
+        run: |
+          brew install ripgrep
+          command -v rg
+          command -v zsh
+          zsh -df -c 'exit 0'
+      - name: Select build interpreter
+        run: echo "PYBIN=$(python -c 'import sys; print(sys.executable)')" >> "$GITHUB_ENV"
+      - name: Install development dependencies
+        run: make bootstrap-python
+      - name: Download current attempt reports
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
+        with:
+          pattern: planveyor-ci-${{ github.run_id }}-${{ github.run_attempt }}-*
+          path: ${{ runner.temp }}/ci-reports
+          merge-multiple: false
+      - name: Validate actual CI reports
+        env:
+          CI_NEEDS_JSON: ${{ toJSON(needs) }}
+        run: |
+          set -euo pipefail
+          ci_context=(--ci-profile "$CI_PROFILE" --ci-event "$CI_EVENT"
+            --ci-run-id "$CI_RUN_ID" --ci-run-attempt "$CI_RUN_ATTEMPT"
+            --ci-expected-sha "$CI_EXPECTED_SHA")
+          if [[ "$CI_EVENT" == pull_request ]]; then
+            ci_context+=(--ci-pr-head-sha "$CI_PR_HEAD_SHA")
+          fi
+          "$PYBIN" -B scripts/run_test_shard.py --ci-summary "$RUNNER_TEMP/ci-reports" \
+            "${ci_context[@]}" --ci-needs-json "$CI_NEEDS_JSON"

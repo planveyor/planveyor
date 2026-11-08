@@ -1,4 +1,4 @@
-<!-- i18n: pair=docs/tools/verify_suite.md pair-sha256=eb83f6cf50e9f2dd0887a8a96f6e24a4db3393d40dffde69c0de97dd4dbf97ba self-sha256=719d9fbaa9e96c15cf48c040b36ce9a8c9b0a30d339228ae6e025aa71dfee2ab -->
+<!-- i18n: pair=docs/tools/verify_suite.md pair-sha256=484571ce081836362d628105df2c1cb8e83a9a2bf2c7344012f953ef8d31952b self-sha256=17244f3b188601f977f78e9f13cc8d3dfcca669d03b10fa7cbd25f3314c9d97a -->
 # Руководство Owner: маршруты проверки
 
 [English](verify_suite.md) · **Русский**
@@ -23,7 +23,7 @@ make test-scripts
 
 ## Границы платформы и CI
 
-Первый выпуск поддерживает работу на macOS с подготовленным окружением Python 3.12 и зависимостями из `requirements-dev.lock`. Ещё должны быть доступны Git, zsh и ripgrep. Загрузчик идентичности исходников (source identity) технически принимает Python 3.10–3.12, но поддержку первого выпуска это не расширяет. Настроенная матрица CI на macOS запускает все 14 полных частей на Python 3.12 и выборку тестов `compat310` на Python 3.10; проверки метаданных идут только в первой полной части на Python 3.12. Сама по себе настройка результатом прогона в hosted CI не считается. Нативная проверка на Windows и Linux не завершена.
+Первый выпуск поддерживает работу на macOS с подготовленным окружением Python 3.12 и зависимостями из `requirements-dev.lock`. Ещё должны быть доступны Git, zsh и ripgrep. Загрузчик идентичности исходников (source identity) технически принимает Python 3.10–3.12, но поддержку первого выпуска это не расширяет. Профили CI на macOS и обязательный summary описаны ниже; сама настройка результатом hosted CI не считается. Нативная проверка на Windows и Linux не завершена.
 
 Имена модулей, запущенных установленной версией, есть в JSON-отчёте
 `planveyor_verify --format json`; передайте нужное имя через `--module`. Для работы с проектом выберите его явно через фасад, перед командой, если модуль рассчитан на проверку дерева проекта.
@@ -43,6 +43,31 @@ make test-scripts
 `--matrix` читает структуру матрицы, не импортируя тесты. `--check` импортирует тесты через каноническое обнаружение и проверяет все ID настроенных выборок и полное разбиение: каждый тест должен стоять ровно в одной части. Тела тестов при этом не выполняются. Запуск выборки сначала повторяет эти проверки, а затем отбирает нужные тесты из исходных в каноническом порядке и сохраняет хуки уровня модуля и класса. Неизвестные, пустые, повторные или отсутствующие ID и неверное полное разбиение приводят к отказу. Каталог отчёта должен существовать, а файлов отчёта и событий по указанным путям ещё не должно быть. `--subset` нельзя совмещать с выбором полной части или локального профиля.
 
 Отчёт и парный файл `.events.jsonl` связывают упорядоченный список ID, хеш манифеста, сведения об интерпретаторе Python, HEAD и учёт запущенных и завершённых тестов. В отчёте выборки стоят `selected_subset=compat310` и `selected_shards=[]`, в отчёте полного или локального запуска — ID его частей и `selected_subset=null`. Если учёт неполный, запуск прерван или HEAD после исполнения отличается от HEAD до него, результат не будет зелёным. Локальный результат проверки совместимости не доказывает ни успеха в hosted CI, ни покрытия полного набора на Python 3.10 и не обещает, сколько времени займёт проверка после push. Полные маршруты проверки, описанные выше, остаются отдельными.
+
+## Fast/full CI и обязательный итог
+
+Checked-in workflow направляет push в `main` и `pull_request` в **fast**: части Python 3.12 `core` (`--subset fast`), `contracts-a`, `contracts-b` и отдельную часть Python 3.10 `compat310`. Ежедневный `schedule` (`17 2 * * *` UTC) и `workflow_dispatch` выбирают **full**: все 14 частей Python 3.12 и `compat310`. Обхода для docs-only и release action нет. Bare `--matrix`, локальные профили и публичная полная проверка сохраняют прежние defaults.
+
+До selection CI импортирует canonical discovery, проверяет полное exact-once разбиение и независимо от mutable subset IDs сверяет composition. Core сохраняет fixed16 целых safety witnesses; `contracts-a` содержит все discovered cases `test_planveyor_plan_bundle`; `contracts-b` — все cases explicit29-module policy в `scripts/run_test_shard.py`. Core/A/B не пересекаются. Fixed9 compatibility IDs проверяются отдельно. Числа растут с canonical methods; snapshots не являются потолками.
+
+`shard-matrix` устанавливает существующие declared prerequisites до импорта tests и выполняет explicit composition check вне subset selection. Четыре metadata команды идут один раз: strict docs/i18n, changed-plan lint, typecheck с policy Python 3.10 и public scan. Их row — `contracts-b` для fast или `s01` для full. PR base для changed-plan lint — обязательный merge-base с target branch; недоступный PR base приводит к отказу. Push использует valid event-before commit либо root fallback; schedule/manual — `HEAD^1` либо root fallback. Выбранные event/base/head логируются.
+
+Strict worker требует `--ci-strict`, `--ci-profile`, `--ci-part`, `--ci-python`, `--ci-event`, `--ci-run-id`, `--ci-run-attempt` и `--ci-expected-sha`. Profile вместе с execution selector без strict context отказывает до bodies. PR дополнительно требует `--ci-pr-head-sha`; другие events отвергают этот flag. Trusted expected checkout — `github.sha`, включая synthetic merge commit для PR; head SHA передаётся отдельно. Равенства двух observed HEAD недостаточно.
+
+Просмотр profiles из подготовленного checkout не исполняет тела tests:
+
+```zsh
+"$PYBIN" -B scripts/run_test_shard.py --matrix --ci-profile fast
+"$PYBIN" -B scripts/run_test_shard.py --check --ci-profile full
+```
+
+Strict report добавляет validated `ci_profile,ci_part,ci_event,ci_run_id,ci_run_attempt,ci_expected_sha,ci_pr_head_sha,ci_expected_python,ci_python` к existing report. Actual Python pair, manifest, trusted expected SHA, selector и непустые ordered planned/started/completed IDs должны совпадать с independently expected execution. Strict green требует полного accounting без failures, errors, skips, interruption или source drift; legacy local skip semantics сохраняются. Python 3.12 сохраняет native duration records, Python 3.10 — wall-only/null durations. Timing остаётся diagnostic.
+
+Standard artifact actions с immutable pins передают только `result.json` в `planveyor-ci-<run>-<attempt>-<part>`; upload использует `if: always()`, отсутствие report считается ошибкой. Обязательный check **`ci-summary`** идёт с `if: always()`, зависит от `shard-matrix` и `verify` и независимо вызывает `--ci-summary DIRECTORY --ci-profile fast|full` с trusted event/run/attempt/SHA context и `--ci-needs-json JSON`. Он читает ровно current-attempt corpus, не повторяет workers и не берёт expected IDs из reports или preparation output. Union full shards обязан exact-once равняться всему canonical suite; fast union равен только core/A/B. Compatibility остаётся отдельной axis.
+
+Missing, extra, malformed, duplicate-key, stale, foreign, duplicate, incomplete, red, cancelled или skipped parts/needs дают отказ. Успешный matrix aggregate не скрывает missing report, s02 с исполнением s01, два equal wrong HEAD или red authoritative report. Events — diagnostics; обязательной per-event reaggregation и GitHub API client нет.
+
+Fast concurrency привязана к ref и использует latest-wins. Full groups содержат run ID и attempt, поэтому последующие full не вытесняют предыдущие pending full; runner capacity этим не резервируется. Deployment policy должна сохранять обязательный summary как required check; repository rulesets этот change не меняет. Перед будущим выпуском нужен full green на actual release SHA. Local synthetic checks и source configuration не доказывают hosted success, queue/cancellation qualification, публикацию или часовой budget.
 
 ## Что значит результат
 

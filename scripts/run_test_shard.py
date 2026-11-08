@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """Run an exact manifest partition of canonical unittest discovery.
 
---matrix reads files and JSON only; --check and execution import the canonical
-suite. This script does not create environments or launch parallel workers.
+Bare --matrix reads files and JSON only; CI profiles, --check and execution
+import the canonical suite. This script creates no environments or parallel workers.
 """
 from __future__ import annotations
 
@@ -10,6 +10,7 @@ import argparse
 from collections import Counter
 import hashlib
 import json
+import math
 import os
 from pathlib import Path
 import re
@@ -198,6 +199,257 @@ def validate_subsets(cases, data):
         require(not unknown, f"unknown subset IDs in {subset_name}: {sorted(unknown)}")
 
 
+# These contracts are deliberately independent of mutable manifest subsets.
+CI_CORE_IDS = (
+    "test_planveyor_init_capture.InitCaptureTests.test_in_scope_init_wrappers_promote_run_artifacts_by_sid",
+    "test_planveyor_init_capture.InitCaptureTests.test_failed_init_without_sid_stays_under_pending",
+    "test_planveyor_init_capture.InitCaptureTests.test_runner_selection_init_precedes_artifacts_and_consumes_captured_bytes_once",
+    "test_planveyor_init_capture.InitCaptureTests.test_role_run_writes_fresh_success_receipt_and_compat_readback",
+    "test_planveyor_init_capture.InitCaptureTests.test_role_run_rejects_bad_or_changed_preflight_identity_before_child",
+    "test_planveyor_init_capture.InitCaptureTests.test_role_run_missing_wrapper_and_spawn_error_are_not_started",
+    "test_planveyor_init_capture.InitCaptureTests.test_role_run_nonzero_and_timeout_are_non_green_receipts",
+    "test_planveyor_init_capture.InitCaptureTests.test_role_run_keeps_non_green_child_and_green_outcome_independent",
+    "test_planveyor_init_capture.InitCaptureTests.test_role_run_control_markers_functional_safety_witness",
+    "test_planveyor_init_capture.InitCaptureTests.test_role_run_recovery_tuple_is_one_shot_and_exactly_once",
+    "test_planveyor_init_capture.InitCaptureTests.test_role_run_carrier_is_isolated_from_manager_architect_paths",
+    "test_contract_authority_shell.ContractAuthorityShellIntegrationTests.test_clean_first_source_pins_and_same_source_is_idempotent",
+    "test_contract_authority_shell.ContractAuthorityShellIntegrationTests.test_runtime_closure_and_runner_policy_drift_fail_before_effect_sentinel",
+    "test_sibling_runbook.NativeSiblingCommitPolicyTests.test_tui_cmd_architect_and_direct_policy_sequence_ignores_ambient",
+    "test_sibling_runbook.NativeSiblingCommitPolicyTests.test_tui_markerless_legacy_refuses_before_session_effects",
+    "test_planveyor_bare_entrypoints.PlanveyorFacadeDashboardTests.test_help_and_dashboards_finish_without_per_row_authority_revalidation",
+)
+
+CI_COMPAT_IDS = (
+    "test_contract_authority_loader_stream.ContractAuthorityLoaderStreamTests.test_header_is_not_executed_and_body_status_stays_in_current_shell",
+    "test_contract_authority_loader_stream.ContractAuthorityLoaderStreamTests.test_missing_supported_python_explains_how_to_select_it",
+    "test_contract_authority_shell.ContractAuthorityShellIntegrationTests.test_runtime_closure_and_runner_policy_drift_fail_before_effect_sentinel",
+    "test_pybin.PybinResolveTests.test_project_cache_is_ignored_in_favor_of_path_python3",
+    "test_pybin.PybinResolveTests.test_explicit_invalid_pybin_stays_strict",
+    "test_pybin.PybinResolveTests.test_conda_prefix_precedes_path_python3",
+    "test_contract_authority_snapshot.AuthoritySnapshotTests.test_local_marker_v3_has_exact_live_fields",
+    "test_contract_authority_snapshot.AuthoritySnapshotTests.test_duplicate_json_keys_and_non_json_bytes_are_rejected",
+    "test_consumer_contract.ConsumerContractFacadeTests.test_public_facade_init_doctor_and_compatible_upgrade",
+)
+
+CI_CONTRACT_MODULES = (
+    "test_authority_vocabulary_prompt_contract",
+    "test_censor_prompt_contract",
+    "test_manager_custom_pipeline_prompt_contract",
+    "test_plan_lint",
+    "test_plan_lint_changed",
+    "test_review_header_metadata",
+    "test_run_test_shard",
+    "test_sibling_contract_docs",
+    "test_zcode_bootstrap_lifecycle_prompt_contract",
+    "test_plan_handoff_digest",
+    "test_plan_harvest_lint",
+    "test_plan_status_oracle",
+    "test_planning_wave_readback",
+    "test_planveyor_plan_list",
+    "test_doc_lint",
+    "test_doc_lint_policy",
+    "test_shared_docs_mirror_drift",
+    "test_review_artifact_lint",
+    "test_analysis_source_ownership",
+    "test_build_role_bundles",
+    "test_planveyor_profile_extraction",
+    "test_planveyor_shared_corpus_contract",
+    "test_check_planveyor_profile_contract",
+    "test_planveyor_codex_agent_roles",
+    "test_contract_authority_matrix_check",
+    "test_oss_release_scan",
+    "test_oss_evidence_prepare",
+    "test_docs_closeout",
+    "test_plan_queue",
+)
+
+
+def ci_composition(cases, data):
+    require([row["id"] for row in data["shards"]] == [f"s{i:02}" for i in range(1, 15)],
+            "CI requires the complete ordered s01..s14 partition")
+    expected = {"fast": set(CI_CORE_IDS), "compat310": set(CI_COMPAT_IDS)}
+    by_module = {}
+    for case in cases:
+        by_module.setdefault(case.__class__.__module__, set()).add(case.id())
+    for module in ("test_planveyor_plan_bundle", *CI_CONTRACT_MODULES):
+        require(by_module.get(module), f"missing CI contract module: {module}")
+    expected["contracts-a"] = by_module["test_planveyor_plan_bundle"]
+    expected["contracts-b"] = set().union(*(by_module[module] for module in CI_CONTRACT_MODULES))
+    canonical = {case.id() for case in cases}
+    for subset, wanted in expected.items():
+        actual = data.get("subsets", {}).get(subset, {}).get("ids", [])
+        require(wanted <= canonical, f"missing canonical CI floor: {subset}")
+        require(len(actual) == len(wanted) and set(actual) == wanted,
+                f"CI composition mismatch: {subset}")
+    require(data["subsets"]["compat310"]["ids"] == list(CI_COMPAT_IDS),
+            "CI compat310 order differs from fixed contract")
+    for left, right in (("fast", "contracts-a"), ("fast", "contracts-b"),
+                        ("contracts-a", "contracts-b")):
+        require(not expected[left] & expected[right], f"CI composition overlap: {left}/{right}")
+    return {key: [case.id() for case in cases if case.id() in wanted]
+            for key, wanted in expected.items()}
+
+
+def ci_rows(profile):
+    require(profile in ("fast", "full"), "unknown CI profile")
+    if profile == "fast":
+        rows = [{"part": part, "python-version": "3.12", "subset": subset,
+                 "meta": part == "contracts-b"}
+                for part, subset in (("core", "fast"), ("contracts-a", "contracts-a"),
+                                     ("contracts-b", "contracts-b"))]
+    else:
+        rows = [{"part": f"s{i:02}", "python-version": "3.12",
+                 "shard": f"s{i:02}", "meta": i == 1} for i in range(1, 15)]
+    return rows + [{"part": "compat310", "python-version": "3.10",
+                    "subset": "compat310", "meta": False}]
+
+
+def ci_context(args):
+    require(args.ci_profile in ("fast", "full"), "CI context requires profile")
+    require(args.ci_event in ("push", "pull_request", "schedule", "workflow_dispatch"),
+            "invalid CI event")
+    require(args.ci_profile == ("fast" if args.ci_event in ("push", "pull_request") else "full"),
+            "CI event/profile mismatch")
+    for key in ("ci_run_id", "ci_run_attempt"):
+        name(getattr(args, key), r"[1-9][0-9]*", key)
+    name(args.ci_expected_sha, r"[0-9a-f]{40}", "CI expected SHA")
+    if args.ci_event == "pull_request":
+        name(args.ci_pr_head_sha, r"[0-9a-f]{40}", "PR head SHA")
+    else:
+        require(args.ci_pr_head_sha is None, "PR head SHA is only valid for pull_request")
+    return {key: getattr(args, key) for key in
+            ("ci_profile", "ci_event", "ci_run_id", "ci_run_attempt",
+             "ci_expected_sha", "ci_pr_head_sha")}
+
+
+def ci_mode(args):
+    live = (args.ci_part, args.ci_python, args.ci_event, args.ci_run_id,
+            args.ci_run_attempt, args.ci_expected_sha, args.ci_pr_head_sha)
+    if args.ci_summary is not None:
+        require(not args.ci_strict and args.ci_part is None and args.ci_python is None,
+                "summary does not accept worker-only flags")
+        require(args.local_group is None and args.report is None and args.durations is None,
+                "unexpected execution arguments for summary")
+        require(args.ci_needs_json is not None, "summary requires --ci-needs-json")
+        ci_context(args)
+    elif args.matrix or args.check:
+        require(not args.ci_strict and not any(value is not None for value in live)
+                and args.ci_needs_json is None, "matrix/check do not accept live CI context")
+    else:
+        require(args.ci_needs_json is None, "--ci-needs-json requires summary")
+        if args.ci_profile is not None or args.ci_strict or any(value is not None for value in live):
+            require(args.ci_strict and args.ci_profile is not None,
+                    "CI execution requires --ci-strict and --ci-profile")
+            require(args.local_profile is None and args.local_group is None,
+                    "CI does not accept local-profile selection")
+            ci_context(args)
+            rows = [row for row in ci_rows(args.ci_profile) if row["part"] == args.ci_part]
+            require(len(rows) == 1, "unknown CI part")
+            row = rows[0]
+            require(args.ci_python == row["python-version"], "CI part/Python mismatch")
+            require(args.subset == row.get("subset") and args.shard == row.get("shard"),
+                    "CI part/selector mismatch")
+            require(".".join(map(str, sys.version_info[:2])) == args.ci_python,
+                    "actual Python differs from CI expected Python")
+
+
+def ci_selection(row, composition, assignments, cases):
+    wanted = (set(composition[row["subset"]]) if "subset" in row
+              else set(assignments[row["shard"]]))
+    return [case.id() for case in cases if case.id() in wanted]
+
+
+def ci_report_valid(report, context, row, expected_ids, manifest_hash):
+    required = ("status", "head_before", "head_after", "manifest_sha256", "python",
+                "selected_shards", "selected_subset", "planned_ids", "started_ids",
+                "completed_ids", "tests_run", "skipped", "wall_seconds", "durations_source",
+                "durations", "completion_exact", "result_successful", "failures", "errors",
+                "ci_part", "ci_expected_python", "ci_python", *context)
+    keys(report, required)
+    for key, value in context.items():
+        require(report[key] == value and type(report[key]) is type(value), f"CI context mismatch: {key}")
+    require(report["ci_part"] == row["part"], "CI report part mismatch")
+    expected_python = row["python-version"]
+    require(report["ci_expected_python"] == expected_python, "CI report expected Python mismatch")
+    observed = report["ci_python"]
+    keys(observed, ("major", "minor"))
+    require(all(type(value) is int for value in observed.values()), "invalid CI Python types")
+    require(f'{observed["major"]}.{observed["minor"]}' == expected_python, "wrong CI Python")
+    require(isinstance(report["python"], str) and
+            re.match(re.escape(expected_python) + r"\.[0-9]+(?:\s|$)", report["python"]) is not None,
+            "Python report string mismatch")
+    require(report["status"] == "green" and report["completion_exact"] is True
+            and report["result_successful"] is True, "CI report is not complete green")
+    require(report["head_before"] == report["head_after"] == context["ci_expected_sha"],
+            "CI report HEAD differs from trusted expected SHA")
+    require(report["manifest_sha256"] == manifest_hash, "CI manifest mismatch")
+    require(report["selected_shards"] == ([row["shard"]] if "shard" in row else [])
+            and report["selected_subset"] == row.get("subset"), "CI report selector mismatch")
+    require(expected_ids and len(set(expected_ids)) == len(expected_ids), "empty/duplicate expected IDs")
+    for key in ("planned_ids", "started_ids", "completed_ids"):
+        require(report[key] == expected_ids, f"CI ordered accounting mismatch: {key}")
+    require(type(report["tests_run"]) is int and report["tests_run"] == len(expected_ids),
+            "CI tests_run mismatch")
+    require(report["skipped"] == report["failures"] == report["errors"] == [], "CI skips/failures/errors")
+    wall = report["wall_seconds"]
+    require(type(wall) in (int, float) and math.isfinite(wall) and wall >= 0, "invalid wall seconds")
+    if expected_python == "3.12":
+        require(report["durations_source"] == "unittest-native" and isinstance(report["durations"], list),
+                "invalid native durations")
+        for duration in report["durations"]:
+            keys(duration, ("test", "seconds"))
+            seconds = duration["seconds"]
+            require(isinstance(duration["test"], str) and bool(duration["test"])
+                    and type(seconds) in (int, float) and math.isfinite(seconds) and seconds >= 0,
+                    "invalid duration record")
+    else:
+        require(report["durations_source"] == "wall-only" and report["durations"] is None,
+                "invalid wall-only durations")
+
+
+def ci_json(raw):
+    def reject(value):
+        raise PartitionError(f"non-JSON numeric constant: {value}")
+    return json.loads(raw, object_pairs_hook=unique_object, parse_constant=reject)
+
+
+def ci_summary(args, data, manifest_hash, cases, assignments, composition):
+    context = ci_context(args)
+    require(git_head(args.root) == args.ci_expected_sha, "summary checkout differs from trusted expected SHA")
+    needs = ci_json(args.ci_needs_json)
+    keys(needs, ("shard-matrix", "verify"))
+    for job, result in needs.items():
+        keys(result, ("result",), ("outputs",))
+        require(result["result"] == "success", f"required need is not successful: {job}")
+    rows = ci_rows(args.ci_profile)
+    directory = args.ci_summary
+    require(directory.is_dir() and not directory.is_symlink(), "missing or unsafe CI report directory")
+    expected = {f'planveyor-ci-{args.ci_run_id}-{args.ci_run_attempt}-{row["part"]}': row for row in rows}
+    require({path.name for path in directory.iterdir()} == set(expected), "missing/extra CI artifact parts")
+    union = []
+    for artifact, row in expected.items():
+        part_dir = directory / artifact
+        require(part_dir.is_dir() and not part_dir.is_symlink(), "unsafe CI artifact directory")
+        require({path.name for path in part_dir.iterdir()} == {"result.json"}, "extra/missing report members")
+        path = part_dir / "result.json"
+        require(path.is_file() and not path.is_symlink(), "unsafe CI report")
+        report = ci_json(path.read_bytes())
+        wanted = ci_selection(row, composition, assignments, cases)
+        ci_report_valid(report, context, row, wanted, manifest_hash)
+        if row["part"] != "compat310":
+            union.extend(report["completed_ids"])
+    intended = ([case.id() for case in cases] if args.ci_profile == "full"
+                else [value for subset in ("fast", "contracts-a", "contracts-b") for value in composition[subset]])
+    require(Counter(union) == Counter(intended) and all(count == 1 for count in Counter(union).values()),
+            "CI actual union differs from independent expected universe")
+    manifest = args.manifest or args.root / "scripts/test_shards.json"
+    require(hashlib.sha256(manifest.read_bytes()).hexdigest() == manifest_hash
+            and git_head(args.root) == args.ci_expected_sha, "summary source drift")
+    print(json.dumps({"status": "green", **context, "parts": [row["part"] for row in rows],
+                      "manifest_sha256": manifest_hash}))
+    return 0
+
+
 def git_head(root):
     completed = subprocess.run(["git", "-C", str(root), "rev-parse", "HEAD"], text=True, capture_output=True, check=True)
     value = completed.stdout.strip()
@@ -262,6 +514,13 @@ def run_selected(args, data, manifest_hash, cases, assignments):
         "wall_seconds": None, "durations_source": "unittest-native" if native_durations else "wall-only",
         "durations": None, "completion_exact": False, "result_successful": None,
     }
+    strict = getattr(args, "ci_strict", False)
+    if strict:
+        context = ci_context(args)
+        require(report["head_before"] == args.ci_expected_sha,
+                "worker checkout differs from trusted expected SHA")
+        report.update(context, ci_part=args.ci_part, ci_expected_python=args.ci_python,
+                      ci_python={"major": sys.version_info.major, "minor": sys.version_info.minor})
     write_report(args.report, report)
     with events_path.open("x", encoding="utf-8") as events:
         events.write(json.dumps({"event": "planned", "head": report["head_before"], "manifest_sha256": manifest_hash,
@@ -301,6 +560,17 @@ def run_selected(args, data, manifest_hash, cases, assignments):
         report["durations"] = [{"test": str(test), "seconds": seconds} for test, seconds in result.collectedDurations]
     green = report["completion_exact"] and report["result_successful"] and report["head_before"] == report["head_after"]
     report["status"] = "green" if green else "red"
+    if strict:
+        manifest = args.manifest or args.root / "scripts/test_shards.json"
+        try:
+            require(hashlib.sha256(manifest.read_bytes()).hexdigest() == manifest_hash,
+                    "manifest changed during CI execution")
+            row = next(row for row in ci_rows(args.ci_profile) if row["part"] == args.ci_part)
+            ci_report_valid(report, context, row, report["planned_ids"], manifest_hash)
+        except PartitionError as error:
+            green = False
+            report["status"] = "red"
+            print(f"test-shard: {error}", file=sys.stderr)
     write_report(args.report, report)
     print(json.dumps(report, ensure_ascii=False))
     return 0 if green else 1
@@ -311,24 +581,36 @@ def main(argv=None):
     parser.add_argument("--root", type=Path, default=Path(__file__).resolve().parent.parent)
     parser.add_argument("--manifest", type=Path)
     mode = parser.add_mutually_exclusive_group(required=True)
-    mode.add_argument("--matrix", action="store_true", help="emit include matrix without test imports")
+    mode.add_argument("--matrix", action="store_true", help="emit include matrix; bare mode does not import tests")
     mode.add_argument("--check", action="store_true", help="discover and validate coverage; do not execute")
     mode.add_argument("--shard")
     mode.add_argument("--subset")
     mode.add_argument("--local-profile", choices=("3", "4"))
+    mode.add_argument("--ci-summary", type=Path)
     parser.add_argument("--local-group")
     parser.add_argument("--report", type=Path)
     parser.add_argument("--durations", type=int)
+    parser.add_argument("--ci-profile", choices=("fast", "full"))
+    parser.add_argument("--ci-strict", action="store_true")
+    parser.add_argument("--ci-part")
+    parser.add_argument("--ci-python", choices=("3.12", "3.10"))
+    parser.add_argument("--ci-event", choices=("push", "pull_request", "schedule", "workflow_dispatch"))
+    parser.add_argument("--ci-run-id")
+    parser.add_argument("--ci-run-attempt")
+    parser.add_argument("--ci-expected-sha")
+    parser.add_argument("--ci-pr-head-sha")
+    parser.add_argument("--ci-needs-json")
     args = parser.parse_args(argv)
     try:
         require((3, 10) <= sys.version_info[:2] <= (3, 12), "supported Python versions: 3.10–3.12")
         require(args.durations is None or args.durations >= 0, "negative durations")
+        ci_mode(args)
         args.root = args.root.resolve()
         if args.report is not None:
             args.report = args.report.resolve()
         manifest = args.manifest or args.root / "scripts/test_shards.json"
         data, manifest_hash = load_manifest(manifest, args.root / "scripts")
-        if args.matrix:
+        if args.matrix and args.ci_profile is None:
             require(args.local_group is None and args.report is None and args.durations is None, "unexpected execution arguments for matrix")
             require("compat310" in data.get("subsets", {}), "matrix requires compat310 subset")
             print(json.dumps({"include": [
@@ -336,7 +618,7 @@ def main(argv=None):
                 for index, shard in enumerate(data["shards"])
             ] + [{"python-version": "3.10", "subset": "compat310", "meta": False}]}, separators=(",", ":")))
             return 0
-        if not args.check:
+        if not args.check and not args.matrix and args.ci_summary is None:
             if args.subset is not None:
                 choose_subset(args, data)
             else:
@@ -350,13 +632,25 @@ def main(argv=None):
         cases = list(flatten(discovered))
         assignments = partition(cases, data)
         validate_subsets(cases, data)
+        composition = ci_composition(cases, data) if args.ci_profile is not None else None
+        if args.matrix:
+            require(args.local_group is None and args.report is None and args.durations is None,
+                    "unexpected execution arguments for matrix")
+            print(json.dumps({"include": ci_rows(args.ci_profile)}, separators=(",", ":")))
+            return 0
+        if args.ci_summary is not None:
+            return ci_summary(args, data, manifest_hash, cases, assignments, composition)
         if args.check:
             require(args.local_group is None and args.report is None and args.durations is None, "unexpected execution arguments for check")
-            print(json.dumps({"manifest_sha256": manifest_hash, "canonical_tests": len(cases),
-                              "shards": {key: sum(value.values()) for key, value in assignments.items()}}))
+            result = {"manifest_sha256": manifest_hash, "canonical_tests": len(cases),
+                      "shards": {key: sum(value.values()) for key, value in assignments.items()}}
+            if composition is not None:
+                result.update(ci_profile=args.ci_profile,
+                              ci_composition={key: len(value) for key, value in composition.items()})
+            print(json.dumps(result))
             return 0
         return run_selected(args, data, manifest_hash, cases, assignments)
-    except (PartitionError, OSError, json.JSONDecodeError, subprocess.CalledProcessError) as error:
+    except (PartitionError, OSError, UnicodeError, json.JSONDecodeError, subprocess.CalledProcessError) as error:
         print(f"test-shard: {error}", file=sys.stderr)
         return 2
 
