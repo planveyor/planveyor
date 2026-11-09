@@ -6624,8 +6624,8 @@ class PlanBundleCommitReadyTests(unittest.TestCase):
 
             self.assertEqual(result.returncode, 0, result.stderr)
             self.assertEqual(result.stdout.count('commit -m "<message>" --'), 2)
-            self.assertIn(str(root), result.stdout)
-            self.assertIn(str(sibling_root), result.stdout)
+            self.assertIn(str(root.resolve()), result.stdout)
+            self.assertIn(str(sibling_root.resolve()), result.stdout)
             self.assertIn(PRIMARY_TARGET_REL, result.stdout)
             self.assertIn(sibling_rel, result.stdout)
             self.assertIn("Commit-ready guard passed across 2 repo root(s).", result.stdout)

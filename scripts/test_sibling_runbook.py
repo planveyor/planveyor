@@ -311,6 +311,8 @@ planveyor_arch() { print status-driven >> "$PLANVEYOR_CTX_ROOT/.fixture_role_cal
             handle.write("\n.fixture_init_calls\n.fixture_role_calls\n")
             if getattr(cls, "actual_native_policy_sink", False):
                 handle.write(".fixture_native_calls\n.fixture_native_mode\n.fixture_stats_mode\n")
+        # Keep the adapter commit reachable from a branch after an exact-SHA checkout.
+        git(cls.runtime, "checkout", "--quiet", "-B", "main")
         git(cls.runtime, "add", "--all")
         git(cls.runtime, "commit", "--quiet", "-m", "Disposable human sibling command fixture")
         # Assert the candidate lineage before any consumer/bootstrap effects.

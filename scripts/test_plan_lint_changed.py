@@ -121,14 +121,14 @@ class PlanLintChangedTests(unittest.TestCase):
 
         self.assertIn("fetch-depth: 0", workflow)
         self.assertIn(
-            'planveyor_ci_base="$(git merge-base "origin/$BASE_BRANCH" HEAD)"',
+            'base="$(git merge-base "origin/$BASE_BRANCH" HEAD)"',
             workflow,
         )
         self.assertIn("BEFORE_COMMIT: ${{ github.event.before }}", workflow)
-        self.assertIn('planveyor_ci_base="$BEFORE_COMMIT"', workflow)
-        self.assertIn('git cat-file -e "$planveyor_ci_base^{commit}"', workflow)
+        self.assertIn('base="$BEFORE_COMMIT"', workflow)
+        self.assertIn('git cat-file -e "$base^{commit}"', workflow)
         self.assertIn(
-            'planveyor_ci_base="$(git rev-list --max-parents=0 HEAD)"',
+            'base="$(git rev-list --max-parents=0 HEAD)"',
             workflow,
         )
         self.assertIn(
@@ -136,7 +136,7 @@ class PlanLintChangedTests(unittest.TestCase):
             workflow,
         )
         self.assertIn(
-            '"$PYBIN" -B scripts/plan_lint_changed.py --base "$planveyor_ci_base" --head HEAD',
+            '"$PYBIN" -B scripts/plan_lint_changed.py --base "$base" --head HEAD',
             workflow,
         )
 
