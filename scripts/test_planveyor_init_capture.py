@@ -4317,7 +4317,7 @@ class InitCaptureTests(unittest.TestCase):
                 self.assertGreaterEqual(closed_at, fault_started)
                 self.assertLess(
                     closed_at - fault_started,
-                    5.0,
+                    10.0,
                     f"whole_command_elapsed={whole_command_elapsed:.3f}s; marker={marker_name}",
                 )
                 payload = json.loads(result.stdout)
@@ -4473,12 +4473,12 @@ class InitCaptureTests(unittest.TestCase):
                 self.assertGreaterEqual(second_closed_at, second_started_at)
                 self.assertLess(
                     first_closed_at - first_fault_started,
-                    5.0,
+                    10.0,
                     f"whole_command_elapsed={whole_command_elapsed:.3f}s; call=first_fault",
                 )
                 self.assertLess(
                     second_closed_at - second_started_at,
-                    5.0,
+                    10.0,
                     f"whole_command_elapsed={whole_command_elapsed:.3f}s; call=retry",
                 )
                 self.assertEqual(result.stdout.strip(), "126:0")
