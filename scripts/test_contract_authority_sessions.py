@@ -427,6 +427,8 @@ class ContractAuthoritySessionTests(unittest.TestCase):
                     )
 
     def test_engaged_child_uses_pinned_facade_not_target_shim(self) -> None:
+        import time
+
         with AuthorityFixture(identity="planveyor") as fixture:
             self._enable_isolated_admission(fixture)
             fixture.activate_planveyor(source_context.STATIC_PLANVEYOR_REQUIRED_ENGAGED_PATHS)
@@ -446,10 +448,13 @@ class ContractAuthoritySessionTests(unittest.TestCase):
             )
             wrapper_source = fixture.root / "child-wrapper.zsh"
             wrapper_result = fixture.root / "child-wrapper-ran"
+            wrapper_arrival = fixture.root / "child-wrapper-arrived"
             wrapper_source.write_text(
                 textwrap.dedent(
                     f"""\
                     planveyor_authority_test_wrapper() {{
+                      builtin print -r -- entered > {shlex.quote(str(wrapper_arrival))}
+                      {shlex.quote(sys.executable)} -I -B -c 'import time; print(time.monotonic_ns())' >> {shlex.quote(str(wrapper_arrival))}
                       [[ -z "${{PLANVEYOR_CTX_SEAL-}}${{PLANVEYOR_CTX_ROOT-}}${{PLANVEYOR_CTX_GENERATION-}}${{PLANVEYOR_CTX_JSON-}}${{PLANVEYOR_CTX_STATE-}}" ]] || return 92
                       [[ -n "${{_PLANVEYOR_AUTHORITY_CONTEXT_V1-}}" ]] || return 93
                       print -r -- wrapped > {shlex.quote(str(wrapper_result))}
@@ -477,16 +482,64 @@ class ContractAuthoritySessionTests(unittest.TestCase):
                     "PLANVEYOR_CTX_STATE=engaged",
                 )
             )
-            result = self._run_shell(
-                fixture,
-                command,
-                extra_env={"PLANVEYOR_TEST_HOSTILE_MARKER": str(hostile_marker)},
-            )
+            result = None
+            started_ns = time.monotonic_ns()
+            finished_ns = None
+            try:
+                try:
+                    result = self._run_shell(
+                        fixture,
+                        command,
+                        extra_env={"PLANVEYOR_TEST_HOSTILE_MARKER": str(hostile_marker)},
+                    )
+                finally:
+                    finished_ns = time.monotonic_ns()
 
-            self.assertEqual(result.returncode, 0, result.stderr)
-            self.assertEqual(json.loads(result.stdout)["exit_code"], 0)
-            self.assertEqual(wrapper_result.read_text(encoding="utf-8").strip(), "wrapped")
-            self.assertFalse(hostile_marker.exists())
+                self.assertEqual(result.returncode, 0, result.stderr)
+                self.assertEqual(json.loads(result.stdout)["exit_code"], 0)
+                self.assertEqual(wrapper_result.read_text(encoding="utf-8").strip(), "wrapped")
+                self.assertFalse(hostile_marker.exists())
+            except Exception as error:
+                try:
+                    def tail(path: Path) -> str:
+                        try:
+                            with path.open("rb") as stream:
+                                stream.seek(0, os.SEEK_END)
+                                stream.seek(max(0, stream.tell() - 4096))
+                                return stream.read(4096).decode("utf-8", errors="replace")
+                        except OSError as read_error:
+                            return f"<unavailable: {read_error}>"
+
+                    stdout = result.stdout if result is not None else getattr(error, "output", None)
+                    stderr = result.stderr if result is not None else getattr(error, "stderr", None)
+                    if isinstance(stdout, bytes):
+                        stdout = stdout.decode("utf-8", errors="replace")
+                    if isinstance(stderr, str):
+                        stderr = stderr.encode("utf-8", errors="replace")
+                    print(
+                        json.dumps({
+                            "schema": "s06_child_failure.v1",
+                            "exception_type": type(error).__name__,
+                            "supervisor_timeout_seconds": 15,
+                            "outer_timeout_seconds": 60,
+                            "returncode": result.returncode if result is not None else None,
+                            "supervisor_stdout": stdout or "",
+                            "outer_stderr_tail": (stderr or b"")[-4096:].decode("utf-8", errors="replace"),
+                            "child_stdout_tail": tail(stdout_path),
+                            "child_stderr_tail": tail(stderr_path),
+                            "started_monotonic_ns": started_ns,
+                            "finished_monotonic_ns": finished_ns,
+                            "elapsed_ns": finished_ns - started_ns if finished_ns is not None else None,
+                            "arrival_content": tail(wrapper_arrival),
+                            "arrival_exists": wrapper_arrival.exists(),
+                            "wrapper_result_exists": wrapper_result.exists(),
+                            "hostile_marker_exists": hostile_marker.exists(),
+                        }),
+                        file=sys.stderr,
+                    )
+                except Exception:
+                    pass
+                raise
 
     def test_public_resume_wrappers_preserve_child_status_and_cleanup(self) -> None:
         """Every direct resume surface returns its child status after ``popd``.
