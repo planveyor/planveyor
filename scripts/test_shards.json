@@ -415,7 +415,6 @@
             "test_sibling_runbook.NativeSiblingCommitPolicyTests.test_tui_engaged_missing_session_bootstraps_only_through_facade",
             "test_sibling_runbook.NativeSiblingCommitPolicyTests.test_tui_reuses_receipt_and_refreshes_current_plan_payload",
             "test_sibling_runbook.NativeSiblingCommitPolicyTests.test_tui_process_exit_and_missing_saved_session_use_existing_checker",
-            "test_sibling_runbook.NativeSiblingCommitPolicyTests.test_tui_cmd_architect_and_direct_policy_sequence_ignores_ambient",
             "test_sibling_runbook.NativeSiblingCommitPolicyTests.test_tui_client_error_and_runtime_drift_preserve_native_outcome"
           ]
         },
@@ -727,6 +726,12 @@
         },
         {
           "module": "test_semantic_review_observation"
+        },
+        {
+          "module": "test_sibling_runbook",
+          "ids": [
+            "test_sibling_runbook.NativeSiblingCommitPolicyTests.test_tui_cmd_architect_and_direct_policy_sequence_ignores_ambient"
+          ]
         },
         {
           "module": "test_strip_trailing_ws"
