@@ -32,6 +32,32 @@ class SharedCorpusContractTests(unittest.TestCase):
                             "non-empty regular non-symlink", "docs/code_reviews/assets/<REVIEW_BASENAME>/"):
             self.assertIn(requirement, text)
 
+    def test_manager_init_bootstrap_pointer_resolves_to_role_heading(self) -> None:
+        prompt = (ROOT / "docs/tools/prompts/manager_init.md").read_text(encoding="utf-8")
+        instructions = [line for line in prompt.splitlines() if re.match(r"^2\)\s", line)]
+        self.assertEqual(len(instructions), 1, "manager init must have one instruction 2)")
+
+        def assert_pointer_resolves(instruction: str) -> str:
+            role_paths = re.findall(r"`(docs/roles/[^`]+\.md)`", instruction)
+            self.assertEqual(role_paths, ["docs/roles/manager.md"])
+            headings = re.findall(r"`(## [^`]+)`", instruction)
+            self.assertEqual(len(headings), 1, "instruction 2) must name one bootstrap heading")
+            heading = headings[0]
+            role_lines = (ROOT / role_paths[0]).read_text(encoding="utf-8").splitlines()
+            self.assertTrue(
+                heading in role_lines,
+                f"bootstrap heading missing from {role_paths[0]}: {heading}",
+            )
+            return heading
+
+        heading = assert_pointer_resolves(instructions[0])
+        previous_heading = "## Обязательный старт (session bootstrap; 1 раз на role‑сессию)"
+        invalid_instruction = instructions[0].replace(f"`{heading}`", f"`{previous_heading}`", 1)
+        with self.assertRaisesRegex(
+            AssertionError, r"bootstrap heading missing from docs/roles/manager\.md:"
+        ):
+            assert_pointer_resolves(invalid_instruction)
+
     def test_shared_role_and_prompt_fallbacks_are_declared_public_content(self) -> None:
         sources = [path for path in PUBLIC_ROOT_CONTENT
                    if path.startswith(("docs/roles/", "docs/tools/prompts/"))]

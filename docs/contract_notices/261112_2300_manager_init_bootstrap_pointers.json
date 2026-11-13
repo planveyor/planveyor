@@ -1,0 +1,14 @@
+{
+  "summary": "Стартовый промпт Manager ссылается на существующий раздел Bootstrap Pointers.",
+  "contract_changes": [
+    "В docs/tools/prompts/manager_init.md и его копии Copier bootstrap-ссылка исправлена на существующий ## Bootstrap Pointers в docs/roles/manager.md."
+  ],
+  "engine_changes": [],
+  "sibling_actions": [
+    "Принять обновлённый промпт обычным planveyor sibling upgrade в отдельном локальном плане адаптации."
+  ],
+  "checks": [
+    "Проверить, что принятый docs/tools/prompts/manager_init.md ссылается на существующий ## Bootstrap Pointers в docs/roles/manager.md.",
+    "Сверить байты доставленного manager_init.md с Copier-шаблоном выбранной версии Planveyor."
+  ]
+}

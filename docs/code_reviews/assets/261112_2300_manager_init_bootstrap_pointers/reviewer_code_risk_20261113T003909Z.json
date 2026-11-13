@@ -1,0 +1,171 @@
+{
+  "run_id": "reviewer_code_risk:20261113T003909Z",
+  "lane_id": "reviewer_code_risk",
+  "runner_id": "codex",
+  "session_key": "unknown",
+  "sid": "unknown",
+  "profile": "unknown",
+  "model": "gpt-6.1-sol",
+  "reasoning_effort": "ultra",
+  "prompt_file": "docs/tools/prompts/reviewer_status_driven.md",
+  "target_ref": "BUNDLE=current",
+  "coverage_domains": [
+    "correctness",
+    "tests quality",
+    "security/privacy",
+    "integrations",
+    "failure semantics"
+  ],
+  "findings": [],
+  "lane_status": "no_findings",
+  "no_findings_reason": "В пяти exact current targets не найдено risk-дефектов: исправлена только ссылка двух prompt copies; один relationship test проверяет реальный heading и missing-heading negative; manifest ID зарегистрирован один раз; notice соответствует существующему consumer.",
+  "limits": [
+    "Проверены source bytes и 14 локальных tests; manifest check импортирует discovery, но не запускает полную suite. Hosted CI, live Manager bootstrap и sibling adoption не проверялись.",
+    "Subprocess/timeouts, races/locks/atomicity, data/migrations, performance, observability и supply chain не затронуты изменением.",
+    "Native role contract задаёт gpt-6.1-sol/ultra; session_key, SID и runtime profile не подтверждены current env/helper и остаются unknown. Canonical task name не используется как SID или источник effort."
+  ],
+  "source_refs": [
+    "docs/tools/prompts/manager_init.md:5",
+    "copier_template/docs/tools/prompts/manager_init.md:5",
+    "docs/roles/manager.md:183",
+    "scripts/test_planveyor_shared_corpus_contract.py:35",
+    "scripts/test_shards.json:2200",
+    "docs/contract_notices/261112_2300_manager_init_bootstrap_pointers.json"
+  ],
+  "written_at": "2026-11-13T00:39:09Z",
+  "current": true,
+  "commands_run": [
+    {
+      "command": "\"$PYBIN\" -B scripts/test_planveyor_shared_corpus_contract.py -v",
+      "result": "rc0; 5 tests; positive и in-memory missing-heading negative прошли"
+    },
+    {
+      "command": "\"$PYBIN\" -B scripts/test_sibling_contract_docs.py SiblingContractDocsTest.test_template_copies_match_their_docs_sources_byte_for_byte SiblingContractDocsTest.test_delivered_docs_call_the_engine_only_through_the_facade SiblingContractDocsTest.test_delivered_code_blocks_do_not_start_with_bare_engine_functions SiblingContractDocsTest.test_delivered_docs_reference_only_delivered_or_explicit_engine_paths SiblingContractDocsTest.test_delivered_docs_do_not_offer_root_defaulting_helpers_directly SiblingContractDocsTest.test_delivered_files_carry_no_private_fingerprints -v",
+      "result": "rc0; 6 tests; byte parity и delivered-content checks"
+    },
+    {
+      "command": "\"$PYBIN\" -B scripts/test_planveyor_profile_extraction.py PlanveyorProfileExtractionTests.test_all_public_prompt_phases_resolve_from_one_root_corpus -v",
+      "result": "rc0; 1 test; resolver corpus"
+    },
+    {
+      "command": "\"$PYBIN\" -B scripts/test_planveyor_router_merge_boundary.py RouterMergeBoundaryTests.test_neutral_consumer_manager_init_reaches_fake_codex_and_saves_sid -v",
+      "result": "rc0; 1 test; fake-init plumbing/SID"
+    },
+    {
+      "command": "\"$PYBIN\" -B scripts/run_test_shard.py --check --ci-profile fast",
+      "result": "rc0; canonical_tests=3541; contracts-b=1511; manifest_sha256=a173806b1ab4d83391953777b3b616b4602ed9ec9408df939b0396fc65509ef4"
+    },
+    {
+      "command": "\"$PYBIN\" -B scripts/test_consumer_contract.py ConsumerContractNoticeTests.test_current_notice_history_and_strict_notice_are_valid -v",
+      "result": "rc0; 1 test; current/history notice schema"
+    },
+    {
+      "command": "\"$PLANVEYOR_RUNTIME_ROOT/bin/planveyor\" --project \"$PWD\" planveyor_plan_lint docs/plans/261112_2300_manager_init_bootstrap_pointers.md",
+      "result": "rc0; warnings отсутствуют"
+    },
+    {
+      "command": "\"$PLANVEYOR_RUNTIME_ROOT/bin/planveyor\" --project \"$PWD\" planveyor_plan_bundle --scope-check docs/plans/261112_2300_manager_init_bootstrap_pointers.md",
+      "result": "rc0; scope_ok=true; review artifact planned, current-review completion ещё не подтверждён"
+    },
+    {
+      "command": "\"$PYBIN\" -B scripts/doc_lint.py --root docs/tools/prompts/manager_init.md --root copier_template/docs/tools/prompts/manager_init.md --check-code-refs --code-refs-scope repo",
+      "result": "rc0; doc-lint: OK"
+    },
+    {
+      "command": "\"$PYBIN\" -B scripts/doc_lint.py --root docs/plans/261112_2300_manager_init_bootstrap_pointers.md --root docs/code_drafts/261112_2300_manager_init_bootstrap_pointers__code_draft.md --check-basic-hygiene",
+      "result": "rc0; doc-lint: OK"
+    }
+  ],
+  "hygiene": {
+    "tracked_diff_check": "rc0; diagnostics отсутствуют",
+    "untracked_byte_checks": "plan/draft/notice: rc1 при пустых stdout/stderr для git diff --check --no-index /dev/null; clean difference",
+    "markers_and_trailing_whitespace": "rg rc1; совпадений нет"
+  },
+  "target_snapshot": {
+  "bundle_sha256": "00896b03d609a5bba169d5d460a463a9fc7fed026257477b9d55b64a717df1d3",
+  "code_draft": "docs/code_drafts/261112_2300_manager_init_bootstrap_pointers__code_draft.md",
+  "files": [
+    {
+      "git_mode": "100644",
+      "path": "copier_template/docs/tools/prompts/manager_init.md",
+      "sha256": "457c50be13ba90d42c6b958d7900ada36aa680a1eaef0a6834fcd64730509702",
+      "size_bytes": 1142
+    },
+    {
+      "git_mode": "100644",
+      "path": "docs/contract_notices/261112_2300_manager_init_bootstrap_pointers.json",
+      "sha256": "918a8f07ac6b87b9a94895dc2ed18fb67b0357e52beb3d6f1bf6fffdcf0e1378",
+      "size_bytes": 933
+    },
+    {
+      "git_mode": "100644",
+      "path": "docs/tools/prompts/manager_init.md",
+      "sha256": "457c50be13ba90d42c6b958d7900ada36aa680a1eaef0a6834fcd64730509702",
+      "size_bytes": 1142
+    },
+    {
+      "git_mode": "100644",
+      "path": "scripts/test_planveyor_shared_corpus_contract.py",
+      "sha256": "909c47bbf8554a4c2976ddd3d081c7a27690b68161b9ee62e1c40b6ec9db401d",
+      "size_bytes": 7645
+    },
+    {
+      "git_mode": "100644",
+      "path": "scripts/test_shards.json",
+      "sha256": "a173806b1ab4d83391953777b3b616b4602ed9ec9408df939b0396fc65509ef4",
+      "size_bytes": 239422
+    }
+  ],
+  "hash_basis": "sha256 over canonical JSON (ensure_ascii=False, sort_keys=True, separators=(',', ':')) of hash_basis_payload; targets come from the primary code_draft_meta.targets, are normalized to repo-relative POSIX paths, sorted by path, and each file authenticates its bytes plus normalized git_mode (100755 iff the owner-execute bit is set, otherwise 100644)",
+  "hash_basis_payload": {
+    "algorithm": "sha256",
+    "files": [
+      {
+        "git_mode": "100644",
+        "path": "copier_template/docs/tools/prompts/manager_init.md",
+        "sha256": "457c50be13ba90d42c6b958d7900ada36aa680a1eaef0a6834fcd64730509702",
+        "size_bytes": 1142
+      },
+      {
+        "git_mode": "100644",
+        "path": "docs/contract_notices/261112_2300_manager_init_bootstrap_pointers.json",
+        "sha256": "918a8f07ac6b87b9a94895dc2ed18fb67b0357e52beb3d6f1bf6fffdcf0e1378",
+        "size_bytes": 933
+      },
+      {
+        "git_mode": "100644",
+        "path": "docs/tools/prompts/manager_init.md",
+        "sha256": "457c50be13ba90d42c6b958d7900ada36aa680a1eaef0a6834fcd64730509702",
+        "size_bytes": 1142
+      },
+      {
+        "git_mode": "100644",
+        "path": "scripts/test_planveyor_shared_corpus_contract.py",
+        "sha256": "909c47bbf8554a4c2976ddd3d081c7a27690b68161b9ee62e1c40b6ec9db401d",
+        "size_bytes": 7645
+      },
+      {
+        "git_mode": "100644",
+        "path": "scripts/test_shards.json",
+        "sha256": "a173806b1ab4d83391953777b3b616b4602ed9ec9408df939b0396fc65509ef4",
+        "size_bytes": 239422
+      }
+    ],
+    "schema_version": "review_target_snapshot.hash_basis.v2"
+  },
+  "plan": "docs/plans/261112_2300_manager_init_bootstrap_pointers.md",
+  "schema_version": "review_target_snapshot.v2",
+  "target": "BUNDLE=current bundle_sha256=00896b03d609a5bba169d5d460a463a9fc7fed026257477b9d55b64a717df1d3",
+  "target_paths": [
+    "copier_template/docs/tools/prompts/manager_init.md",
+    "docs/contract_notices/261112_2300_manager_init_bootstrap_pointers.json",
+    "docs/tools/prompts/manager_init.md",
+    "scripts/test_planveyor_shared_corpus_contract.py",
+    "scripts/test_shards.json"
+  ],
+  "target_snapshot": {
+    "bundle_sha256": "00896b03d609a5bba169d5d460a463a9fc7fed026257477b9d55b64a717df1d3",
+    "target": "BUNDLE=current"
+  }
+}
+}

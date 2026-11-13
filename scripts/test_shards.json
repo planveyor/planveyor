@@ -2197,6 +2197,7 @@
         "test_planveyor_profile_extraction.PlanveyorProfileExtractionTests.test_source_identity_and_content_selection_use_public_families",
         "test_planveyor_shared_corpus_contract.SharedCorpusContractTests.test_generic_reviews_preserve_supplied_spec_and_diff_transport",
         "test_planveyor_shared_corpus_contract.SharedCorpusContractTests.test_generic_visual_review_keeps_materialized_proof_requirements",
+        "test_planveyor_shared_corpus_contract.SharedCorpusContractTests.test_manager_init_bootstrap_pointer_resolves_to_role_heading",
         "test_planveyor_shared_corpus_contract.SharedCorpusContractTests.test_shared_playbooks_use_declared_inputs_without_weakening_process_gates",
         "test_planveyor_shared_corpus_contract.SharedCorpusContractTests.test_shared_role_and_prompt_fallbacks_are_declared_public_content",
         "test_review_artifact_lint.HistoricalDiffCheckReadbackTests.test_accepted_disposition_keeps_unrelated_open_blocker_current_red",
